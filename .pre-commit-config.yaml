@@ -1,0 +1,13 @@
+# Pre-commit configuration for this repository
+# Runs Ruff for linting and formatting on commit
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Pin to a specific release of the hook. You can update this as needed.
+    rev: v0.6.9
+    hooks:
+      # Lint Python files with Ruff; --fix will auto-apply safe fixes.
+      - id: ruff
+        args: ["--fix"]
+      # Format Python files with Ruff formatter (black-compatible formatting)
+      - id: ruff-format
