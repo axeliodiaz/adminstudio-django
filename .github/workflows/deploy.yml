@@ -12,6 +12,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Archive source (exclude .git)
+        run: |
+          tar --exclude=.git --exclude=.github -czf app.tar.gz .
+
       - name: Prepare remote directory
         uses: appleboy/ssh-action@v1.1.0
         with:
@@ -21,20 +25,16 @@ jobs:
           script: |
             set -e
             mkdir -p "${{ secrets.EC2_PATH }}"
-            # chown si hiciera falta:
-            # sudo chown -R $USER:$USER "${{ secrets.EC2_PATH }}"
 
-      - name: Upload project to EC2
+      - name: Upload package to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
-          source: "."
+          source: "app.tar.gz"
           target: ${{ secrets.EC2_PATH }}
           overwrite: true
-          # 'rm' y 'exclude' removidos para evitar el error y el warning
-          # strip_components también innecesario
 
       - name: Build & Up via SSH (Docker Compose)
         uses: appleboy/ssh-action@v1.1.0
@@ -45,6 +45,10 @@ jobs:
           script: |
             set -euo pipefail
             cd "${{ secrets.EC2_PATH }}"
+
+            echo "==> Unpack"
+            tar -xzf app.tar.gz
+            rm -f app.tar.gz
 
             echo "==> Versions"
             docker --version
