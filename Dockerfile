@@ -12,8 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
-COPY requirements/prod.txt requirements/prod.txt
+COPY requirements.txt requirements.txt
 COPY requirements/base.txt requirements/base.txt
+COPY requirements/prod.txt requirements/prod.txt
 RUN pip install --no-cache-dir -r requirements/prod.txt
 
 # Copy project
@@ -22,6 +23,6 @@ COPY . .
 # Collect static (if any) - no staticfiles app configured by default but harmless
 # RUN python manage.py collectstatic --noinput
 
-EXPOSE 8000
+EXPOSE 80
 
-CMD ["gunicorn", "adminstudio_django.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "adminstudio_django.wsgi:application", "--bind", "0.0.0.0:80"]
