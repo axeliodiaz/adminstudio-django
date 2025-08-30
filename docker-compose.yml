@@ -6,6 +6,6 @@ services:
     ports:
       - "80:80"
     environment:
-      - DJANGO_SETTINGS_MODULE=adminstudio_django.settings
+      - DJANGO_SETTINGS_MODULE=adminstudio_django.settings.prod
     volumes:
       - .:/app
