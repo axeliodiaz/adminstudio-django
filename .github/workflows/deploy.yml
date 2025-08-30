@@ -1,4 +1,4 @@
-name: Deploy to EC2 via SSH
+name: Deploy to EC2 (Docker Compose)
 
 on:
   push:
@@ -12,6 +12,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare remote directory
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            set -e
+            mkdir -p "${{ secrets.EC2_PATH }}"
+            # chown si hiciera falta:
+            # sudo chown -R $USER:$USER "${{ secrets.EC2_PATH }}"
+
       - name: Upload project to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -20,13 +32,9 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           source: "."
           target: ${{ secrets.EC2_PATH }}
-          rm: true
           overwrite: true
-          strip_components: 0
-          exclude: |
-            .git*
-            node_modules
-            __pycache__
+          # 'rm' y 'exclude' removidos para evitar el error y el warning
+          # strip_components también innecesario
 
       - name: Build & Up via SSH (Docker Compose)
         uses: appleboy/ssh-action@v1.1.0
@@ -35,9 +43,26 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            set -e
-            cd ${{ secrets.EC2_PATH }}
+            set -euo pipefail
+            cd "${{ secrets.EC2_PATH }}"
+
+            echo "==> Versions"
+            docker --version
             docker compose version
-            docker compose down || true
+
+            echo "==> Recreate"
+            docker compose down --remove-orphans || true
             docker compose up -d --build
-            docker system prune -f
+
+            echo "==> Healthcheck"
+            for i in {1..30}; do
+              if curl -fsS http://localhost/healthcheck > /dev/null; then
+                echo "App healthy ✅"
+                exit 0
+              fi
+              sleep 3
+            done
+
+            echo "Healthcheck failed ❌ — last logs:"
+            docker compose logs --no-color --timestamps | tail -n 200
+            exit 1
