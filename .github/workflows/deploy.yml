@@ -7,14 +7,14 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Archive source (exclude .git)
+      - name: Archive source (git archive)
         run: |
-          tar --exclude=.git --exclude=.github -czf app.tar.gz .
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git archive --format=tar.gz -o app.tar.gz HEAD
 
       - name: Prepare remote directory
         uses: appleboy/ssh-action@v1.1.0
@@ -45,28 +45,13 @@ jobs:
           script: |
             set -euo pipefail
             cd "${{ secrets.EC2_PATH }}"
-
-            echo "==> Unpack"
-            tar -xzf app.tar.gz
-            rm -f app.tar.gz
-
-            echo "==> Versions"
-            docker --version
-            docker compose version
-
-            echo "==> Recreate"
+            tar -xzf app.tar.gz && rm -f app.tar.gz
             docker compose down --remove-orphans || true
             docker compose up -d --build
-
-            echo "==> Healthcheck"
             for i in {1..30}; do
               if curl -fsS http://localhost/healthcheck > /dev/null; then
-                echo "App healthy ✅"
-                exit 0
+                echo "App healthy ✅"; exit 0
               fi
               sleep 3
             done
-
-            echo "Healthcheck failed ❌ — last logs:"
-            docker compose logs --no-color --timestamps | tail -n 200
-            exit 1
+            echo "Healthcheck failed ❌"; docker compose logs --no-color --timestamps | tail -n 200; exit 1
