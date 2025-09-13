@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir -r requirements/prod.txt
 COPY . .
 
 # Collect static files (harmless if not configured)
-RUN python manage.py collectstatic --noinput || true
+RUN DJANGO_ENV=prod python manage.py collectstatic --noinput || true
 
 # Non-root user
 RUN adduser --disabled-password --gecos '' appuser
