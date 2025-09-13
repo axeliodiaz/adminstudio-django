@@ -31,8 +31,13 @@ THIRD_PARTY_APPS = [
 ]
 OWN_APPS = [
     "apps.healthcheck",
+    "apps.users",
+    "apps.riders",
 ]
 INSTALLED_APPS = CORE_APPS + THIRD_PARTY_APPS + OWN_APPS
+
+# Use custom user model
+AUTH_USER_MODEL = "users.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -99,3 +104,5 @@ REST_FRAMEWORK = {
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+DEFAULT_PASSWORD_LENGTH = 13
