@@ -1,11 +1,25 @@
 version: "3.9"
+
 services:
   web:
     build: .
-    command: gunicorn adminstudio_django.wsgi:application --bind 0.0.0.0:80
+    command: >
+      sh -c "
+      python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
+      gunicorn adminstudio_django.wsgi:application --bind 0.0.0.0:80
+      "
     ports:
       - "80:80"
     environment:
-      - DJANGO_SETTINGS_MODULE=adminstudio_django.settings.prod
+      DJANGO_SETTINGS_MODULE: adminstudio_django.settings.prod
     volumes:
-      - .:/app
+      - sqlite_data:/app/db.sqlite3
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/healthcheck || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  sqlite_data:
