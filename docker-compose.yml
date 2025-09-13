@@ -14,6 +14,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: adminstudio_django.settings.prod
       DJANGO_DEBUG: "False"
+      DJANGO_ENV: "prod"
     volumes:
       - sqlite_data:/app/db.sqlite3
     healthcheck:
