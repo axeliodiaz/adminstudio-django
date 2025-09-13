@@ -51,7 +51,7 @@ jobs:
             tar -xzf app.tar.gz && rm -f app.tar.gz
             docker compose down --remove-orphans || true
             docker compose up -d --build
-            for i in {1..30}; do
+            for i in {1..10}; do
               if curl -fsS http://localhost/healthcheck > /dev/null; then
                 echo "App healthy ✅"; exit 0
               fi
