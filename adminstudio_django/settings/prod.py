@@ -9,4 +9,4 @@ REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
 ]
 
 # Hosts can be provided via env; keep the one already used plus sane defaults
-ALLOWED_HOSTS = ALLOWED_HOSTS  # from base; override via DJANGO_ALLOWED_HOSTS
+ALLOWED_HOSTS += ["3.86.184.243"]  # from base; override via DJANGO_ALLOWED_HOSTS

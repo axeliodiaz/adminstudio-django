@@ -13,9 +13,7 @@ SECRET_KEY = os.environ.get(
 # Default: production-safe unless overridden in local.py
 DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in {"1", "true", "yes", "on"}
 
-ALLOWED_HOSTS = os.environ.get(
-    "DJANGO_ALLOWED_HOSTS", "3.86.184.243,localhost,127.0.0.1"
-).split(",")
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 # Application definition
 CORE_APPS = [
