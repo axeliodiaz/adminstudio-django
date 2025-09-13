@@ -1,4 +1,5 @@
 from adminstudio_django.settings.base import *  # noqa
+import os
 
 # Production overrides
 DEBUG = False
@@ -10,3 +11,9 @@ REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
 
 # Hosts can be provided via env; keep the one already used plus sane defaults
 ALLOWED_HOSTS += ["3.86.184.243"]  # from base; override via DJANGO_ALLOWED_HOSTS
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = "/static/"
+
+# Define a directory inside the container to collect static files
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
