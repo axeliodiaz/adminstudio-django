@@ -10,6 +10,7 @@ jobs:
     env:
       DJANGO_ENV: prod
       DJANGO_SETTINGS_MODULE: adminstudio_django.settings.prod
+      DJANGO_DEBUG: "False"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
