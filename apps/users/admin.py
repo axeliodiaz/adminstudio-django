@@ -31,11 +31,14 @@ class UserAdmin(DjangoUserAdmin):
             {
                 "classes": ("wide",),
                 "fields": (
-                    "password1",
-                    "password2",
+                    "username",
+                    "email",
                     "first_name",
                     "last_name",
-                    "phone",
+                    "phone_number",
+                    "gender",
+                    "password1",
+                    "password2",
                 ),
             },
         ),
