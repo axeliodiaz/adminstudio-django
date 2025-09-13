@@ -13,6 +13,7 @@ services:
       - "80:80"
     environment:
       DJANGO_SETTINGS_MODULE: adminstudio_django.settings.prod
+      DJANGO_DEBUG: "False"
     volumes:
       - sqlite_data:/app/db.sqlite3
     healthcheck:
