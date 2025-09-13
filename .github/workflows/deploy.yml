@@ -7,6 +7,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      DJANGO_ENV: prod
     steps:
       - name: Checkout
         uses: actions/checkout@v4
