@@ -3,3 +3,4 @@
 pre-commit==4.3.0
 drf-yasg==1.21.10
 setuptools==80.9.0
+black==25.9.0
