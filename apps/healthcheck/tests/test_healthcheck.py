@@ -1,9 +1,10 @@
+from unittest.mock import patch
+
+from django.db import connections
+from django.db.utils import OperationalError
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
-from django.db.utils import OperationalError
-from django.db import connections
-from unittest.mock import patch
 
 
 class HealthcheckTests(TestCase):

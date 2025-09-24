@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
 # Base directories
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -31,6 +31,8 @@ OWN_APPS = [
     "apps.healthcheck",
     "apps.users",
     "apps.riders",
+    "apps.verifications",
+    "apps.notifications",
 ]
 INSTALLED_APPS = CORE_APPS + THIRD_PARTY_APPS + OWN_APPS
 
@@ -76,9 +78,7 @@ DATABASES = {
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -104,3 +104,11 @@ REST_FRAMEWORK = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DEFAULT_PASSWORD_LENGTH = 13
+
+EMAIL_HOST = os.getenv("EMAIL_HOST", "sandbox.smtp.mailtrap.io")
+EMAIL_API_KEY = os.getenv("EMAIL_API_KEY")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "apikey")  # 'apikey' for Sendgrid
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+EMAIL_PORT = os.getenv("EMAIL_PORT", 2525)
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = "noreply<no_reply@domain.com>"

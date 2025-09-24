@@ -1,5 +1,6 @@
-from adminstudio_django.settings.base import *  # noqa
 import os
+
+from adminstudio_django.settings.base import *  # noqa
 
 # Production overrides
 DEBUG = False
