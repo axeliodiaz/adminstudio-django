@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 
 from apps.riders.models import Rider
 from apps.users.services import create_user
+from apps.verifications.services import create_verification_code
 
 User = get_user_model()
 
@@ -20,4 +21,5 @@ def create_rider_user(validated_data: dict) -> Rider:
         rider = Rider.objects.get(user=user)
     except Rider.DoesNotExist:
         rider = Rider.objects.create(user=user)
+        create_verification_code(user=rider.user)
     return rider
