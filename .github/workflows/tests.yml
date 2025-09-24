@@ -37,5 +37,6 @@ jobs:
       - name: Run tests
         env:
           DJANGO_DEBUG: "0"
+          DJANGO_ENV: "prod"
         run: |
           pytest -q
