@@ -13,3 +13,5 @@ class User(AbstractUser, SoftDeletableModel, UUIDModel, TimeStampedModel):
 
     phone_number = models.CharField(max_length=30, blank=True)
     gender = models.CharField(max_length=10, choices=GENDER, default=GENDER.other, blank=True)
+    birthdate = models.DateField(null=True, blank=True)
+    address = models.TextField(blank=True)
