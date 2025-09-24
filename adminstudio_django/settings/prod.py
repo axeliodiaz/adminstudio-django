@@ -19,7 +19,9 @@ STATIC_URL = "/static/"
 # Define a directory inside the container to collect static files
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
-DATABASES["default"] = {
-    "ENGINE": "django.db.backends.sqlite3",
-    "NAME": BASE_DIR / "db" / "db.sqlite3",
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.path.join("/data", "db.sqlite3"),
+    }
 }

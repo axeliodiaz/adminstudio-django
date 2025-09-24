@@ -19,17 +19,12 @@ RUN pip install --no-cache-dir -r requirements/prod.txt
 # Copy project
 COPY . .
 
+# Create the path for the DB
+RUN mkdir -p /data && chown -R 1000:1000 /data
+
 # Collect static files (harmless if not configured)
 RUN DJANGO_ENV=prod python manage.py collectstatic --noinput || true
 
-# Non-root user
-RUN adduser --disabled-password --gecos '' appuser
-USER appuser
-
 EXPOSE 80
 
-CMD ["gunicorn", "adminstudio_django.wsgi:application", \
-     "--bind", "0.0.0.0:80", \
-     "--workers", "3", \
-     "--threads", "2", \
-     "--timeout", "120"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn adminstudio_django.wsgi:application --bind 0.0.0.0:80 --workers 3 --threads 2 --timeout 120"]
