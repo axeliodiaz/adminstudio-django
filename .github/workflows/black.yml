@@ -1,4 +1,4 @@
-name: Ruff
+name: Black & isort
 
 on:
   push:
@@ -8,9 +8,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  ruff:
-    name: Ruff Lint
+  lint:
+    name: Check formatting (Black + isort)
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,13 +23,18 @@ jobs:
           cache: 'pip'
           cache-dependency-path: requirements.txt
 
-      - name: Install dependencies (including Ruff)
+      - name: Install Black & isort
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install black isort
 
-      - name: Show Ruff version
-        run: ruff --version
+      - name: Show versions
+        run: |
+          black --version
+          isort --version
 
-      - name: Run ruff check
-        run: ruff check .
+      - name: Run Black (check only)
+        run: black --check --diff .
+
+      - name: Run isort (check only)
+        run: isort --check-only --diff .
