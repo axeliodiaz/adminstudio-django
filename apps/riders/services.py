@@ -1,3 +1,5 @@
+import pdb
+
 from django.contrib.auth import get_user_model
 
 from apps.riders.models import Rider
@@ -15,11 +17,13 @@ def get_or_create_user(data: dict) -> User:
     return user
 
 
-def create_rider_user(validated_data: dict) -> Rider:
+def get_or_create_rider_user(validated_data: dict) -> tuple[Rider, bool]:
     user = get_or_create_user(validated_data)
+    created = False
     try:
         rider = Rider.objects.get(user=user)
     except Rider.DoesNotExist:
         rider = Rider.objects.create(user=user)
+        created = True
         create_verification_code(user=rider.user)
-    return rider
+    return rider, created
