@@ -15,3 +15,12 @@ def async_send_notifications(notifications):
         None: This function does not explicitly raise errors.
     """
     send_pending_emails(notifications)
+
+
+import time
+
+
+@shared_task
+def test_celery(name: str) -> str:
+    time.sleep(2)  # simula un trabajo pesado
+    return f"Hello {name}, Celery is working!"

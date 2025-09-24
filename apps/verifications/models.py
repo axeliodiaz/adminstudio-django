@@ -10,5 +10,5 @@ class VerificationCode(SoftDeletableModel, UUIDModel, TimeStampedModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="verification_codes"
     )
-    has_confirmed = models.BooleanField()
+    has_confirmed = models.BooleanField(default=False)
     expires_at = models.DateTimeField()
