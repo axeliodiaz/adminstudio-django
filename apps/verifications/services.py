@@ -1,6 +1,7 @@
 import random
 import string
 from datetime import datetime, timedelta, timezone
+from uuid import UUID
 
 from django.conf import settings
 
@@ -17,11 +18,14 @@ def validate_code(validation_code: VerificationCode) -> VerificationCode:
     return validation_code
 
 
-def send_email_verification(user: "users.User", verification_code: str):
+def send_email_verification(
+    user: "users.User", verification_uuid: str | UUID, verification_code: str
+):
     subject_email_verification = "Please confirm your subscription"
     message_email_verification = (
         f"Your verification code is: {verification_code} and expires in "
-        f"{settings.VERIFICATION_CODE_EXPIRATION_MINUTES} minutes."
+        f"{settings.VERIFICATION_CODE_EXPIRATION_MINUTES} minutes. "
+        f"UUID: {verification_uuid}"
     )
     create_notification(
         subject=subject_email_verification,
@@ -44,5 +48,5 @@ def create_verification_code(user: "users.User") -> VerificationCode:
     verification_code = VerificationCode.objects.create(
         user=user, code=random_code, expires_at=expiration_date
     )
-    send_email_verification(user, verification_code.code)
+    send_email_verification(user, verification_code.id, verification_code.code)
     return verification_code

@@ -3,7 +3,8 @@ from rest_framework import serializers
 
 class VerificationSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=6)
-    verification_code_uuid = serializers.UUIDField()
+    # UUID now comes from URL, keep optional for backward compatibility
+    verification_code_uuid = serializers.UUIDField(required=False)
     # Email is optional for now; included for potential future cross-checks
     email = serializers.EmailField(required=False)
 

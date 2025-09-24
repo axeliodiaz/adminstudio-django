@@ -15,7 +15,6 @@ from apps.verifications.models import VerificationCode
 class TestVerificationView:
     def setup_method(self):
         self.client = APIClient()
-        self.endpoint = reverse("verification")
 
     def test_successful_verification_activates_user_and_soft_deletes(
         self, inactive_user, verification_code
@@ -25,11 +24,11 @@ class TestVerificationView:
         assert verification_code.is_removed is False
 
         # Act
-        resp = self.client.post(
-            self.endpoint,
+        endpoint = reverse("verification", kwargs={"verification_uuid": str(verification_code.id)})
+        resp = self.client.patch(
+            endpoint,
             {
                 "code": verification_code.code,
-                "verification_code_uuid": str(verification_code.id),
             },
             format="json",
         )
@@ -48,11 +47,11 @@ class TestVerificationView:
         # Use a different 6-char code to avoid serializer max_length error
         wrong_last = "Z" if verification_code.code[-1] != "Z" else "Y"
         wrong_code = verification_code.code[:-1] + wrong_last
-        resp = self.client.post(
-            self.endpoint,
+        endpoint = reverse("verification", kwargs={"verification_uuid": str(verification_code.id)})
+        resp = self.client.patch(
+            endpoint,
             {
                 "code": wrong_code,  # wrong but same length
-                "verification_code_uuid": str(verification_code.id),
             },
             format="json",
         )
@@ -74,11 +73,11 @@ class TestVerificationView:
             expires_at=timezone.now() - timedelta(minutes=1),  # already expired
         )
 
-        resp = self.client.post(
-            self.endpoint,
+        endpoint = reverse("verification", kwargs={"verification_uuid": str(vc.id)})
+        resp = self.client.patch(
+            endpoint,
             {
                 "code": vc.code,
-                "verification_code_uuid": str(vc.id),
             },
             format="json",
         )
@@ -95,11 +94,11 @@ class TestVerificationView:
             expires_at=timezone.now() + timedelta(minutes=5),
         )
 
-        resp = self.client.post(
-            self.endpoint,
+        endpoint = reverse("verification", kwargs={"verification_uuid": str(vc.id)})
+        resp = self.client.patch(
+            endpoint,
             {
                 "code": vc.code,
-                "verification_code_uuid": str(vc.id),
             },
             format="json",
         )
@@ -116,11 +115,11 @@ class TestVerificationView:
             expires_at=timezone.now() + timedelta(minutes=5),
         )
 
-        resp = self.client.post(
-            self.endpoint,
+        endpoint = reverse("verification", kwargs={"verification_uuid": str(vc.id)})
+        resp = self.client.patch(
+            endpoint,
             {
                 "code": vc.code,
-                "verification_code_uuid": str(vc.id),
             },
             format="json",
         )
