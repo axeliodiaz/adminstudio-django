@@ -14,16 +14,17 @@ class VerificationView(APIView):
     authentication_classes = []
     permission_classes = []
 
-    def post(self, request, *args, **kwargs):
+    # Accept PATCH to verify code using UUID from URL and code from body (email not required)
+    def patch(self, request, *args, **kwargs):
         serializer = VerificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         code = serializer.validated_data["code"]
-        verification_code_uuid = serializer.validated_data["verification_code_uuid"]
+        verification_uuid = kwargs.get("verification_uuid")
         now = datetime.datetime.now(tz=datetime.timezone.utc)
 
         try:
             vc = VerificationCode.objects.get(
-                id=verification_code_uuid,
+                id=verification_uuid,
                 code=code,
                 is_removed=False,
                 expires_at__gt=now,
@@ -34,8 +35,13 @@ class VerificationView(APIView):
                 {"detail": constants.EMAIL_VERIFICATION_INVALID_CODE_MESSAGE},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
         validate_code(vc)
 
         return Response(
             {"detail": constants.EMAIL_VERIFICATION_SUCCESS_MESSAGE}, status=status.HTTP_200_OK
         )
+
+    # Also support PUT for idempotent verification with same logic
+    def put(self, request, *args, **kwargs):
+        return self.patch(request, *args, **kwargs)
