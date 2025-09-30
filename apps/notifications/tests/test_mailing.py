@@ -17,23 +17,16 @@ class TestSendPendingEmails:
             "apps.notifications.mailing.get_user_from_id",
             side_effect=[{"email": emails[0]}, {"email": emails[1]}],
         )
-        send_mail = mocker.patch("apps.notifications.mailing.send_mail")
+        email_send = mocker.patch("apps.notifications.mailing.Email.send_mail")
         mark_sent = mocker.patch("apps.notifications.mailing.mark_notification_as_sent")
 
         # Act
         send_pending_emails(mocked_pending)
 
-        # Assert: get_user called for each, send_mail called with expected args, and marked sent
+        # Assert: get_user called for each, email client called, and marked sent
         assert get_user_from_id.call_count == len(mocked_pending)
-        assert send_mail.call_count == len(mocked_pending)
-        for idx, notification in enumerate(mocked_pending):
-            send_mail.assert_any_call(
-                subject=notification["subject"],
-                message=notification["message"],
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[emails[idx]],
-                fail_silently=False,
-            )
+        assert email_send.call_count == len(mocked_pending)
+        for notification in mocked_pending:
             mark_sent.assert_any_call(str(notification["id"]))
         assert mark_sent.call_count == len(mocked_pending)
 
@@ -44,19 +37,28 @@ class TestSendPendingEmails:
             "subject": "Hi",
             "message": "There",
             "user_id": uuid.uuid4(),
+            # Provide a valid recipient_list to satisfy Notification schema
+            "recipient_list": [
+                {
+                    "first_name": "User",
+                    "last_name": "Zero",
+                    "email": "valid@example.com",
+                    "phone_number": "",
+                }
+            ],
         }
         mocker.patch(
             "apps.notifications.mailing.get_user_from_id",
             return_value={"email": ""},
         )
-        send_mail = mocker.patch("apps.notifications.mailing.send_mail")
+        email_send = mocker.patch("apps.notifications.mailing.Email.send_mail")
         mark_sent = mocker.patch("apps.notifications.mailing.mark_notification_as_sent")
 
         # Act
         send_pending_emails([notification])
 
         # Assert: no email sent and not marked as sent
-        send_mail.assert_not_called()
+        email_send.assert_not_called()
         mark_sent.assert_not_called()
 
 

@@ -35,12 +35,22 @@ class TestCreateNotification:
 class TestGetPendingNotifications:
     """Tests for the get_pending_notifications function."""
 
+    @pytest.mark.django_db
     def test_get_pending_notifications_transforms_to_schema(self, mocker, mocked_pending):
         """Test that the get_pending_notifications function transforms to schema."""
         # Arrange
         get_pending_mock = mocker.patch(
             "apps.notifications.notifications.get_pending_notifications",
             return_value=mocked_pending,
+        )
+        mocker.patch(
+            "apps.notifications.services.get_user_from_id",
+            return_value={
+                "first_name": "Test",
+                "last_name": "User",
+                "email": "test@example.com",
+                "phone_number": "",
+            },
         )
 
         # Act

@@ -11,7 +11,7 @@ def notification():
         "notifications.Notification",
         subject="Test Subject",
         message="Test Message",
-        user=baker.make("users.User"),
+        user=baker.make("users.User", email="user@example.com"),
     )
     return notification
 
@@ -24,12 +24,28 @@ def mocked_pending():
             "subject": "Hello",
             "message": "World",
             "user_id": uuid.uuid4(),
+            "recipient_list": [
+                {
+                    "first_name": "User",
+                    "last_name": "One",
+                    "email": "user1@example.com",
+                    "phone_number": "",
+                }
+            ],
         },
         {
             "id": uuid.uuid4(),
             "subject": "Foo",
             "message": "Bar",
             "user_id": uuid.uuid4(),
+            "recipient_list": [
+                {
+                    "first_name": "User",
+                    "last_name": "Two",
+                    "email": "user2@example.com",
+                    "phone_number": "",
+                }
+            ],
         },
     ]
 
