@@ -7,7 +7,7 @@ def validated_registration_data():
         "email": "john.doe@example.com",
         "first_name": "John",
         "last_name": "Doe",
-        "phone": "+123456789",
+        "phone_number": "+123456789",
         "password": "should_be_ignored",
     }
 

@@ -13,6 +13,7 @@ def get_or_create_user(data: dict) -> User:
     try:
         user = User.objects.get(email=data["email"])
     except User.DoesNotExist:
+        # apps.users.services.create_user now supports optional password
         user = create_user(data)
     return user
 
