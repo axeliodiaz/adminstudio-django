@@ -1,0 +1,3 @@
+MAIL_CLIENT_SENDGRID = "sendgrid"
+MAIL_CLIENT_RESEND = "resend"
+MAIL_CLIENT_DEFAULT = "default"

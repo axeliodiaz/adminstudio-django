@@ -3,6 +3,8 @@ from django.contrib.auth import get_user_model
 from apps.notifications import notifications
 from apps.notifications.schemas import Notification as NotificationSchema
 from apps.notifications.tasks import async_send_notifications
+from apps.users.schemas import UserSchema
+from apps.users.services import get_user_from_id
 
 User = get_user_model()
 
@@ -46,4 +48,9 @@ def get_pending_notifications() -> list[NotificationSchema]:
         the pending notifications.
     """
     pending_notifications = notifications.get_pending_notifications()
-    return [NotificationSchema(**notification) for notification in pending_notifications]
+    notifications_list = []
+    for notification in pending_notifications:
+        user = get_user_from_id(notification["user_id"])
+        notification["recipient_list"] = [UserSchema(**user).model_dump()]
+        notifications_list.append(NotificationSchema(**notification))
+    return notifications_list

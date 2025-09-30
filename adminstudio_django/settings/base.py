@@ -111,8 +111,10 @@ EMAIL_API_KEY = os.getenv("EMAIL_API_KEY")
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "apikey")  # 'apikey' for Sendgrid
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_PORT = os.getenv("EMAIL_PORT", 2525)
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = "noreply<no_reply@domain.com>"
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False").lower() in {"1", "true", "yes", "on"}
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
 VERIFICATION_CODE_EXPIRATION_MINUTES = 5
 
