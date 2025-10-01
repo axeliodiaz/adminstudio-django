@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 
 from apps.instructors.models import Instructor
+from apps.instructors.schemas import InstructorSchema
 from apps.users.services import create_user
 from apps.verifications.services import create_verification_code
 
@@ -48,3 +50,12 @@ def get_or_create_instructor_user(validated_data: dict) -> tuple[Instructor, boo
     user = get_or_create_user(validated_data)
     instructor, created = Instructor.objects.get_or_create(user=user)
     return instructor, created
+
+
+def get_instructor_by_id(pk) -> dict:
+    """Return an InstructorSchema as dict by primary key or raise ObjectDoesNotExist with a friendly message."""
+    try:
+        instructor = Instructor.objects.get(pk=pk)
+    except Instructor.DoesNotExist as exc:
+        raise ObjectDoesNotExist("Instructor not found.") from exc
+    return InstructorSchema.model_validate(instructor).model_dump()
