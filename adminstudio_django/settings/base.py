@@ -34,6 +34,7 @@ OWN_APPS = [
     "apps.verifications",
     "apps.notifications",
     "apps.instructors",
+    "apps.studios",
 ]
 INSTALLED_APPS = CORE_APPS + THIRD_PARTY_APPS + OWN_APPS
 

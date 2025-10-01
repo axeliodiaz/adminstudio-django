@@ -1,0 +1,14 @@
+[
+{
+  "model": "studios.studio",
+  "pk": "dba69187-3362-48c8-92b9-aeb02d76103e",
+  "fields": {
+    "created": "2025-10-01T15:56:12.841Z",
+    "modified": "2025-10-01T15:56:12.841Z",
+    "is_removed": false,
+    "name": "AndinoAndamos",
+    "address": "Patio Andino",
+    "is_active": false
+  }
+}
+]
