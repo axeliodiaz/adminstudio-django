@@ -4,6 +4,7 @@ import uuid
 
 import pytest
 from django.urls import reverse
+from rest_framework import status
 from rest_framework.test import APIClient
 
 
@@ -12,7 +13,7 @@ class TestStudioViewSet:
     def test_list_studios(self, studio, empty_studio):
         client = APIClient()
         resp = client.get(reverse("studio-list"))
-        assert resp.status_code == 200
+        assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert isinstance(data, list)
         # Should include both studios
@@ -30,7 +31,7 @@ class TestStudioViewSet:
     def test_retrieve_studio(self, studio):
         client = APIClient()
         resp = client.get(reverse("studio-detail", args=[studio.id]))
-        assert resp.status_code == 200
+        assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert data["id"] == str(studio.id)
         assert data["name"] == studio.name
@@ -40,7 +41,7 @@ class TestStudioViewSet:
     def test_retrieve_studio_404(self):
         client = APIClient()
         resp = client.get(reverse("studio-detail", args=[uuid.uuid4()]))
-        assert resp.status_code == 404
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestRoomViewSet:
@@ -48,7 +49,7 @@ class TestRoomViewSet:
     def test_list_rooms(self, room, extra_room):
         client = APIClient()
         resp = client.get(reverse("room-list"))
-        assert resp.status_code == 200
+        assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert isinstance(data, list)
         ids = {item["id"] for item in data}
@@ -63,7 +64,7 @@ class TestRoomViewSet:
     def test_retrieve_room(self, room):
         client = APIClient()
         resp = client.get(reverse("room-detail", args=[room.id]))
-        assert resp.status_code == 200
+        assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert data["id"] == str(room.id)
         assert data["name"] == room.name
@@ -73,4 +74,4 @@ class TestRoomViewSet:
     def test_retrieve_room_404(self):
         client = APIClient()
         resp = client.get(reverse("room-detail", args=[uuid.uuid4()]))
-        assert resp.status_code == 404
+        assert resp.status_code == status.HTTP_404_NOT_FOUND

@@ -4,6 +4,7 @@ from django.db import connections
 from django.db.utils import OperationalError
 from django.test import TestCase
 from django.urls import reverse
+from rest_framework import status
 from rest_framework.test import APIClient
 
 
@@ -15,7 +16,7 @@ class HealthcheckTests(TestCase):
     def test_healthcheck_ok(self):
         # When DB is accessible, it should return 200 and status ok
         resp = self.client.get(self.url)
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         data = resp.json()
         self.assertEqual(data.get("status"), "ok")
         self.assertIn("checks", data)
@@ -29,7 +30,7 @@ class HealthcheckTests(TestCase):
             connections["default"], "cursor", side_effect=OperationalError("db down")
         ):
             resp = self.client.get(self.url)
-        self.assertEqual(resp.status_code, 503)
+        self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
         data = resp.json()
         self.assertEqual(data.get("status"), "error")
         self.assertIn("checks", data)
@@ -40,4 +41,4 @@ class HealthcheckTests(TestCase):
     def test_anonymous_access_allowed(self):
         # APIClient without credentials should work
         resp = self.client.get(self.url)
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)

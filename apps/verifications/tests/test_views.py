@@ -6,6 +6,7 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 from model_bakery import baker
+from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.verifications.models import VerificationCode
@@ -34,7 +35,7 @@ class TestVerificationView:
         )
 
         # Assert
-        assert resp.status_code == 200
+        assert resp.status_code == status.HTTP_200_OK
         assert resp.json()["detail"] == "Email verified successfully."
 
         inactive_user.refresh_from_db()
@@ -57,7 +58,7 @@ class TestVerificationView:
         )
 
         # Assert
-        assert resp.status_code == 400
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.json()["detail"] == "Invalid verification code."
         inactive_user.refresh_from_db()
         verification_code.refresh_from_db()
@@ -82,7 +83,7 @@ class TestVerificationView:
             format="json",
         )
 
-        assert resp.status_code == 400
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.json()["detail"] == "Invalid verification code."
 
     def test_removed_code_returns_400(self, inactive_user):
@@ -103,7 +104,7 @@ class TestVerificationView:
             format="json",
         )
 
-        assert resp.status_code == 400
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.json()["detail"] == "Invalid verification code."
 
     def test_already_confirmed_returns_400(self, inactive_user):
@@ -124,5 +125,5 @@ class TestVerificationView:
             format="json",
         )
 
-        assert resp.status_code == 400
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
         assert resp.json()["detail"] == "Invalid verification code."
