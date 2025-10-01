@@ -55,9 +55,9 @@ class TestRoomViewSet:
         assert str(room.id) in ids
         assert str(extra_room.id) in ids
         sample = data[0]
-        assert set(
-            ["id", "studio", "name", "capacity", "is_active", "created", "modified"]
-        ).issubset(sample.keys())
+        assert {"id", "studio", "name", "capacity", "is_active", "created", "modified"}.issubset(
+            sample.keys()
+        )
 
     @pytest.mark.django_db
     def test_retrieve_room(self, room):
