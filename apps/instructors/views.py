@@ -11,9 +11,6 @@ from apps.instructors.services import get_or_create_instructor_user
 class InstructorRegistrationView(APIView):
     """Instructor registration view."""
 
-    authentication_classes = []
-    permission_classes = []
-
     def post(self, request, *args, **kwargs):
         """Handle POST request."""
         serializer = InstructorSerializer(data=request.data)
