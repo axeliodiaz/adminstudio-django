@@ -1,0 +1,53 @@
+from __future__ import annotations
+
+from datetime import datetime
+from uuid import UUID
+
+from apps.instructors.services import get_instructor_by_id
+from apps.schedules import constants
+from apps.schedules.models import Schedule
+from apps.studios.services import get_room as get_room_by_id
+
+
+def get_schedules_list():
+    """Return queryset of schedules ordered by start_time.
+
+    This helper replaces direct usages of Schedule.objects.all().order_by("start_time").
+    """
+    return Schedule.objects.all().order_by("start_time")
+
+
+def create_schedule(
+    *,
+    instructor_id: UUID,
+    start_time: datetime,
+    duration_minutes: int,
+    room_id: UUID,
+    status: str,
+) -> Schedule:
+    """Create and return a Schedule model instance.
+
+    Raises
+    - ValueError: If the status value is invalid or duration is non-positive.
+    - ObjectDoesNotExist: If the referenced Instructor or Room does not exist.
+    """
+    if status not in constants.SCHEDULE_STATUSES:
+        raise ValueError("Invalid schedule status.")
+    if duration_minutes <= 0:
+        raise ValueError("duration_minutes must be a positive integer.")
+
+    # Validate instructor existence using service (returns schema dict)
+    _ = get_instructor_by_id(instructor_id)
+
+    # Validate room existence using service (returns schema object)
+    _ = get_room_by_id(room_id)
+
+    schedule = Schedule.objects.create(
+        instructor_id=instructor_id,
+        start_time=start_time,
+        duration_minutes=duration_minutes,
+        room_id=room_id,
+        status=status,
+    )
+
+    return schedule

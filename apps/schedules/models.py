@@ -2,33 +2,33 @@ from django.db import models
 from model_utils.models import SoftDeletableModel, TimeStampedModel, UUIDModel
 
 from apps.instructors.models import Instructor
-from apps.sessions import constants
-from apps.studios.models import StudioRoom
+from apps.schedules import constants
+from apps.studios.models import Room
 
 
-class Session(UUIDModel, SoftDeletableModel, TimeStampedModel):
+class Schedule(UUIDModel, SoftDeletableModel, TimeStampedModel):
     STATUS = [
-        (constants.SESSION_STATUS_DRAFT, "Draft"),
-        (constants.SESSION_STATUS_SCHEDULED, "Scheduled"),
-        (constants.SESSION_STATUS_COMPLETED, "Completed"),
-        (constants.SESSION_STATUS_CANCELED, "Canceled"),
+        (constants.SCHEDULE_STATUS_DRAFT, "Draft"),
+        (constants.SCHEDULE_STATUS_SCHEDULED, "Scheduled"),
+        (constants.SCHEDULE_STATUS_COMPLETED, "Completed"),
+        (constants.SCHEDULE_STATUS_CANCELED, "Canceled"),
     ]
     instructor = models.ForeignKey(
         Instructor,
         on_delete=models.CASCADE,
-        related_name="sessions",
+        related_name="schedules",
     )
     start_time = models.DateTimeField()
     duration_minutes = models.PositiveIntegerField(default=45)
     room = models.ForeignKey(
-        StudioRoom,
+        Room,
         on_delete=models.CASCADE,
-        related_name="sessions",
+        related_name="schedules",
     )
     status = models.CharField(
         max_length=20,
         choices=STATUS,
-        default=constants.SESSION_STATUS_DRAFT,
+        default=constants.SCHEDULE_STATUS_DRAFT,
     )
 
     class Meta:
