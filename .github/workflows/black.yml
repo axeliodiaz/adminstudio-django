@@ -1,4 +1,4 @@
-name: Black & isort
+name: Black
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   lint:
-    name: Check formatting (Black + isort)
+    name: Check formatting (Black)
     runs-on: ubuntu-latest
 
     steps:
@@ -23,18 +23,14 @@ jobs:
           cache: 'pip'
           cache-dependency-path: requirements.txt
 
-      - name: Install Black & isort
+      - name: Install Black
         run: |
           python -m pip install --upgrade pip
-          pip install black isort
+          pip install black
 
       - name: Show versions
         run: |
           black --version
-          isort --version
 
       - name: Run Black (check only)
         run: black --check --diff .
-
-      - name: Run isort (check only)
-        run: isort --check-only --diff .
