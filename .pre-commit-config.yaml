@@ -1,13 +1,8 @@
 # Pre-commit configuration for this repository
-# Runs Black and isort for formatting on commit
+# Runs Black for formatting on commit
 
 repos:
   - repo: https://github.com/psf/black
     rev: 24.8.0
     hooks:
       - id: black
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
