@@ -1,61 +1,78 @@
-from django.contrib.auth import get_user_model
+"""View-facing services for the instructors app.
+
+Expose functions that return schemas or simple dicts for consumption by views.
+Core business logic lives in apps.instructors.instructors.
+"""
+
+from typing import Tuple
+
 from django.core.exceptions import ObjectDoesNotExist
 
-from apps.instructors.models import Instructor
+from apps.instructors.instructors import get_instructor_from_id
+from apps.instructors.instructors import (
+    get_or_create_instructor_user as _get_or_create_instructor_user,
+)
+from apps.instructors.instructors import instructors_queryset
 from apps.instructors.schemas import InstructorSchema
-from apps.users.services import create_user
-from apps.verifications.services import create_verification_code
-
-User = get_user_model()
+from apps.users.schemas import UserSchema
 
 
-def get_or_create_user(data: dict) -> User:
-    """
-    Retrieves an existing user by email or creates a new user using the provided data.
-
-    The function first attempts to retrieve a user matching the specified email address.
-    If no such user exists, it creates a new user based on the provided data dictionary.
-
-    Parameters:
-        data (dict): A dictionary containing user-related information. The dictionary
-            must include at least an 'email' key to perform the lookup.
-
-    Returns:
-        User: The existing or newly created User instance.
-    """
-    try:
-        user = User.objects.get(email=data["email"])
-    except User.DoesNotExist:
-        user = create_user(data)
-    return user
-
-
-def get_or_create_instructor_user(validated_data: dict) -> tuple[Instructor, bool]:
-    """
-    Gets an existing instructor or creates one based on provided validated data.
-
-    This function retrieves an existing instructor or creates a new one by utilizing the
-    `validated_data`. It first ensures the associated user exists and then either retrieves
-    or creates the instructor. If a new instructor is created, a verification code is
-    generated for the associated user.
+def get_or_create_instructor_user(validated_data: dict) -> Tuple[dict, bool]:
+    """Create or fetch an Instructor and return user schema dict for views.
 
     Args:
-        validated_data (dict): The validated data required to create or fetch the user
-        and instructor.
+        validated_data: Validated input data used to create/find the associated user.
 
     Returns:
-        tuple[Instructor, bool]: A tuple containing the retrieved or newly created
-        Instructor object and a boolean indicating whether it was created.
+        (data, created): Tuple where `data` is a dict produced by UserSchema
+        for the related user, and `created` indicates if the instructor was created.
     """
-    user = get_or_create_user(validated_data)
-    instructor, created = Instructor.objects.get_or_create(user=user)
-    return instructor, created
+    instructor, created = _get_or_create_instructor_user(validated_data)
+    data = UserSchema.model_validate(instructor.user).model_dump()
+    return data, created
 
 
 def get_instructor_by_id(pk) -> dict:
     """Return an InstructorSchema as dict by primary key or raise ObjectDoesNotExist with a friendly message."""
     try:
-        instructor = Instructor.objects.get(pk=pk)
-    except Instructor.DoesNotExist as exc:
+        instructor = get_instructor_from_id(pk)
+    except ObjectDoesNotExist as exc:
         raise ObjectDoesNotExist("Instructor not found.") from exc
+    return InstructorSchema.model_validate(instructor).model_dump()
+
+
+def get_instructors_list() -> list[dict]:
+    """Return a list of InstructorSchema dicts for all instructors."""
+    return [InstructorSchema.model_validate(obj).model_dump() for obj in instructors_queryset()]
+
+
+def update_instructor(pk, validated_data: dict, *, partial: bool = False) -> dict:
+    """Update an instructor's related user fields and return InstructorSchema dict.
+
+    Args:
+        pk: Instructor primary key.
+        validated_data: Data already validated by the view serializer.
+        partial: Whether this is a partial update (PATCH). Note: since data is already
+            validated and we only set provided fields, behavior is naturally partial.
+
+    Returns:
+        dict: InstructorSchema as dict after applying updates.
+    """
+    # Will raise ObjectDoesNotExist("Instructor not found.") if missing
+    instructor = get_instructor_from_id(pk)
+    user = instructor.user
+
+    # Only update allowed fields and only those provided in validated_data
+    updatable_fields = {"first_name", "last_name", "email", "phone_number", "birthdate", "address"}
+    update_fields: list[str] = []
+
+    for field in updatable_fields:
+        if field in validated_data:
+            setattr(user, field, validated_data[field])
+            update_fields.append(field)
+
+    if update_fields:
+        user.save(update_fields=update_fields)  # type: ignore[arg-type]
+
+    # Return the instructor schema payload
     return InstructorSchema.model_validate(instructor).model_dump()

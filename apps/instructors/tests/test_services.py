@@ -7,7 +7,18 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 
 from apps.instructors.models import Instructor
-from apps.instructors.services import get_instructor_by_id
+from apps.instructors.services import get_instructor_by_id, get_or_create_instructor_user
+
+
+@pytest.fixture
+def validated_registration_data():
+    return {
+        "email": "jane.doe@example.com",
+        "first_name": "Jane",
+        "last_name": "Doe",
+        "phone_number": "+198765432",
+        "password": "ignored_password",
+    }
 
 
 @pytest.mark.django_db
@@ -40,3 +51,37 @@ class TestGetInstructorById:
         with pytest.raises(ObjectDoesNotExist) as exc:
             get_instructor_by_id(uuid.uuid4())
         assert str(exc.value) == "Instructor not found."
+
+
+@pytest.mark.django_db
+class TestGetOrCreateInstructorUser:
+    def test_creates_instructor_and_returns_user_schema_dict(self, validated_registration_data):
+        # Act
+        data, created = get_or_create_instructor_user(validated_registration_data)
+
+        # Assert: created and payload matches UserSchema fields
+        assert created is True
+        assert set(data.keys()) == {"first_name", "last_name", "email", "phone_number"}
+        assert data["email"] == validated_registration_data["email"]
+        assert data["first_name"] == validated_registration_data["first_name"]
+        assert data["last_name"] == validated_registration_data["last_name"]
+        assert data["phone_number"] == validated_registration_data["phone_number"]
+        # Ensure an Instructor was created and linked to the created user
+        assert Instructor.objects.count() == 1
+
+    def test_returns_existing_instructor_and_created_false_on_second_call(
+        self, validated_registration_data
+    ):
+        # Arrange: first call creates the instructor
+        _data, created_first = get_or_create_instructor_user(validated_registration_data)
+        assert created_first is True
+
+        # Act: second call with same email should fetch existing
+        data, created_second = get_or_create_instructor_user(validated_registration_data)
+
+        # Assert
+        assert created_second is False
+        assert Instructor.objects.count() == 1
+        # Data should still be the same schema dict for the user
+        assert set(data.keys()) == {"first_name", "last_name", "email", "phone_number"}
+        assert data["email"] == validated_registration_data["email"]
