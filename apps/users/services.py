@@ -60,3 +60,12 @@ def get_user_from_id(id: str | UUID) -> dict[str, str | int]:
     """
     user = get_object_or_404(User, id=id)
     return UserSchema.model_validate(user).model_dump()
+
+
+def get_or_create_user(data: dict) -> User:
+    try:
+        user = User.objects.get(email=data["email"])
+    except User.DoesNotExist:
+        # apps.users.services.create_user now supports optional password
+        user = create_user(data)
+    return user

@@ -30,7 +30,7 @@ THIRD_PARTY_APPS = [
 OWN_APPS = [
     "apps.healthcheck",
     "apps.users",
-    "apps.riders",
+    "apps.members",
     "apps.verifications",
     "apps.notifications",
     "apps.instructors",
