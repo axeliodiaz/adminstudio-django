@@ -7,3 +7,6 @@ class Instructor(SoftDeletableModel, UUIDModel, TimeStampedModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="instructor"
     )
+
+    def __str__(self):
+        return self.user.username
