@@ -9,12 +9,16 @@ from apps.schedules.models import Schedule
 from apps.studios.services import get_room as get_room_by_id
 
 
-def get_schedules_list():
+def get_schedules_list(*, start_time: datetime | None = None):
     """Return queryset of schedules ordered by start_time.
 
+    Optionally filter by exact start_time when provided.
     This helper replaces direct usages of Schedule.objects.all().order_by("start_time").
     """
-    return Schedule.objects.all().order_by("start_time")
+    qs = Schedule.objects.all()
+    if start_time is not None:
+        qs = qs.filter(start_time__gte=start_time)
+    return qs.order_by("start_time")
 
 
 def create_schedule(

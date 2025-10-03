@@ -41,6 +41,9 @@ def to_schedule_schema_list(items: Iterable) -> List[ScheduleSchema]:
     return [ScheduleSchema.model_validate(obj) for obj in items]
 
 
-def get_schedule_schema_list() -> List[ScheduleSchema]:
-    """Fetch schedules ordered by start_time and return as list of ScheduleSchema."""
-    return to_schedule_schema_list(get_schedules_list())
+def get_schedule_schema_list(*, start_time: datetime | None = None) -> List[ScheduleSchema]:
+    """Fetch schedules ordered by start_time and return as list of ScheduleSchema.
+
+    If start_time is provided, filter schedules by exact start_time.
+    """
+    return to_schedule_schema_list(get_schedules_list(start_time=start_time))
