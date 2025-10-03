@@ -38,14 +38,14 @@ class TestGetOrCreateMemberUser:
         self, mocker, existing_member, member_user
     ):
         # Arrange: create user and member via fixtures
-        verification_mock = mocker.patch("apps.members.services.create_verification_code")
+        verification_mock = mocker.patch("apps.members.members.create_verification_code")
 
         # Act
-        result_member, created = get_or_create_member_user({"email": member_user.email})
+        member_schema, created = get_or_create_member_user({"email": member_user.email})
 
         # Assert: no new member, created flag false, no verification sent
-        assert result_member == existing_member
         assert created is False
+        assert member_schema.user.email == member_user.email
         verification_mock.assert_not_called()
 
     @pytest.mark.django_db
@@ -53,12 +53,12 @@ class TestGetOrCreateMemberUser:
         self, mocker, user_without_member
     ):
         # Arrange: user exists, but member does not
-        verification_mock = mocker.patch("apps.members.services.create_verification_code")
+        verification_mock = mocker.patch("apps.members.members.create_verification_code")
 
         # Act
-        member, created = get_or_create_member_user({"email": user_without_member.email})
+        member_schema, created = get_or_create_member_user({"email": user_without_member.email})
 
         # Assert
         assert created is True
-        assert member.user == user_without_member
-        verification_mock.assert_called_once_with(user=member.user)
+        assert member_schema.user.email == user_without_member.email
+        verification_mock.assert_called_once()

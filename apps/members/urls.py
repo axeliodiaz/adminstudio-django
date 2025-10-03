@@ -1,7 +1,7 @@
 from django.urls import path
 
-from apps.members.views import MemberRegistrationView
+from apps.members.views import MemberView
 
 urlpatterns = [
-    path("register/", MemberRegistrationView.as_view(), name="member-register"),
+    path("register/", MemberView.as_view({"post": "create"}), name="member-register"),
 ]
