@@ -11,11 +11,9 @@ from django.utils.dateparse import parse_datetime
 class ScheduleViewSet(viewsets.ViewSet):
     """Minimal viewset for schedules: list, retrieve, create."""
 
-    def list(self, request):
-        start_time_str = request.query_params.get("start_time")
-        start_time = None
-        if start_time_str:
-            start_time = parse_datetime(start_time_str)
+    def _get_start_time_params(self, start_time: str | None = None):
+        if start_time:
+            start_time = parse_datetime(start_time)
             if start_time is None:
                 return Response(
                     {
@@ -23,9 +21,18 @@ class ScheduleViewSet(viewsets.ViewSet):
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+        return start_time
 
-        # Use service-layer query and schema conversion
-        schemas = get_schedule_schema_list(start_time=start_time)
+    def list(self, request):
+        start_time_str = request.query_params.get("start_time")
+        start_time = self._get_start_time_params(start_time_str)
+        if isinstance(start_time, Response):
+            return start_time
+        instructor_username = request.query_params.get("instructor")
+        room_name = request.query_params.get("room_name")
+        schemas = get_schedule_schema_list(
+            start_time=start_time, instructor_username=instructor_username, room_name=room_name
+        )
         data = [s.model_dump() for s in schemas]
         return Response(data)
 

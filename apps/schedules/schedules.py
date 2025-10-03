@@ -9,15 +9,24 @@ from apps.schedules.models import Schedule
 from apps.studios.services import get_room as get_room_by_id
 
 
-def get_schedules_list(*, start_time: datetime | None = None):
+def get_schedules_list(
+    *,
+    start_time: datetime | None = None,
+    instructor_username: str | None = None,
+    room_name: str | None = None,
+):
     """Return queryset of schedules ordered by start_time.
 
-    Optionally filter by exact start_time when provided.
+    Optionally filter by start_time (>= provided value), by instructor username, and/or by room name when provided.
     This helper replaces direct usages of Schedule.objects.all().order_by("start_time").
     """
     qs = Schedule.objects.all()
     if start_time is not None:
         qs = qs.filter(start_time__gte=start_time)
+    if instructor_username:
+        qs = qs.filter(instructor__user__username__icontains=instructor_username)
+    if room_name:
+        qs = qs.filter(room__name__icontains=room_name)
     return qs.order_by("start_time")
 
 
