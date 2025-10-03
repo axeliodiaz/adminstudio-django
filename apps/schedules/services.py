@@ -37,10 +37,22 @@ def create_schedule(
 
 
 def to_schedule_schema_list(items: Iterable) -> List[ScheduleSchema]:
-    """Convert an iterable of Schedule model instances to a list of ScheduleSchema."""
+    """Convert iterable of Schedule model instances to a list of ScheduleSchema."""
     return [ScheduleSchema.model_validate(obj) for obj in items]
 
 
-def get_schedule_schema_list() -> List[ScheduleSchema]:
-    """Fetch schedules ordered by start_time and return as list of ScheduleSchema."""
-    return to_schedule_schema_list(get_schedules_list())
+def get_schedule_schema_list(
+    *,
+    start_time: datetime | None = None,
+    instructor_username: str | None = None,
+    room_name: str | None = None,
+) -> List[ScheduleSchema]:
+    """Fetch schedules ordered by start_time and return as list of ScheduleSchema.
+
+    If start_time is provided, filter schedules by start_time (>= provided). Optionally filter by instructor username and/or room name.
+    """
+    return to_schedule_schema_list(
+        get_schedules_list(
+            start_time=start_time, instructor_username=instructor_username, room_name=room_name
+        )
+    )
