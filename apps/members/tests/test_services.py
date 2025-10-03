@@ -9,7 +9,7 @@ class TestGetOrCreateUser:
     @pytest.mark.django_db
     def test_returns_existing_user_without_creating(self, mocker, existing_user):
         # Arrange: existing user with given email
-        create_user_mock = mocker.patch("apps.members.services.create_user")
+        create_user_mock = mocker.patch("apps.users.services.create_user")
 
         # Act
         returned = get_or_create_user({"email": existing_user.email})
@@ -22,9 +22,7 @@ class TestGetOrCreateUser:
     def test_creates_user_when_missing(self, mocker, new_user_data):
         # Arrange: no user with this email exists
         mocked_user = mocker.Mock()
-        create_user_mock = mocker.patch(
-            "apps.members.services.create_user", return_value=mocked_user
-        )
+        create_user_mock = mocker.patch("apps.users.services.create_user", return_value=mocked_user)
 
         # Act
         returned = get_or_create_user(new_user_data)
