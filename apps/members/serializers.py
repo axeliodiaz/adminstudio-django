@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 
-class RiderSerializer(serializers.Serializer):
+class MemberSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, style={"input_type": "password"})
     first_name = serializers.CharField()
