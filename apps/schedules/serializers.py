@@ -18,7 +18,11 @@ class ScheduleCreateSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=constants.SCHEDULE_STATUSES)
 
     def validate_instructor_id(self, value):
-        """Validate that the referenced instructor exists."""
+        """Validate that the referenced instructor exists.
+
+        This validation always runs to ensure a consistent 400 response
+        at the API boundary when the instructor does not exist.
+        """
         try:
             get_instructor_by_id(value)
         except ObjectDoesNotExist:
