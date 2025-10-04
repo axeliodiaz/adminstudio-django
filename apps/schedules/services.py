@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Iterable, List
 from uuid import UUID
 
+from apps.schedules.models import Schedule
 from apps.schedules.schedules import create_schedule as create_schedule_model
 from apps.schedules.schedules import get_schedules_list
 from apps.schedules.schemas import ScheduleSchema
@@ -56,3 +57,8 @@ def get_schedule_schema_list(
             start_time=start_time, instructor_username=instructor_username, room_name=room_name
         )
     )
+
+
+def get_schedule_schema_by_id(schedule_id: UUID) -> ScheduleSchema:
+    """Fetch schedule by id and return as ScheduleSchema."""
+    return ScheduleSchema.model_validate(Schedule.objects.get(pk=schedule_id))

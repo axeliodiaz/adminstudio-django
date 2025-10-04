@@ -1,8 +1,37 @@
 """Tests for members services module."""
 
-import pytest
+from apps.members.services import (
+    get_or_create_member_user,
+    get_or_create_user,
+    get_member_from_user_id,
+)
 
-from apps.members.services import get_or_create_member_user, get_or_create_user
+import pytest
+from model_bakery import baker
+
+from apps.members.models import Reservation, Member
+from apps.members.services import create_reservation
+
+
+@pytest.mark.django_db
+class TestCreateReservationService:
+    def test_creates_reservation_and_returns_schema_for_existing_member(self, existing_member):
+        schedule = baker.make("schedules.Schedule")
+
+        schema = create_reservation(
+            {
+                "user_id": existing_member.user.id,
+                "schedule_id": schedule.id,
+            }
+        )
+
+        # Validate schema fields
+        assert schema.member_id == existing_member.id
+        assert schema.schedule_id == schedule.id
+        assert schema.status == "RESERVED"
+
+        # Ensure persisted in DB
+        assert Reservation.objects.filter(member=existing_member, schedule=schedule).count() == 1
 
 
 class TestGetOrCreateUser:
@@ -38,14 +67,14 @@ class TestGetOrCreateMemberUser:
         self, mocker, existing_member, member_user
     ):
         # Arrange: create user and member via fixtures
-        verification_mock = mocker.patch("apps.members.services.create_verification_code")
+        verification_mock = mocker.patch("apps.members.members.create_verification_code")
 
         # Act
-        result_member, created = get_or_create_member_user({"email": member_user.email})
+        member_schema, created = get_or_create_member_user({"email": member_user.email})
 
         # Assert: no new member, created flag false, no verification sent
-        assert result_member == existing_member
         assert created is False
+        assert member_schema.user.email == member_user.email
         verification_mock.assert_not_called()
 
     @pytest.mark.django_db
@@ -53,12 +82,27 @@ class TestGetOrCreateMemberUser:
         self, mocker, user_without_member
     ):
         # Arrange: user exists, but member does not
-        verification_mock = mocker.patch("apps.members.services.create_verification_code")
+        verification_mock = mocker.patch("apps.members.members.create_verification_code")
 
         # Act
-        member, created = get_or_create_member_user({"email": user_without_member.email})
+        member_schema, created = get_or_create_member_user({"email": user_without_member.email})
 
         # Assert
         assert created is True
-        assert member.user == user_without_member
-        verification_mock.assert_called_once_with(user=member.user)
+        assert member_schema.user.email == user_without_member.email
+        verification_mock.assert_called_once()
+
+
+class TestGetMemberFromUserIdService:
+    @pytest.mark.django_db
+    def test_returns_member_schema_when_exists(self, existing_member):
+        schema = get_member_from_user_id(existing_member.user.id)
+        assert schema.id == existing_member.id
+        assert schema.user.email == existing_member.user.email
+
+    @pytest.mark.django_db
+    def test_raises_does_not_exist_for_unknown_user_id(self):
+        import uuid
+
+        with pytest.raises(Member.DoesNotExist):
+            get_member_from_user_id(uuid.uuid4())

@@ -161,9 +161,8 @@ class TestScheduleViewSetCreate:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     @pytest.mark.django_db
-    def test_create_nonexistent_instructor_returns_500(self, room_main):
+    def test_create_nonexistent_instructor_returns_400(self, room_main):
         client = APIClient()
-        client.raise_request_exception = False
         payload = {
             "instructor_id": str(uuid.uuid4()),
             "start_time": datetime(2025, 1, 3, 11, 0, tzinfo=timezone.utc)
@@ -174,7 +173,7 @@ class TestScheduleViewSetCreate:
             "status": constants.SCHEDULE_STATUS_DRAFT,
         }
         resp = client.post(reverse("schedule-list"), data=payload, format="json")
-        assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     @pytest.mark.django_db
     def test_create_nonexistent_room_returns_404(self, instructor_alice):

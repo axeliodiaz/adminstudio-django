@@ -9,6 +9,11 @@ from apps.schedules.models import Schedule
 from apps.studios.services import get_room as get_room_by_id
 
 
+def get_schedule_by_id(schedule_id: UUID | str) -> Schedule:
+    """Return a Schedule by id or 404."""
+    return Schedule.objects.get(id=schedule_id)
+
+
 def get_schedules_list(
     *,
     start_time: datetime | None = None,

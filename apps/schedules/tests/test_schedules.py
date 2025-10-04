@@ -6,10 +6,11 @@ import uuid
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
+from model_bakery import baker
 
 from apps.schedules import constants
 from apps.schedules.models import Schedule
-from apps.schedules.schedules import create_schedule
+from apps.schedules.schedules import create_schedule, get_schedule_by_id
 
 
 class TestGetSchedulesList:
@@ -113,3 +114,17 @@ class TestCreateSchedule:
                 room_id=uuid.uuid4(),
                 status=constants.SCHEDULE_STATUS_DRAFT,
             )
+
+
+class TestGetScheduleByIdDomain:
+    @pytest.mark.django_db
+    def test_returns_schedule_when_exists(self):
+        obj = baker.make("schedules.Schedule")
+        fetched = get_schedule_by_id(obj.id)
+        assert isinstance(fetched, Schedule)
+        assert fetched.id == obj.id
+
+    @pytest.mark.django_db
+    def test_raises_does_not_exist_for_unknown_id(self):
+        with pytest.raises(Schedule.DoesNotExist):
+            get_schedule_by_id(uuid.uuid4())

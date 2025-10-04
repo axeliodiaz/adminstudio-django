@@ -1,5 +1,6 @@
 import pytest
 from datetime import datetime, timedelta, timezone
+from model_bakery import baker
 
 from apps.schedules.services import (
     get_schedule_schema_list,
@@ -109,3 +110,34 @@ class TestServicesToScheduleSchemaList:
         schemas = to_schedule_schema_list(qs)
         assert len(schemas) == 3
         assert {s.id for s in schemas} == set(qs.values_list("id", flat=True))
+
+
+class TestGetScheduleSchemaByIdService:
+    @pytest.mark.django_db
+    def test_returns_schedule_schema_when_exists(self):
+        # Arrange: create a schedule with related objects auto-created
+        obj = Schedule.objects.create(
+            instructor=baker.make("instructors.Instructor"),
+            start_time=datetime.now(timezone.utc),
+            duration_minutes=45,
+            room=baker.make("studios.Room"),
+            status=constants.SCHEDULE_STATUS_DRAFT,
+        )
+        from apps.schedules.services import get_schedule_schema_by_id
+
+        # Act
+        schema = get_schedule_schema_by_id(obj.id)
+
+        # Assert
+        assert schema.id == obj.id
+        assert schema.instructor_id == obj.instructor_id
+        assert schema.room_id == obj.room_id
+        assert schema.status == obj.status
+
+    @pytest.mark.django_db
+    def test_raises_does_not_exist_for_unknown_id(self):
+        from uuid import uuid4
+        from apps.schedules.services import get_schedule_schema_by_id
+
+        with pytest.raises(Schedule.DoesNotExist):
+            get_schedule_schema_by_id(uuid4())
