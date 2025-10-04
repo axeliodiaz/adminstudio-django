@@ -8,3 +8,9 @@ class MemberSerializer(serializers.Serializer):
     last_name = serializers.CharField()
     phone_number = serializers.CharField()
     created = serializers.DateTimeField(read_only=True)
+
+
+class ReservationSerializer(serializers.Serializer):
+    user_id = serializers.UUIDField()
+    schedule_id = serializers.UUIDField()
+    notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)

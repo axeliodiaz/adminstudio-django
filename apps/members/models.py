@@ -35,10 +35,11 @@ class Reservation(SoftDeletableModel, UUIDModel, TimeStampedModel):
         choices=STATUS_CHOICES,
         default=constants.RESERVATION_STATUS_RESERVED,
     )
-
     notes = models.TextField(
         blank=True,
-        help_text="Optional notes or remarks related to this reservation (e.g. late arrival, injury, manual adjustment).",
+        help_text=(
+            "Optional notes or remarks related to this reservation (e.g. late arrival, injury, manual adjustment)."
+        ),
     )
 
     def __str__(self):

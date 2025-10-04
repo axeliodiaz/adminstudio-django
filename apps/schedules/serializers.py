@@ -3,8 +3,10 @@
 Input serializer for creation and output serializer mirroring ScheduleSchema.
 """
 
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
+from apps.instructors.services import get_instructor_by_id
 from apps.schedules import constants
 
 
@@ -14,6 +16,14 @@ class ScheduleCreateSerializer(serializers.Serializer):
     duration_minutes = serializers.IntegerField(min_value=1)
     room_id = serializers.UUIDField()
     status = serializers.ChoiceField(choices=constants.SCHEDULE_STATUSES)
+
+    def validate_instructor_id(self, value):
+        """Validate that the referenced instructor exists."""
+        try:
+            get_instructor_by_id(value)
+        except ObjectDoesNotExist:
+            raise serializers.ValidationError("Instructor not found.")
+        return value
 
 
 class ScheduleSerializer(ScheduleCreateSerializer):

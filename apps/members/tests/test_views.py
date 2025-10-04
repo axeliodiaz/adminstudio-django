@@ -1,8 +1,58 @@
 import datetime
+import uuid
 
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
+
+
+@pytest.mark.django_db
+class TestReservationViewSet:
+    @pytest.fixture
+    def api_client(self):
+        return APIClient()
+
+    def _make_reservation_schema_mock(self, schedule_id: uuid.UUID, member_id: uuid.UUID):
+        class _ReservationSchemaLike:
+            def __init__(self):
+                self.id = uuid.uuid4()
+                self.schedule_id = schedule_id
+                self.member_id = member_id
+                self.status = "RESERVED"
+                self.notes = ""
+
+            def model_dump(self):
+                return {
+                    "id": self.id,
+                    "schedule_id": self.schedule_id,
+                    "member_id": self.member_id,
+                    "status": self.status,
+                    "notes": self.notes,
+                }
+
+        return _ReservationSchemaLike()
+
+    def test_create_returns_201_and_payload_forwarded(self, mocker, api_client):
+        schedule_id = uuid.uuid4()
+        member_id = uuid.uuid4()
+        reservation_schema = self._make_reservation_schema_mock(schedule_id, member_id)
+        create_res_mock = mocker.patch(
+            "apps.members.views.create_reservation", return_value=reservation_schema
+        )
+
+        url = reverse("reservation-create")
+        payload = {
+            "user_id": str(member_id),
+            "schedule_id": str(schedule_id),
+            "notes": "Bring towel",
+        }
+        resp = api_client.post(url, data=payload, format="json")
+
+        assert resp.status_code == 201
+        called_args, _ = create_res_mock.call_args
+        assert called_args
+        assert str(called_args[0]["user_id"]) == payload["user_id"]
+        assert str(resp.data["schedule_id"]) == str(schedule_id)
 
 
 @pytest.mark.django_db
