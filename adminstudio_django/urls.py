@@ -30,7 +30,7 @@ urlpatterns = [
 ]
 import os
 
-print(f"[DEBUG CHECK] DJANGO_DEBUG={os.environ.get('DJANGO_DEBUG')} -> DEBUG={DEBUG}")
+print(f"[DEBUG CHECK] DJANGO_DEBUG={os.environ.get('DJANGO_DEBUG')} -> DEBUG={settings.DEBUG}")
 
 if settings.DEBUG:
     from drf_yasg import openapi
