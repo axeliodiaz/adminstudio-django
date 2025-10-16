@@ -1,7 +1,5 @@
 from uuid import UUID
 
-from pydantic.v1 import UUID1
-
 from apps.members import members
 from apps.members.schemas import MemberSchema, ReservationSchema
 from apps.users.services import get_or_create_user as _get_or_create_user
