@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from apps.members.exceptions import RoomFullException
 from apps.members.serializers import MemberSerializer, ReservationSerializer
 from apps.members.services import get_or_create_member_user, create_reservation
 
@@ -21,5 +22,8 @@ class ReservationView(ViewSet):
     def create(self, request, *args, **kwargs):
         serializer = ReservationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        reservation = create_reservation(serializer.validated_data)
+        try:
+            reservation = create_reservation(serializer.validated_data)
+        except RoomFullException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation.model_dump(), status=status.HTTP_201_CREATED)
