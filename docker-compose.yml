@@ -1,13 +1,12 @@
-version: "3.9"
-
 services:
   web:
     build: .
+    user: "1000:1000"
     command: >
       sh -c "
       python manage.py migrate --noinput &&
       python manage.py collectstatic --noinput &&
-      gunicorn adminstudio_django.wsgi:application --bind 0.0.0.0:80
+      gunicorn adminstudio_django.wsgi:application --bind 0.0.0.0:80 --workers 3 --threads 2 --timeout 120
       "
     ports:
       - "80:80"
@@ -16,7 +15,7 @@ services:
       DJANGO_DEBUG: "False"
       DJANGO_ENV: "prod"
     volumes:
-      - sqlite_data:/app/db
+      - sqlite_data:/data
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost/healthcheck || exit 1"]
       interval: 30s

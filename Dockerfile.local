@@ -12,12 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
-COPY requirements/local.txt requirements/local.txt
-COPY requirements/base.txt requirements/base.txt
+COPY requirements/ requirements/
 RUN pip install --no-cache-dir -r requirements/local.txt
-
-# Copy project
-COPY . .
 
 EXPOSE 8000
 

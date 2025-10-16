@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
 # Base directories
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -30,7 +30,12 @@ THIRD_PARTY_APPS = [
 OWN_APPS = [
     "apps.healthcheck",
     "apps.users",
-    "apps.riders",
+    "apps.members",
+    "apps.verifications",
+    "apps.notifications",
+    "apps.instructors",
+    "apps.studios",
+    "apps.schedules",
 ]
 INSTALLED_APPS = CORE_APPS + THIRD_PARTY_APPS + OWN_APPS
 
@@ -76,9 +81,7 @@ DATABASES = {
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -104,3 +107,71 @@ REST_FRAMEWORK = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DEFAULT_PASSWORD_LENGTH = 13
+
+EMAIL_HOST = os.getenv("EMAIL_HOST", "sandbox.smtp.mailtrap.io")
+EMAIL_API_KEY = os.getenv("EMAIL_API_KEY")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "apikey")  # 'apikey' for Sendgrid
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+EMAIL_PORT = os.getenv("EMAIL_PORT", 2525)
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False").lower() in {"1", "true", "yes", "on"}
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+
+VERIFICATION_CODE_EXPIRATION_MINUTES = 5
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+# Logging configuration
+# Shows INFO and above in local by default, WARNING in production unless overridden.
+DJANGO_LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO" if DEBUG else "WARNING")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {
+            "format": "%(levelname)s %(name)s: %(message)s",
+        },
+        "verbose": {
+            "format": "%(asctime)s %(levelname)s [%(name)s] %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+            "formatter": "verbose",
+        }
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": DJANGO_LOG_LEVEL,
+    },
+    "loggers": {
+        # Make Django's internal logs visible at INFO in development
+        "django": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_DJANGO_LOG_LEVEL", "INFO" if DEBUG else "WARNING"),
+            "propagate": False,
+        },
+        # Project apps (e.g., apps.notifications.mailing will match and propagate to root)
+        "apps": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_APPS_LOG_LEVEL", "DEBUG" if DEBUG else "INFO"),
+            "propagate": True,
+        },
+        # Celery logger (worker output)
+        "celery": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_CELERY_LOG_LEVEL", "INFO"),
+            "propagate": True,
+        },
+    },
+}
+
+CELERY_BROKER_URL = "amqp://guest:guest@rabbitmq:5672//"
+CELERY_RESULT_BACKEND = "rpc://"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"

@@ -1,0 +1,46 @@
+"""Serializers for schedules app.
+
+Input serializer for creation and output serializer mirroring ScheduleSchema.
+"""
+
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import serializers
+
+from apps.instructors.services import get_instructor_by_id
+from apps.schedules import constants
+
+
+class ScheduleCreateSerializer(serializers.Serializer):
+    instructor_id = serializers.UUIDField()
+    start_time = serializers.DateTimeField()
+    duration_minutes = serializers.IntegerField(min_value=1)
+    room_id = serializers.UUIDField()
+    status = serializers.ChoiceField(choices=constants.SCHEDULE_STATUSES)
+
+    def validate_instructor_id(self, value):
+        """Validate that the referenced instructor exists.
+
+        This validation always runs to ensure a consistent 400 response
+        at the API boundary when the instructor does not exist.
+        """
+        try:
+            get_instructor_by_id(value)
+        except ObjectDoesNotExist:
+            raise serializers.ValidationError("Instructor not found.")
+        return value
+
+
+class ScheduleSerializer(ScheduleCreateSerializer):
+    id = serializers.UUIDField(read_only=True)
+    created = serializers.DateTimeField(read_only=True)
+    modified = serializers.DateTimeField(read_only=True)
+    instructor = serializers.UUIDField(source="instructor_id", read_only=True)
+    room = serializers.UUIDField(source="room_id", read_only=True)
+    status = serializers.ChoiceField(
+        choices=[
+            constants.SCHEDULE_STATUS_DRAFT,
+            constants.SCHEDULE_STATUS_SCHEDULED,
+            constants.SCHEDULE_STATUS_COMPLETED,
+            constants.SCHEDULE_STATUS_CANCELED,
+        ]
+    )

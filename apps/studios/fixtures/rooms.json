@@ -1,0 +1,15 @@
+[
+{
+  "model": "studios.room",
+  "pk": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+  "fields": {
+    "created": "2025-10-01T16:00:48.700Z",
+    "modified": "2025-10-01T16:00:48.702Z",
+    "is_removed": false,
+    "studio": "dba69187-3362-48c8-92b9-aeb02d76103e",
+    "name": "AndinoCycling",
+    "capacity": 25,
+    "is_active": true
+  }
+}
+]
