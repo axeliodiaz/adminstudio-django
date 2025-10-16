@@ -11,7 +11,7 @@ REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
 ]
 
 # Hosts can be provided via env; keep the one already used plus sane defaults
-ALLOWED_HOSTS += ["3.86.184.243"]  # from base; override via DJANGO_ALLOWED_HOSTS
+ALLOWED_HOSTS += ["adminstudio-django.onrender.com"]  # from base; override via DJANGO_ALLOWED_HOSTS
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "/static/"
