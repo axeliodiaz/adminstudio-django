@@ -2,6 +2,7 @@
 FROM python:3.12-slim
 
 ENV DJANGO_SETTINGS_MODULE=adminstudio_django.settings.prod \
+    DJANGO_ENV=prod \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
