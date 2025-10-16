@@ -1,3 +1,7 @@
+from django.db.models import QuerySet
+
+from apps.members import constants
+from apps.members.exceptions import RoomFullException
 from apps.members.models import Member, Reservation
 from apps.schedules.schedules import get_schedule_by_id
 from apps.users.services import get_or_create_user
@@ -27,6 +31,15 @@ def get_or_create_member_user(validated_data: dict) -> tuple[Member, bool]:
     return member, created
 
 
+def get_scheduled_reservations_by_member_id_and_schedule_id(
+    member_id: str, schedule_id: str
+) -> QuerySet[Reservation]:
+    """Get all reservations for a member and schedule."""
+    return Reservation.objects.filter(
+        schedule_id=schedule_id, member_id=member_id, status=constants.RESERVATION_STATUS_RESERVED
+    )
+
+
 def create_reservation(validated_data: dict) -> Reservation:
     """Domain logic: create a Reservation for a member and schedule.
 
@@ -45,6 +58,13 @@ def create_reservation(validated_data: dict) -> Reservation:
 
     # Fetch Schedule model instance via domain function
     schedule = get_schedule_by_id(validated_data["schedule_id"])
+
+    members_in_schedule = get_scheduled_reservations_by_member_id_and_schedule_id(
+        member.id, schedule.id
+    )
+
+    if members_in_schedule.count() > schedule.room.capacity:
+        raise RoomFullException("Room is full.")
 
     reservation = Reservation.objects.create(
         member=member,

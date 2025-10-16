@@ -109,3 +109,79 @@ class TestGetMemberByIdDomain:
 
         with pytest.raises(Member.DoesNotExist):
             get_member_by_id(uuid.uuid4())
+
+
+@pytest.mark.django_db
+class TestGetScheduledReservationsByMemberAndSchedule:
+    def test_returns_only_reserved_for_member_and_schedule(self):
+        from apps.members.members import (
+            get_scheduled_reservations_by_member_id_and_schedule_id as get_qs,
+        )
+        from apps.members import constants
+
+        member = baker.make("members.Member")
+        schedule = baker.make("schedules.Schedule")
+        # Should be included (RESERVED by same member in same schedule)
+        r_included = baker.make(
+            "members.Reservation",
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+        )
+        # Exclusions
+        baker.make(
+            "members.Reservation",
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_CANCELLED,
+        )
+        baker.make(
+            "members.Reservation",
+            member=member,
+            schedule=baker.make("schedules.Schedule"),
+            status=constants.RESERVATION_STATUS_RESERVED,
+        )
+        baker.make(
+            "members.Reservation",
+            member=baker.make("members.Member"),
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+        )
+
+        qs = get_qs(member.id, schedule.id)
+        ids = set(qs.values_list("id", flat=True))
+        assert ids == {r_included.id}
+
+    def test_returns_empty_when_no_reservations(self):
+        from apps.members.members import (
+            get_scheduled_reservations_by_member_id_and_schedule_id as get_qs,
+        )
+
+        member = baker.make("members.Member")
+        schedule = baker.make("schedules.Schedule")
+
+        qs = get_qs(member.id, schedule.id)
+        assert qs.count() == 0
+
+    def test_accepts_uuid_and_str_ids(self):
+        from apps.members.members import (
+            get_scheduled_reservations_by_member_id_and_schedule_id as get_qs,
+        )
+        from apps.members import constants
+
+        member = baker.make("members.Member")
+        schedule = baker.make("schedules.Schedule")
+        r = baker.make(
+            "members.Reservation",
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+        )
+
+        # UUID inputs
+        qs_uuid = get_qs(member.id, schedule.id)
+        assert set(qs_uuid.values_list("id", flat=True)) == {r.id}
+
+        # String inputs
+        qs_str = get_qs(str(member.id), str(schedule.id))
+        assert set(qs_str.values_list("id", flat=True)) == {r.id}
