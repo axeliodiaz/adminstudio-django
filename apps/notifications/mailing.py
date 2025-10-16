@@ -1,12 +1,9 @@
 import logging
 from typing import Any
 
-import resend
 import requests
 from django.conf import settings
-from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
-from sendgrid import Mail, SendGridAPIClient
 
 from apps.notifications import constants
 from apps.notifications.models import Notification
@@ -51,45 +48,6 @@ class Email:
             return constants.MAIL_CLIENT_RESEND
         return constants.MAIL_CLIENT_DEFAULT
 
-    def send_sendgrid_email(self, **kwargs: Any) -> Any | None:
-        sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
-        message = Mail(
-            from_email=self.from_email,
-            to_emails=self.recipient_list,  # list | str
-            subject=self.subject,
-            html_content=self.html_content or None,
-            plain_text_content=self.message,
-        )
-        try:
-            response = sg.send(message)
-            return response
-        except Exception as e:
-            if hasattr(e, "body"):
-                logger.error("SendGrid error body: %s", e.body)
-            logger.exception("SendGrid exception")
-            return None
-
-    def send_resend_email(self, **kwargs: Any) -> Any | None:
-        resend.api_key = settings.RESEND_API_KEY
-        params = {
-            "from": self.from_email,
-            "to": self.recipient_list,
-            "subject": self.subject,
-            "html": self.html_content,
-            "text": self.message,
-        }
-        email = resend.Emails.send(params)
-        logger.info(email)
-
-    def send_default_email(self):
-        send_mail(
-            subject=self.subject,
-            message=self.message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=self.recipient_list,
-            fail_silently=False,
-        )
-
     def _get_api_key_for_provider(self, provider: str) -> str | None:
         if provider == constants.MAIL_CLIENT_SENDGRID:
             return settings.SENDGRID_API_KEY
@@ -119,10 +77,7 @@ class Email:
         # Logging payload must not contain reserved LogRecord attribute names like 'message'
         log_base = {
             "notification_id": str(self.notification_id),
-            "subject": self.subject,
-            "recipient_list": str(self.recipient_list),
-            "from_email": str(self.from_email),
-            "mailing_client": mailing_client,
+            "payload": request_payload,
         }
 
         try:
@@ -137,13 +92,6 @@ class Email:
                 "Failed to send email via external service",
                 extra={**log_base, "error": str(e)},
             )
-            # As a fallback, try existing mechanisms to avoid losing the email completely
-            if mailing_client == constants.MAIL_CLIENT_SENDGRID:
-                self.send_sendgrid_email()
-            elif mailing_client == constants.MAIL_CLIENT_RESEND:
-                self.send_resend_email()
-            else:
-                self.send_default_email()
         else:
             logger.info(
                 "Email request sent successfully via external service",

@@ -155,15 +155,7 @@ class TestEmailSendMail:
         assert kwargs["json"] == expected_json
         assert kwargs.get("timeout") == 20
 
-        # No fallback should be triggered on success
-        sendgrid_fallback = mocker.patch.object(Email, "send_sendgrid_email")
-        resend_fallback = mocker.patch.object(Email, "send_resend_email")
-        default_fallback = mocker.patch.object(Email, "send_default_email")
-        sendgrid_fallback.assert_not_called()
-        resend_fallback.assert_not_called()
-        default_fallback.assert_not_called()
-
-    def test_http_error_triggers_sendgrid_fallback(self, mocker, settings):
+    def test_http_error_handled_sendgrid(self, mocker, settings):
         # Arrange
         settings.SENDGRID_API_KEY = "SG.TEST"
         settings.DEFAULT_FROM_EMAIL = "from@example.com"
@@ -178,27 +170,18 @@ class TestEmailSendMail:
         )
 
         # Mock post returns a response but raise_for_status raises HTTPError
-        http_error = mocker.Mock(spec=mocker.ANY)
         resp = mocker.Mock()
         resp.text = "bad"
         resp.raise_for_status.side_effect = Exception("HTTP 500")
         post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
 
-        # Spy on fallbacks
-        sendgrid_fallback = mocker.patch.object(Email, "send_sendgrid_email")
-        resend_fallback = mocker.patch.object(Email, "send_resend_email")
-        default_fallback = mocker.patch.object(Email, "send_default_email")
-
-        # Act
+        # Act - should not raise
         email.send_mail()
 
-        # Assert: post called and sendgrid fallback used
+        # Assert: post called and error handled (no exception raised)
         assert post_mock.called
-        sendgrid_fallback.assert_called_once()
-        resend_fallback.assert_not_called()
-        default_fallback.assert_not_called()
 
-    def test_http_error_triggers_resend_fallback(self, mocker, settings):
+    def test_http_error_handled_resend(self, mocker, settings):
         # Arrange
         settings.RESEND_API_KEY = "RS.TEST"
         settings.DEFAULT_FROM_EMAIL = "from@example.com"
@@ -216,16 +199,8 @@ class TestEmailSendMail:
         resp.raise_for_status.side_effect = Exception("HTTP 500")
         post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
 
-        # Spy on fallbacks
-        sendgrid_fallback = mocker.patch.object(Email, "send_sendgrid_email")
-        resend_fallback = mocker.patch.object(Email, "send_resend_email")
-        default_fallback = mocker.patch.object(Email, "send_default_email")
-
-        # Act
+        # Act - should not raise
         email.send_mail()
 
-        # Assert: post called and resend fallback used
+        # Assert: post called and error handled (no exception raised)
         assert post_mock.called
-        resend_fallback.assert_called_once()
-        sendgrid_fallback.assert_not_called()
-        default_fallback.assert_not_called()
