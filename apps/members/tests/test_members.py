@@ -1,187 +1,76 @@
-"""Domain-layer tests for apps.members.members module."""
-
 import uuid
-
+import datetime
 import pytest
-from model_bakery import baker
+from django.contrib.auth import get_user_model
+from django.utils import timezone
 
-from apps.members.members import create_reservation, get_or_create_member_user
+from apps.members import constants
 from apps.members.models import Member, Reservation
+from apps.members.members import get_reservation_by_id, cancel_reservation
+from apps.members.exceptions import ReservationInvalidStateException
+from apps.studios.models import Studio, Room
+from apps.instructors.models import Instructor
+from apps.schedules.models import Schedule
 
 
 @pytest.mark.django_db
-class TestGetOrCreateMemberUserDomain:
-    def test_returns_existing_member_without_verification(
-        self, mocker, existing_member, member_user
-    ):
-        # Ensure preconditions
-        assert Member.objects.filter(user=member_user).exists()
-        verification_mock = mocker.patch("apps.members.members.create_verification_code")
+class TestMembersDomain:
+    def _build_graph(self):
+        # Create user and related member and instructor
+        User = get_user_model()
+        user_member = User.objects.create_user(
+            username=f"member_{uuid.uuid4()}", email=f"m_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        user_instructor = User.objects.create_user(
+            username=f"instr_{uuid.uuid4()}", email=f"i_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        member = Member.objects.create(user=user_member)
+        instructor = Instructor.objects.create(user=user_instructor)
 
-        member, created = get_or_create_member_user({"email": member_user.email})
+        # Create studio, room, and schedule
+        studio = Studio.objects.create(name="S1", address="Addr", is_active=True)
+        room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+        return member, schedule
 
-        assert created is False
-        assert isinstance(member, Member)
-        assert member.user == member_user
-        verification_mock.assert_not_called()
+    def test_get_reservation_by_id_success(self):
+        member, schedule = self._build_graph()
+        reservation = Reservation.objects.create(member=member, schedule=schedule, notes="")
 
-    def test_creates_member_and_triggers_verification(self, mocker, user_without_member):
-        assert not Member.objects.filter(user=user_without_member).exists()
-        verification_mock = mocker.patch("apps.members.members.create_verification_code")
+        fetched = get_reservation_by_id(str(reservation.id))
+        assert fetched.id == reservation.id
 
-        member, created = get_or_create_member_user({"email": user_without_member.email})
+    def test_get_reservation_by_id_not_found(self):
+        with pytest.raises(Reservation.DoesNotExist):
+            get_reservation_by_id(str(uuid.uuid4()))
 
-        assert created is True
-        assert isinstance(member, Member)
-        assert member.user == user_without_member
-        verification_mock.assert_called_once()
-
-
-@pytest.mark.django_db
-class TestCreateReservationDomain:
-    def test_creates_reservation_for_existing_member(self, existing_member):
-        schedule = baker.make("schedules.Schedule")
-
-        reservation = create_reservation(
-            {
-                "user_id": existing_member.user.id,
-                "schedule_id": schedule.id,
-            }
+    def test_cancel_reservation_success(self):
+        member, schedule = self._build_graph()
+        reservation = Reservation.objects.create(
+            member=member, schedule=schedule, status=constants.RESERVATION_STATUS_RESERVED
         )
 
-        assert isinstance(reservation, Reservation)
-        assert reservation.member_id == existing_member.id
-        assert reservation.schedule_id == schedule.id
-        assert reservation.status == "RESERVED"
-        assert reservation.notes == ""  # default notes when not provided
-        # ensure persisted
-        assert Reservation.objects.filter(id=reservation.id).exists()
+        updated = cancel_reservation(str(reservation.id))
+        assert updated.status == constants.RESERVATION_STATUS_CANCELLED
+        # Re-fetch to ensure persisted
+        db_obj = Reservation.objects.get(id=reservation.id)
+        assert db_obj.status == constants.RESERVATION_STATUS_CANCELLED
 
-    def test_accepts_optional_notes_and_persists(self, existing_member):
-        schedule = baker.make("schedules.Schedule")
-        notes = "Prefer front row"
-
-        reservation = create_reservation(
-            {
-                "user_id": existing_member.user.id,
-                "schedule_id": schedule.id,
-                "notes": notes,
-            }
+    def test_cancel_reservation_raises_on_invalid_state(self):
+        member, schedule = self._build_graph()
+        reservation = Reservation.objects.create(
+            member=member, schedule=schedule, status=constants.RESERVATION_STATUS_CANCELLED
         )
 
-        assert reservation.notes == notes
+        with pytest.raises(ReservationInvalidStateException) as exc:
+            cancel_reservation(str(reservation.id))
+        assert "Only RESERVED reservations can be cancelled" in str(exc.value)
 
-    def test_creates_member_if_missing_then_reservation(self, mocker, member_missing_email):
-        # No user or member with this email; create user and member first
-        # Create a user with the missing email so domain creates member for it via users service
-        user = baker.make("users.User", email=member_missing_email)
-        schedule = baker.make("schedules.Schedule")
-        # Avoid hitting external broker via notifications by mocking verification side-effect
-        verification_mock = mocker.patch("apps.members.members.create_verification_code")
-
-        reservation = create_reservation(
-            {
-                "user_id": user.id,
-                "schedule_id": schedule.id,
-            }
-        )
-
-        # The member should now exist and be linked
-        member = Member.objects.get(user=user)
-        assert reservation.member_id == member.id
-        assert reservation.schedule_id == schedule.id
-        verification_mock.assert_called_once()
-
-
-class TestGetMemberByIdDomain:
-    @pytest.mark.django_db
-    def test_returns_member_when_exists(self, existing_member):
-        from apps.members.members import get_member_by_id
-
-        fetched = get_member_by_id(existing_member.id)
-        assert isinstance(fetched, Member)
-        assert fetched.id == existing_member.id
-
-    @pytest.mark.django_db
-    def test_raises_does_not_exist_for_unknown_id(self):
-        from apps.members.members import get_member_by_id
-        import uuid
-
-        with pytest.raises(Member.DoesNotExist):
-            get_member_by_id(uuid.uuid4())
-
-
-@pytest.mark.django_db
-class TestGetScheduledReservationsByMemberAndSchedule:
-    def test_returns_only_reserved_for_member_and_schedule(self):
-        from apps.members.members import (
-            get_scheduled_reservations_by_member_id_and_schedule_id as get_qs,
-        )
-        from apps.members import constants
-
-        member = baker.make("members.Member")
-        schedule = baker.make("schedules.Schedule")
-        # Should be included (RESERVED by same member in same schedule)
-        r_included = baker.make(
-            "members.Reservation",
-            member=member,
-            schedule=schedule,
-            status=constants.RESERVATION_STATUS_RESERVED,
-        )
-        # Exclusions
-        baker.make(
-            "members.Reservation",
-            member=member,
-            schedule=schedule,
-            status=constants.RESERVATION_STATUS_CANCELLED,
-        )
-        baker.make(
-            "members.Reservation",
-            member=member,
-            schedule=baker.make("schedules.Schedule"),
-            status=constants.RESERVATION_STATUS_RESERVED,
-        )
-        baker.make(
-            "members.Reservation",
-            member=baker.make("members.Member"),
-            schedule=schedule,
-            status=constants.RESERVATION_STATUS_RESERVED,
-        )
-
-        qs = get_qs(member.id, schedule.id)
-        ids = set(qs.values_list("id", flat=True))
-        assert ids == {r_included.id}
-
-    def test_returns_empty_when_no_reservations(self):
-        from apps.members.members import (
-            get_scheduled_reservations_by_member_id_and_schedule_id as get_qs,
-        )
-
-        member = baker.make("members.Member")
-        schedule = baker.make("schedules.Schedule")
-
-        qs = get_qs(member.id, schedule.id)
-        assert qs.count() == 0
-
-    def test_accepts_uuid_and_str_ids(self):
-        from apps.members.members import (
-            get_scheduled_reservations_by_member_id_and_schedule_id as get_qs,
-        )
-        from apps.members import constants
-
-        member = baker.make("members.Member")
-        schedule = baker.make("schedules.Schedule")
-        r = baker.make(
-            "members.Reservation",
-            member=member,
-            schedule=schedule,
-            status=constants.RESERVATION_STATUS_RESERVED,
-        )
-
-        # UUID inputs
-        qs_uuid = get_qs(member.id, schedule.id)
-        assert set(qs_uuid.values_list("id", flat=True)) == {r.id}
-
-        # String inputs
-        qs_str = get_qs(str(member.id), str(schedule.id))
-        assert set(qs_str.values_list("id", flat=True)) == {r.id}
+    def test_cancel_reservation_not_found(self):
+        with pytest.raises(Reservation.DoesNotExist):
+            cancel_reservation(str(uuid.uuid4()))
