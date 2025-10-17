@@ -1,7 +1,5 @@
 from uuid import UUID
 
-from pydantic.v1 import UUID1
-
 from apps.members import members
 from apps.members.schemas import MemberSchema, ReservationSchema
 from apps.users.services import get_or_create_user as _get_or_create_user
@@ -29,4 +27,10 @@ def get_or_create_member_user(validated_data: dict) -> tuple[MemberSchema, bool]
 def create_reservation(validated_data: dict) -> ReservationSchema:
     """Application service: create reservation and return ReservationSchema."""
     reservation = members.create_reservation(validated_data)
+    return ReservationSchema.model_validate(reservation)
+
+
+def cancel_reservation(reservation_id: str) -> ReservationSchema:
+    """Application service: cancel reservation and return ReservationSchema."""
+    reservation = members.cancel_reservation(reservation_id)
     return ReservationSchema.model_validate(reservation)
