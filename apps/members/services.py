@@ -28,3 +28,9 @@ def create_reservation(validated_data: dict) -> ReservationSchema:
     """Application service: create reservation and return ReservationSchema."""
     reservation = members.create_reservation(validated_data)
     return ReservationSchema.model_validate(reservation)
+
+
+def cancel_reservation(reservation_id: str) -> ReservationSchema:
+    """Application service: cancel reservation and return ReservationSchema."""
+    reservation = members.cancel_reservation(reservation_id)
+    return ReservationSchema.model_validate(reservation)

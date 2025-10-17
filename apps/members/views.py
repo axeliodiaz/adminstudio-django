@@ -2,9 +2,10 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from apps.members.exceptions import RoomFullException
+from apps.members.exceptions import RoomFullException, ReservationInvalidStateException
 from apps.members.serializers import MemberSerializer, ReservationSerializer
-from apps.members.services import get_or_create_member_user, create_reservation
+from apps.members.services import get_or_create_member_user, create_reservation, cancel_reservation
+from apps.members.models import Reservation
 
 
 class MemberView(ViewSet):
@@ -27,3 +28,12 @@ class ReservationView(ViewSet):
         except RoomFullException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation.model_dump(), status=status.HTTP_201_CREATED)
+
+    def cancel(self, request, pk=None, *args, **kwargs):
+        try:
+            reservation = cancel_reservation(pk)
+        except Reservation.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        except ReservationInvalidStateException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(reservation.model_dump(), status=status.HTTP_200_OK)

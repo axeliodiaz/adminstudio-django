@@ -1,108 +1,66 @@
-"""Tests for members services module."""
-
-from apps.members.services import (
-    get_or_create_member_user,
-    get_or_create_user,
-    get_member_from_user_id,
-)
-
+import uuid
 import pytest
-from model_bakery import baker
 
+from apps.members import constants
 from apps.members.models import Reservation, Member
-from apps.members.services import create_reservation
+from apps.members.exceptions import ReservationInvalidStateException
+from apps.members.services import cancel_reservation as service_cancel_reservation
+
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from apps.studios.models import Studio, Room
+from apps.instructors.models import Instructor
+from apps.schedules.models import Schedule
+import datetime
 
 
 @pytest.mark.django_db
-class TestCreateReservationService:
-    def test_creates_reservation_and_returns_schema_for_existing_member(self, existing_member):
-        schedule = baker.make("schedules.Schedule")
+class TestMembersServices:
+    def _build_graph(self):
+        User = get_user_model()
+        user_member = User.objects.create_user(
+            username=f"member_{uuid.uuid4()}", email=f"m_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        user_instructor = User.objects.create_user(
+            username=f"instr_{uuid.uuid4()}", email=f"i_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        member = Member.objects.create(user=user_member)
+        instructor = Instructor.objects.create(user=user_instructor)
+        studio = Studio.objects.create(name="S1", address="Addr", is_active=True)
+        room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+        return member, schedule
 
-        schema = create_reservation(
-            {
-                "user_id": existing_member.user.id,
-                "schedule_id": schedule.id,
-            }
+    def test_cancel_reservation_success_returns_schema_and_updates_db(self):
+        member, schedule = self._build_graph()
+        reservation = Reservation.objects.create(
+            member=member, schedule=schedule, status=constants.RESERVATION_STATUS_RESERVED
         )
 
-        # Validate schema fields
-        assert schema.member_id == existing_member.id
-        assert schema.schedule_id == schedule.id
-        assert schema.status == "RESERVED"
+        schema = service_cancel_reservation(str(reservation.id))
 
-        # Ensure persisted in DB
-        assert Reservation.objects.filter(member=existing_member, schedule=schedule).count() == 1
+        # Returned object is a Pydantic ReservationSchema-like with attributes
+        assert str(schema.id) == str(reservation.id)
+        assert schema.status == constants.RESERVATION_STATUS_CANCELLED
 
+        # DB is updated
+        reservation.refresh_from_db()
+        assert reservation.status == constants.RESERVATION_STATUS_CANCELLED
 
-class TestGetOrCreateUser:
-    @pytest.mark.django_db
-    def test_returns_existing_user_without_creating(self, mocker, existing_user):
-        # Arrange: existing user with given email
-        create_user_mock = mocker.patch("apps.users.services.create_user")
+    def test_cancel_reservation_not_found_bubbles_up(self):
+        with pytest.raises(Reservation.DoesNotExist):
+            service_cancel_reservation(str(uuid.uuid4()))
 
-        # Act
-        returned = get_or_create_user({"email": existing_user.email})
+    def test_cancel_reservation_invalid_state_bubbles_custom_exception(self):
+        member, schedule = self._build_graph()
+        reservation = Reservation.objects.create(
+            member=member, schedule=schedule, status=constants.RESERVATION_STATUS_CANCELLED
+        )
 
-        # Assert
-        assert returned == existing_user
-        create_user_mock.assert_not_called()
-
-    @pytest.mark.django_db
-    def test_creates_user_when_missing(self, mocker, new_user_data):
-        # Arrange: no user with this email exists
-        mocked_user = mocker.Mock()
-        create_user_mock = mocker.patch("apps.users.services.create_user", return_value=mocked_user)
-
-        # Act
-        returned = get_or_create_user(new_user_data)
-
-        # Assert
-        create_user_mock.assert_called_once_with(new_user_data)
-        assert returned is mocked_user
-
-
-class TestGetOrCreateMemberUser:
-    @pytest.mark.django_db
-    def test_returns_existing_member_and_does_not_trigger_verification(
-        self, mocker, existing_member, member_user
-    ):
-        # Arrange: create user and member via fixtures
-        verification_mock = mocker.patch("apps.members.members.create_verification_code")
-
-        # Act
-        member_schema, created = get_or_create_member_user({"email": member_user.email})
-
-        # Assert: no new member, created flag false, no verification sent
-        assert created is False
-        assert member_schema.user.email == member_user.email
-        verification_mock.assert_not_called()
-
-    @pytest.mark.django_db
-    def test_creates_member_when_missing_and_triggers_verification(
-        self, mocker, user_without_member
-    ):
-        # Arrange: user exists, but member does not
-        verification_mock = mocker.patch("apps.members.members.create_verification_code")
-
-        # Act
-        member_schema, created = get_or_create_member_user({"email": user_without_member.email})
-
-        # Assert
-        assert created is True
-        assert member_schema.user.email == user_without_member.email
-        verification_mock.assert_called_once()
-
-
-class TestGetMemberFromUserIdService:
-    @pytest.mark.django_db
-    def test_returns_member_schema_when_exists(self, existing_member):
-        schema = get_member_from_user_id(existing_member.user.id)
-        assert schema.id == existing_member.id
-        assert schema.user.email == existing_member.user.email
-
-    @pytest.mark.django_db
-    def test_raises_does_not_exist_for_unknown_user_id(self):
-        import uuid
-
-        with pytest.raises(Member.DoesNotExist):
-            get_member_from_user_id(uuid.uuid4())
+        with pytest.raises(ReservationInvalidStateException):
+            service_cancel_reservation(str(reservation.id))

@@ -1,7 +1,7 @@
 from django.db.models import QuerySet
 
 from apps.members import constants
-from apps.members.exceptions import RoomFullException
+from apps.members.exceptions import RoomFullException, ReservationInvalidStateException
 from apps.members.models import Member, Reservation
 from apps.schedules.schedules import get_schedule_by_id
 from apps.users.services import get_or_create_user
@@ -71,4 +71,23 @@ def create_reservation(validated_data: dict) -> Reservation:
         schedule=schedule,
         notes=validated_data.get("notes") or "",
     )
+    return reservation
+
+
+def get_reservation_by_id(reservation_id: str) -> Reservation:
+    """Get a Reservation by id."""
+    return Reservation.objects.get(id=reservation_id)
+
+
+def cancel_reservation(reservation_id: str) -> Reservation:
+    """Cancel a reservation if it is currently in RESERVED status.
+
+    Raises Reservation.DoesNotExist if the reservation does not exist.
+    Raises ReservationInvalidStateException if the reservation is not in RESERVED status.
+    """
+    reservation = get_reservation_by_id(reservation_id)
+    if reservation.status != constants.RESERVATION_STATUS_RESERVED:
+        raise ReservationInvalidStateException("Only RESERVED reservations can be cancelled.")
+    reservation.status = constants.RESERVATION_STATUS_CANCELLED
+    reservation.save(update_fields=["status", "modified"])
     return reservation
