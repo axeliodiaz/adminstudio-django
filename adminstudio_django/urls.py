@@ -28,9 +28,6 @@ urlpatterns = [
     path("api/schedules/", include("apps.schedules.urls")),
     path("api/verifications/", include("apps.verifications.urls")),
 ]
-import os
-
-print(f"[DEBUG CHECK] DJANGO_DEBUG={os.environ.get('DJANGO_DEBUG')} -> DEBUG={settings.DEBUG}")
 
 if settings.DEBUG:
     from drf_yasg import openapi
