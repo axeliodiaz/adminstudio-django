@@ -34,3 +34,9 @@ def cancel_reservation(reservation_id: str) -> ReservationSchema:
     """Application service: cancel reservation and return ReservationSchema."""
     reservation = members.cancel_reservation(reservation_id)
     return ReservationSchema.model_validate(reservation)
+
+
+def list_reservations(validated_query: dict) -> list[ReservationSchema]:
+    """Application service: list reservations via domain and return schemas."""
+    qs = members.list_reservations_by_date_range(**validated_query)
+    return [ReservationSchema.model_validate(obj) for obj in qs]

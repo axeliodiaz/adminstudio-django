@@ -20,3 +20,49 @@ if django and not os.environ.get("_DJANGO_SETUP_DONE"):
     except Exception:
         # In case migrate isn't available for some reason in CI, ignore to not break import
         pass
+
+# Shared pytest fixtures
+import pytest
+from rest_framework.test import APIClient
+
+
+@pytest.fixture
+def api_client():
+    return APIClient()
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def base_graph():
+    """Builds a minimal graph used by multiple tests: member, instructor, room.
+
+    Returns a tuple: (member, instructor, room)
+    """
+    from django.contrib.auth import get_user_model
+    from apps.members.models import Member
+    from apps.instructors.models import Instructor
+    from apps.studios.models import Studio, Room
+    import uuid as _uuid
+
+    User = get_user_model()
+    # Member side
+    user_member = User.objects.create_user(
+        username=f"member_{_uuid.uuid4()}",
+        email=f"m_{_uuid.uuid4()}@ex.com",
+        password="pass",
+    )
+    member = Member.objects.create(user=user_member)
+
+    # Studio/Room
+    studio = Studio.objects.create(name="S1", address="Addr", is_active=True)
+    room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+
+    # Instructor side
+    user_instr = User.objects.create_user(
+        username=f"instr_{_uuid.uuid4()}",
+        email=f"i_{_uuid.uuid4()}@ex.com",
+        password="pass",
+    )
+    instructor = Instructor.objects.create(user=user_instr)
+
+    return member, instructor, room
