@@ -91,3 +91,21 @@ def cancel_reservation(reservation_id: str) -> Reservation:
     reservation.status = constants.RESERVATION_STATUS_CANCELLED
     reservation.save(update_fields=["status", "modified"])
     return reservation
+
+
+def list_reservations_by_date_range(
+    *, start_date, end_date, member_id=None, instructor_id=None, room_id=None
+) -> QuerySet[Reservation]:
+    """
+    Return reservations filtered by schedule start date range and optional filters.
+
+    Uses __range for date filtering (inclusive) as requested.
+    """
+    filters = {"schedule__start_time__date__range": (start_date, end_date)}
+    if member_id is not None:
+        filters["member_id"] = member_id
+    if instructor_id is not None:
+        filters["schedule__instructor_id"] = instructor_id
+    if room_id is not None:
+        filters["schedule__room_id"] = room_id
+    return Reservation.objects.filter(**filters)

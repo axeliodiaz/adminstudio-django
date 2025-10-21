@@ -5,6 +5,7 @@ from apps.members import constants
 from apps.members.models import Reservation, Member
 from apps.members.exceptions import ReservationInvalidStateException
 from apps.members.services import cancel_reservation as service_cancel_reservation
+from apps.members.services import list_reservations as service_list_reservations
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -64,3 +65,125 @@ class TestMembersServices:
 
         with pytest.raises(ReservationInvalidStateException):
             service_cancel_reservation(str(reservation.id))
+
+    def test_list_reservations_filters_by_date_range_and_returns_schemas(self):
+        # Setup base entities
+        User = get_user_model()
+        user_member = User.objects.create_user(
+            username=f"member_{uuid.uuid4()}", email=f"m_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        member = Member.objects.create(user=user_member)
+        studio = Studio.objects.create(name="S2", address="Addr2", is_active=True)
+        room = Room.objects.create(studio=studio, name="R2", capacity=10, is_active=True)
+        instructor_user = User.objects.create_user(
+            username=f"instr_{uuid.uuid4()}", email=f"i2_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        instructor = Instructor.objects.create(user=instructor_user)
+
+        base = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        s_today = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base,
+            duration_minutes=60,
+            room=room,
+        )
+        s_tomorrow = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base + datetime.timedelta(days=1),
+            duration_minutes=60,
+            room=room,
+        )
+        s_future = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base + datetime.timedelta(days=3),
+            duration_minutes=60,
+            room=room,
+        )
+
+        r1 = Reservation.objects.create(member=member, schedule=s_today)
+        r2 = Reservation.objects.create(member=member, schedule=s_tomorrow)
+        Reservation.objects.create(member=member, schedule=s_future)
+
+        # Date range inclusive: today..tomorrow should include r1 and r2, exclude future
+        start_date = base.date()
+        end_date = (base + datetime.timedelta(days=1)).date()
+        result = service_list_reservations({"start_date": start_date, "end_date": end_date})
+
+        assert isinstance(result, list)
+        ids = {str(obj.id) for obj in result}
+        assert ids == {str(r1.id), str(r2.id)}
+        # Ensure returned items have expected attributes (Pydantic model)
+        for obj in result:
+            assert hasattr(obj, "member_id")
+            assert hasattr(obj, "schedule_id")
+            assert hasattr(obj, "status")
+
+    def test_list_reservations_supports_optional_filters(self):
+        User = get_user_model()
+        # Members
+        u1 = User.objects.create_user(
+            username=f"m1_{uuid.uuid4()}", email=f"m1_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        u2 = User.objects.create_user(
+            username=f"m2_{uuid.uuid4()}", email=f"m2_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        m1 = Member.objects.create(user=u1)
+        m2 = Member.objects.create(user=u2)
+        # Studio/rooms
+        studio = Studio.objects.create(name="S3", address="Addr3", is_active=True)
+        room_a = Room.objects.create(studio=studio, name="RA", capacity=10, is_active=True)
+        room_b = Room.objects.create(studio=studio, name="RB", capacity=10, is_active=True)
+        # Instructors
+        iu1 = User.objects.create_user(
+            username=f"i1_{uuid.uuid4()}", email=f"i1_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        iu2 = User.objects.create_user(
+            username=f"i2_{uuid.uuid4()}", email=f"i2_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        instr1 = Instructor.objects.create(user=iu1)
+        instr2 = Instructor.objects.create(user=iu2)
+
+        base = timezone.now().replace(hour=10, minute=0, second=0, microsecond=0)
+        same_day = base
+        s1 = Schedule.objects.create(
+            instructor=instr1, start_time=same_day, duration_minutes=45, room=room_a
+        )
+        s2 = Schedule.objects.create(
+            instructor=instr2, start_time=same_day, duration_minutes=45, room=room_b
+        )
+
+        r1 = Reservation.objects.create(member=m1, schedule=s1)
+        r2 = Reservation.objects.create(member=m2, schedule=s2)
+
+        start_date = same_day.date()
+        end_date = same_day.date()
+
+        # Filter by member_id
+        res_member = service_list_reservations(
+            {
+                "start_date": start_date,
+                "end_date": end_date,
+                "member_id": str(m1.id),
+            }
+        )
+        assert {str(x.id) for x in res_member} == {str(r1.id)}
+
+        # Filter by instructor_id
+        res_instr = service_list_reservations(
+            {
+                "start_date": start_date,
+                "end_date": end_date,
+                "instructor_id": str(instr2.id),
+            }
+        )
+        assert {str(x.id) for x in res_instr} == {str(r2.id)}
+
+        # Filter by room_id
+        res_room = service_list_reservations(
+            {
+                "start_date": start_date,
+                "end_date": end_date,
+                "room_id": str(room_a.id),
+            }
+        )
+        assert {str(x.id) for x in res_room} == {str(r1.id)}

@@ -7,6 +7,8 @@ from rest_framework.test import APIClient
 
 from apps.members.models import Reservation
 from apps.members.exceptions import ReservationInvalidStateException
+from apps.members.schemas import MemberSchema, ReservationSchema
+from apps.users.schemas import UserSchema
 
 
 @pytest.mark.django_db
@@ -43,7 +45,7 @@ class TestReservationViewSet:
             "apps.members.views.create_reservation", return_value=reservation_schema
         )
 
-        url = reverse("reservation-create")
+        url = reverse("reservations")
         payload = {
             "user_id": str(member_id),
             "schedule_id": str(schedule_id),
@@ -164,7 +166,7 @@ class TestReservationViewSet:
             "apps.members.views.create_reservation", return_value=reservation_schema
         )
 
-        url = reverse("reservation-create")
+        url = reverse("reservations")
         payload = {
             "user_id": str(member_id),
             "schedule_id": str(schedule_id),
@@ -321,3 +323,72 @@ class TestReservationCancelViewSet:
 
         assert resp.status_code == 400
         assert resp.data["detail"] == "Only RESERVED reservations can be cancelled."
+
+
+@pytest.mark.django_db
+class TestReservationsList:
+
+    def test_list_returns_200_and_payload_forwarded(self, mocker, api_client):
+        # Arrange
+        start_date = datetime.date(2025, 1, 1)
+        end_date = datetime.date(2025, 1, 31)
+        member_id = uuid.uuid4()
+        instructor_id = uuid.uuid4()
+        room_id = uuid.uuid4()
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        schemas = [
+            ReservationSchema(
+                id=uuid.uuid4(),
+                created=now,
+                modified=now,
+                schedule_id=uuid.uuid4(),
+                member_id=member_id,
+                status="RESERVED",
+                notes="",
+            ),
+            ReservationSchema(
+                id=uuid.uuid4(),
+                created=now,
+                modified=now,
+                schedule_id=uuid.uuid4(),
+                member_id=member_id,
+                status="RESERVED",
+                notes="",
+            ),
+        ]
+        list_mock = mocker.patch("apps.members.views.list_reservations", return_value=schemas)
+
+        # Act
+        url = reverse("reservations")
+        resp = api_client.get(
+            url,
+            data={
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "member_id": str(member_id),
+                "schedule__instructor_id": str(instructor_id),
+                "schedule__room_id": str(room_id),
+            },
+        )
+
+        # Assert
+        assert resp.status_code == 200
+        list_mock.assert_called_once()
+        assert isinstance(resp.data, list)
+        assert len(resp.data) == 2
+        assert str(resp.data[0]["member_id"]) == str(member_id)
+        assert {"id", "schedule_id", "member_id", "status", "notes"}.issubset(resp.data[0].keys())
+
+    def test_list_returns_400_when_invalid_query(self, api_client):
+        # Missing required end_date
+        url = reverse("reservations")
+        resp = api_client.get(
+            url,
+            data={
+                "start_date": datetime.date(2025, 1, 1).isoformat(),
+                # "end_date" is missing
+            },
+        )
+
+        assert resp.status_code == 400
