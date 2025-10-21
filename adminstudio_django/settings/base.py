@@ -36,6 +36,7 @@ OWN_APPS = [
     "apps.instructors",
     "apps.studios",
     "apps.schedules",
+    "apps.plans",
 ]
 INSTALLED_APPS = CORE_APPS + THIRD_PARTY_APPS + OWN_APPS
 
@@ -78,6 +79,12 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+# MongoDB connection
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "adminstudio_mongo")
+MONGO_HOST = os.getenv("MONGO_HOST", "mongo")
+MONGO_PORT = int(os.getenv("MONGO_PORT", 27017))
+MONGO_CONFIG = {"db": MONGO_DB_NAME, "host": f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}"}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
