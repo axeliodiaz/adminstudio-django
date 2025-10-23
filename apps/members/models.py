@@ -11,6 +11,9 @@ class Member(SoftDeletableModel, UUIDModel, TimeStampedModel):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="member"
     )
 
+    def __str__(self):
+        return self.user.username
+
 
 class Reservation(SoftDeletableModel, UUIDModel, TimeStampedModel):
     STATUS_CHOICES = (
