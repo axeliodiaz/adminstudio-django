@@ -9,7 +9,9 @@ def get_plans() -> List[Plan]:
     Return all active plans.
     """
     return list(
-        Plan.objects.filter(is_active=True).prefetch_related("benefits").order_by("created")
+        Plan.objects.filter(is_active=True)
+        .prefetch_related("benefits")
+        .order_by("-is_highlighted", "-is_popular", "-created")
     )
 
 
