@@ -69,3 +69,7 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
     is_highlighted = models.BooleanField(default=False)
 
     benefits = models.ManyToManyField("Benefit", related_name="plans", blank=True)
+
+    @property
+    def benefits_list(self):
+        return list(self.benefits.filter(is_active=True).order_by("name"))
