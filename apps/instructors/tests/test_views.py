@@ -12,11 +12,13 @@ from apps.instructors.models import Instructor
 
 class TestInstructorViewSet:
     @pytest.mark.django_db
-    def test_create_instructor_returns_201_then_200_on_duplicate(self, registration_payload):
-        client = APIClient()
-
+    def test_create_instructor_returns_201_then_200_on_duplicate(
+        self, api_client, registration_payload
+    ):
         # First create -> 201
-        resp1 = client.post(reverse("instructor-list"), data=registration_payload, format="json")
+        resp1 = api_client.post(
+            reverse("instructor-list"), data=registration_payload, format="json"
+        )
         assert resp1.status_code == status.HTTP_201_CREATED
         data1 = resp1.json()
         assert set(data1.keys()) == {"first_name", "last_name", "email", "phone_number"}
@@ -24,14 +26,15 @@ class TestInstructorViewSet:
         assert Instructor.objects.count() == 1
 
         # Second call with same email -> 200 and does not create duplicates
-        resp2 = client.post(reverse("instructor-list"), data=registration_payload, format="json")
+        resp2 = api_client.post(
+            reverse("instructor-list"), data=registration_payload, format="json"
+        )
         assert resp2.status_code == status.HTTP_200_OK
         assert Instructor.objects.count() == 1
 
     @pytest.mark.django_db
-    def test_list_instructors(self, instructor, another_instructor):
-        client = APIClient()
-        resp = client.get(reverse("instructor-list"))
+    def test_list_instructors(self, api_client, instructor, another_instructor):
+        resp = api_client.get(reverse("instructor-list"))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert isinstance(data, list)
@@ -44,25 +47,21 @@ class TestInstructorViewSet:
         assert ("user" in sample) or ("user_id" in sample)
 
     @pytest.mark.django_db
-    def test_retrieve_instructor(self, instructor):
-        client = APIClient()
-        resp = client.get(reverse("instructor-detail", args=[instructor.id]))
+    def test_retrieve_instructor(self, api_client, instructor):
+        resp = api_client.get(reverse("instructor-detail", args=[instructor.id]))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert data["id"] == str(instructor.id)
         assert ("user" in data) or ("user_id" in data)
 
     @pytest.mark.django_db
-    def test_retrieve_instructor_404(self):
-        client = APIClient()
-        client.raise_request_exception = False
-        resp = client.get(reverse("instructor-detail", args=[uuid.uuid4()]))
+    def test_retrieve_instructor_404(self, api_client):
+        api_client.raise_request_exception = False
+        resp = api_client.get(reverse("instructor-detail", args=[uuid.uuid4()]))
         assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
     @pytest.mark.django_db
-    def test_update_instructor_put_and_patch(self, instructor):
-        client = APIClient()
-
+    def test_update_instructor_put_and_patch(self, api_client, instructor):
         # PUT update all fields
         put_payload = {
             "email": "new.email@example.com",
@@ -72,7 +71,7 @@ class TestInstructorViewSet:
             "birthdate": "1990-12-31",
             "address": "New Address",
         }
-        resp_put = client.put(
+        resp_put = api_client.put(
             reverse("instructor-detail", args=[instructor.id]), data=put_payload, format="json"
         )
         assert resp_put.status_code == status.HTTP_200_OK
@@ -85,7 +84,7 @@ class TestInstructorViewSet:
 
         # PATCH update subset
         patch_payload = {"first_name": "Patched", "phone_number": "+1888888888"}
-        resp_patch = client.patch(
+        resp_patch = api_client.patch(
             reverse("instructor-detail", args=[instructor.id]), data=patch_payload, format="json"
         )
         assert resp_patch.status_code == status.HTTP_200_OK

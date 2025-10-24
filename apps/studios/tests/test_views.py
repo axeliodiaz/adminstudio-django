@@ -10,9 +10,8 @@ from rest_framework.test import APIClient
 
 class TestStudioViewSet:
     @pytest.mark.django_db
-    def test_list_studios(self, studio, empty_studio):
-        client = APIClient()
-        resp = client.get(reverse("studio-list"))
+    def test_list_studios(self, api_client, studio, empty_studio):
+        resp = api_client.get(reverse("studio-list"))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert isinstance(data, list)
@@ -28,9 +27,8 @@ class TestStudioViewSet:
         assert "rooms" not in sample
 
     @pytest.mark.django_db
-    def test_retrieve_studio(self, studio):
-        client = APIClient()
-        resp = client.get(reverse("studio-detail", args=[studio.id]))
+    def test_retrieve_studio(self, api_client, studio):
+        resp = api_client.get(reverse("studio-detail", args=[studio.id]))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert data["id"] == str(studio.id)
@@ -38,17 +36,15 @@ class TestStudioViewSet:
         assert "rooms" not in data  # StudioSerializer does not expose rooms
 
     @pytest.mark.django_db
-    def test_retrieve_studio_404(self):
-        client = APIClient()
-        resp = client.get(reverse("studio-detail", args=[uuid.uuid4()]))
+    def test_retrieve_studio_404(self, api_client):
+        resp = api_client.get(reverse("studio-detail", args=[uuid.uuid4()]))
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestRoomViewSet:
     @pytest.mark.django_db
-    def test_list_rooms(self, room, extra_room):
-        client = APIClient()
-        resp = client.get(reverse("room-list"))
+    def test_list_rooms(self, api_client, room, extra_room):
+        resp = api_client.get(reverse("room-list"))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert isinstance(data, list)
@@ -61,9 +57,8 @@ class TestRoomViewSet:
         )
 
     @pytest.mark.django_db
-    def test_retrieve_room(self, room):
-        client = APIClient()
-        resp = client.get(reverse("room-detail", args=[room.id]))
+    def test_retrieve_room(self, api_client, room):
+        resp = api_client.get(reverse("room-detail", args=[room.id]))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert data["id"] == str(room.id)
@@ -71,7 +66,6 @@ class TestRoomViewSet:
         assert data["studio"] == str(room.studio_id)
 
     @pytest.mark.django_db
-    def test_retrieve_room_404(self):
-        client = APIClient()
-        resp = client.get(reverse("room-detail", args=[uuid.uuid4()]))
+    def test_retrieve_room_404(self, api_client):
+        resp = api_client.get(reverse("room-detail", args=[uuid.uuid4()]))
         assert resp.status_code == status.HTTP_404_NOT_FOUND
