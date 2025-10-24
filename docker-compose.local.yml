@@ -14,12 +14,8 @@ services:
       - DJANGO_SETTINGS_MODULE=adminstudio_django.settings.local
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=rpc://
-      - MONGO_DB_NAME=adminstudio_mongo
-      - MONGO_HOST=mongo
-      - MONGO_PORT=27017
     depends_on:
       - rabbitmq
-      - mongo
     env_file:
       - .env
 
@@ -34,12 +30,8 @@ services:
       - DJANGO_SETTINGS_MODULE=adminstudio_django.settings.local
       - CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
       - CELERY_RESULT_BACKEND=rpc://
-      - MONGO_DB_NAME=adminstudio_mongo
-      - MONGO_HOST=mongo
-      - MONGO_PORT=27017
     depends_on:
       - rabbitmq
-      - mongo
     env_file:
       - .env
 
@@ -52,17 +44,6 @@ services:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
 
-  mongo:
-    image: mongo:6
-    container_name: mongo
-    restart: always
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    environment:
-      MONGO_INITDB_DATABASE: adminstudio_mongo
-
   flower:
     image: mher/flower
     ports:
@@ -74,6 +55,3 @@ services:
     depends_on:
       - rabbitmq
       - worker
-
-volumes:
-  mongo_data:
