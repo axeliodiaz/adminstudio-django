@@ -14,4 +14,22 @@ REST_FRAMEWORK["DEFAULT_SCHEMA_CLASS"] = "rest_framework.schemas.coreapi.AutoSch
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "testserver"]
 INSTALLED_APPS += [
     "drf_yasg",
+    "corsheaders",
 ]
+
+MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
+    *MIDDLEWARE,
+]
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # frontend (Vite)
+    "http://localhost:3000",  # opcional, por si se usa create-react-app
+]
+"""
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+]
+"""
+
+CORS_ALLOW_CREDENTIALS = True
