@@ -5,6 +5,20 @@ from apps.plans import constants
 
 
 class Benefit(SoftDeletableModel, UUIDModel, TimeStampedModel):
+    """
+    Represents a Benefit entity with attributes and behaviors necessary for handling
+    benefits within the application.
+
+    This class serves as a model for storing benefits data. It includes attributes
+    to define the name, description, and its active status. Inherits functionalities
+    from SoftDeletableModel, UUIDModel, and TimeStampedModel.
+
+    Attributes:
+        name (str): The name of the benefit.
+        description (str): A detailed description of the benefit.
+        is_active (bool): Indicates whether the benefit is active.
+    """
+
     name = models.CharField(max_length=100)
     description = models.TextField()
     is_active = models.BooleanField(default=False)
@@ -15,8 +29,26 @@ class Benefit(SoftDeletableModel, UUIDModel, TimeStampedModel):
 
 class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
     """
-    Plan document stored in MongoDB using MongoEngine.
-    Represents either a membership or a package.
+    Represents a plan for a service or product with various attributes and options.
+
+    This class defines a blueprint for creating and managing plans, including details
+    like the name, type, price, duration, and associated benefits. Plans can be categorized
+    and are configurable with indicators like popularity, activity status, and whether they
+    are highlighted. It integrates additional functionality from the UUIDModel,
+    TimeStampedModel, and SoftDeletableModel base models, such as unique identification,
+    timestamps, and soft-deletion support.
+
+    Attributes:
+        name (str): The name of the plan.
+        type (str): The type of the plan, chosen from predefined type choices.
+        price (float): The price of the plan.
+        duration_days (int or None): The number of days the plan is valid. Can be None if not applicable.
+        classes_included (int or None): The number of classes included in the plan.
+            Can be None if not applicable.
+        is_active (bool): Indicates whether the plan is currently active.
+        is_popular (bool): Indicates whether the plan is marked as popular.
+        is_highlighted (bool): Indicates whether the plan is highlighted.
+        benefits (ManyToManyField): The benefits associated with the plan.
     """
 
     TYPE_CHOICES = (
