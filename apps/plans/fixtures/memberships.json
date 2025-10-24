@@ -1,224 +1,178 @@
 [
-    {
-        "model": "plans.benefit",
-        "pk": "a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1",
-        "fields": {
-            "name": "Guest Pass",
-            "description": "Allows inviting a friend to one class per month.",
-            "is_active": true
-        }
-    },
-    {
-        "model": "plans.benefit",
-        "pk": "f8c13f1a-3c91-4d32-a2d4-836502e7f60b",
-        "fields": {
-            "name": "Retail Discount 10%",
-            "description": "10% discount on studio merchandise and drinks.",
-            "is_active": true
-        }
-    },
-    {
-        "model": "plans.benefit",
-        "pk": "dbf97e69-3f3b-47f1-9cf9-ec0f89e3d4d3",
-        "fields": {
-            "name": "Retail Discount 15%",
-            "description": "15% discount on studio merchandise and drinks.",
-            "is_active": true
-        }
-    },
-    {
-        "model": "plans.benefit",
-        "pk": "3ed77b9e-7ef2-4021-9c0a-9a3d3e7d6c1e",
-        "fields": {
-            "name": "Retail Discount 20%",
-            "description": "20% discount on studio merchandise and drinks.",
-            "is_active": true
-        }
-    },
-    {
-        "model": "plans.benefit",
-        "pk": "b59e2ac2-237a-4a1e-906d-4b8c6a7b242a",
-        "fields": {
-            "name": "Priority Booking",
-            "description": "Access to book classes 48 hours before regular members.",
-            "is_active": true
-        }
-    },
-    {
-        "model": "plans.benefit",
-        "pk": "2e1f2a1c-68e2-47cb-a8cb-ec2f5cdd01f0",
-        "fields": {
-            "name": "Freeze Option",
-            "description": "Option to freeze your membership for travel or illness.",
-            "is_active": true
-        }
-    },
-    {
-        "model": "plans.benefit",
-        "pk": "f95c3a63-6b6b-4f01-9a8b-7c3ec3b0d5e3",
-        "fields": {
-            "name": "Late Cancel Forgiveness",
-            "description": "One late cancel per month without penalty.",
-            "is_active": true
-        }
-    },
-    {
-        "model": "plans.benefit",
-        "pk": "e6d3bc71-6b9e-4c0d-b5c7-ef4a2e5f7c4b",
-        "fields": {
-            "name": "Bike Preference",
-            "description": "Preferred bike automatically reserved when available.",
-            "is_active": true
-        }
-    },
-    {
-        "model": "plans.benefit",
-        "pk": "bdf6796f-75d0-48c2-8e8a-f25b21a2de0a",
-        "fields": {
-            "name": "Founders Exclusive",
-            "description": "Founding member pricing and special edition merchandise.",
-            "is_active": true
-        }
-    },
-    {
-        "model": "plans.benefit",
-        "pk": "7e982f17-f9c7-41f9-9b20-5e5b8a6b51fa",
-        "fields": {
-            "name": "Corporate Portal Access",
-            "description": "Access to company-managed portal for booking and reports.",
-            "is_active": true
-        }
-    },
-    {
-        "model": "plans.plan",
-        "pk": "a78ec73d-607b-4c4b-ae1e-fb58b13214b2",
-        "fields": {
-            "name": "Starter 4",
-            "type": "membership",
-            "price": 39000,
-            "duration_days": 30,
-            "classes_included": 4,
-            "is_active": true,
-            "benefits": ["a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1"]
-        }
-    },
-    {
-        "model": "plans.plan",
-        "pk": "b76e2d95-1c6d-43f7-bd39-c0c86ffb7624",
-        "fields": {
-            "name": "Starter 8",
-            "type": "membership",
-            "price": 69000,
-            "duration_days": 30,
-            "classes_included": 8,
-            "is_active": true,
-            "benefits": [
-                "a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1",
-                "f8c13f1a-3c91-4d32-a2d4-836502e7f60b"
-            ]
-        }
-    },
-    {
-        "model": "plans.plan",
-        "pk": "bfb45e24-fab5-4622-9104-3948b1b3b36d",
-        "fields": {
-            "name": "Unlimited",
-            "type": "membership",
-            "price": 99000,
-            "duration_days": 30,
-            "classes_included": null,
-            "is_active": true,
-            "benefits": [
-                "a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1",
-                "f8c13f1a-3c91-4d32-a2d4-836502e7f60b",
-                "b59e2ac2-237a-4a1e-906d-4b8c6a7b242a",
-                "2e1f2a1c-68e2-47cb-a8cb-ec2f5cdd01f0"
-            ]
-        }
-    },
-    {
-        "model": "plans.plan",
-        "pk": "c447ea9e-2197-49a4-9514-14f8e514046f",
-        "fields": {
-            "name": "Pro Plus",
-            "type": "membership",
-            "price": 129000,
-            "duration_days": 30,
-            "classes_included": null,
-            "is_active": true,
-            "benefits": [
-                "a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1",
-                "dbf97e69-3f3b-47f1-9cf9-ec0f89e3d4d3",
-                "b59e2ac2-237a-4a1e-906d-4b8c6a7b242a",
-                "2e1f2a1c-68e2-47cb-a8cb-ec2f5cdd01f0",
-                "f95c3a63-6b6b-4f01-9a8b-7c3ec3b0d5e3",
-                "e6d3bc71-6b9e-4c0d-b5c7-ef4a2e5f7c4b"
-            ]
-        }
-    },
-    {
-        "model": "plans.plan",
-        "pk": "cf33c17a-5f35-4874-bdaa-0e2d3ebfc5c0",
-        "fields": {
-            "name": "Annual",
-            "type": "membership",
-            "price": 1188000,
-            "duration_days": 365,
-            "classes_included": null,
-            "is_active": true,
-            "benefits": [
-                "a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1",
-                "3ed77b9e-7ef2-4021-9c0a-9a3d3e7d6c1e",
-                "b59e2ac2-237a-4a1e-906d-4b8c6a7b242a",
-                "2e1f2a1c-68e2-47cb-a8cb-ec2f5cdd01f0",
-                "f95c3a63-6b6b-4f01-9a8b-7c3ec3b0d5e3",
-                "e6d3bc71-6b9e-4c0d-b5c7-ef4a2e5f7c4b"
-            ]
-        }
-    },
-    {
-        "model": "plans.plan",
-        "pk": "d76e2d95-2d6f-43f7-bd39-d0c86ffb7624",
-        "fields": {
-            "name": "Off-Peak 8",
-            "type": "membership",
-            "price": 55000,
-            "duration_days": 30,
-            "classes_included": 8,
-            "is_active": true,
-            "benefits": []
-        }
-    },
-    {
-        "model": "plans.plan",
-        "pk": "e38b5d5b-6cf5-41d5-9b92-54e6b2532f2a",
-        "fields": {
-            "name": "Corporate Pack",
-            "type": "membership",
-            "price": 500000,
-            "duration_days": 180,
-            "classes_included": 100,
-            "is_active": true,
-            "benefits": ["7e982f17-f9c7-41f9-9b20-5e5b8a6b51fa"]
-        }
-    },
-    {
-        "model": "plans.plan",
-        "pk": "f24e4ad1-dce9-4e6c-aab0-40bdfdc87f25",
-        "fields": {
-            "name": "Founders Pass",
-            "type": "membership",
-            "price": 99000,
-            "duration_days": 90,
-            "classes_included": null,
-            "is_active": true,
-            "benefits": [
-                "bdf6796f-75d0-48c2-8e8a-f25b21a2de0a",
-                "3ed77b9e-7ef2-4021-9c0a-9a3d3e7d6c1e",
-                "b59e2ac2-237a-4a1e-906d-4b8c6a7b242a",
-                "2e1f2a1c-68e2-47cb-a8cb-ec2f5cdd01f0",
-                "e6d3bc71-6b9e-4c0d-b5c7-ef4a2e5f7c4b"
-            ]
-        }
-    }
+{
+  "model": "plans.plan",
+  "pk": "a78ec73d-607b-4c4b-ae1e-fb58b13214b2",
+  "fields": {
+    "created": "2025-10-22T17:52:49.661Z",
+    "modified": "2025-10-24T18:09:23.403Z",
+    "is_removed": false,
+    "name": "Starter 4",
+    "type": "MEMBERSHIP",
+    "price": 39000.0,
+    "duration_days": 30,
+    "classes_included": 4,
+    "is_active": true,
+    "is_popular": false,
+    "is_highlighted": false,
+    "benefits": [
+      "a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1"
+    ]
+  }
+},
+{
+  "model": "plans.plan",
+  "pk": "b76e2d95-1c6d-43f7-bd39-c0c86ffb7624",
+  "fields": {
+    "created": "2025-10-22T17:52:49.662Z",
+    "modified": "2025-10-24T18:07:49.000Z",
+    "is_removed": false,
+    "name": "Starter 8",
+    "type": "PACKAGE",
+    "price": 69000.0,
+    "duration_days": 30,
+    "classes_included": 8,
+    "is_active": true,
+    "is_popular": true,
+    "is_highlighted": true,
+    "benefits": [
+      "a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1",
+      "f8c13f1a-3c91-4d32-a2d4-836502e7f60b"
+    ]
+  }
+},
+{
+  "model": "plans.plan",
+  "pk": "bfb45e24-fab5-4622-9104-3948b1b3b36d",
+  "fields": {
+    "created": "2025-10-22T17:52:49.662Z",
+    "modified": "2025-10-24T18:09:23.409Z",
+    "is_removed": false,
+    "name": "Unlimited",
+    "type": "MEMBERSHIP",
+    "price": 99000.0,
+    "duration_days": 30,
+    "classes_included": null,
+    "is_active": true,
+    "is_popular": false,
+    "is_highlighted": false,
+    "benefits": [
+      "2e1f2a1c-68e2-47cb-a8cb-ec2f5cdd01f0",
+      "a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1",
+      "b59e2ac2-237a-4a1e-906d-4b8c6a7b242a",
+      "f8c13f1a-3c91-4d32-a2d4-836502e7f60b"
+    ]
+  }
+},
+{
+  "model": "plans.plan",
+  "pk": "c447ea9e-2197-49a4-9514-14f8e514046f",
+  "fields": {
+    "created": "2025-10-22T17:52:49.663Z",
+    "modified": "2025-10-24T18:07:49.004Z",
+    "is_removed": false,
+    "name": "Pro Plus!!!!",
+    "type": "MEMBERSHIP",
+    "price": 129000.0,
+    "duration_days": 30,
+    "classes_included": 1,
+    "is_active": true,
+    "is_popular": false,
+    "is_highlighted": false,
+    "benefits": [
+      "2e1f2a1c-68e2-47cb-a8cb-ec2f5cdd01f0",
+      "a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1",
+      "b59e2ac2-237a-4a1e-906d-4b8c6a7b242a",
+      "dbf97e69-3f3b-47f1-9cf9-ec0f89e3d4d3",
+      "e6d3bc71-6b9e-4c0d-b5c7-ef4a2e5f7c4b",
+      "f95c3a63-6b6b-4f01-9a8b-7c3ec3b0d5e3"
+    ]
+  }
+},
+{
+  "model": "plans.plan",
+  "pk": "cf33c17a-5f35-4874-bdaa-0e2d3ebfc5c0",
+  "fields": {
+    "created": "2025-10-22T17:52:49.663Z",
+    "modified": "2025-10-24T18:09:23.412Z",
+    "is_removed": false,
+    "name": "Annual",
+    "type": "MEMBERSHIP",
+    "price": 1188000.0,
+    "duration_days": 365,
+    "classes_included": null,
+    "is_active": true,
+    "is_popular": false,
+    "is_highlighted": false,
+    "benefits": [
+      "2e1f2a1c-68e2-47cb-a8cb-ec2f5cdd01f0",
+      "3ed77b9e-7ef2-4021-9c0a-9a3d3e7d6c1e",
+      "a1d4f690-55aa-4a9c-a23a-d8b89c17bcd1",
+      "b59e2ac2-237a-4a1e-906d-4b8c6a7b242a",
+      "e6d3bc71-6b9e-4c0d-b5c7-ef4a2e5f7c4b",
+      "f95c3a63-6b6b-4f01-9a8b-7c3ec3b0d5e3"
+    ]
+  }
+},
+{
+  "model": "plans.plan",
+  "pk": "d76e2d95-2d6f-43f7-bd39-d0c86ffb7624",
+  "fields": {
+    "created": "2025-10-22T17:52:49.663Z",
+    "modified": "2025-10-24T18:09:23.414Z",
+    "is_removed": false,
+    "name": "Off-Peak 8",
+    "type": "MEMBERSHIP",
+    "price": 55000.0,
+    "duration_days": 30,
+    "classes_included": 8,
+    "is_active": true,
+    "is_popular": false,
+    "is_highlighted": false,
+    "benefits": []
+  }
+},
+{
+  "model": "plans.plan",
+  "pk": "e38b5d5b-6cf5-41d5-9b92-54e6b2532f2a",
+  "fields": {
+    "created": "2025-10-22T17:52:49.664Z",
+    "modified": "2025-10-24T18:09:23.415Z",
+    "is_removed": false,
+    "name": "Corporate Pack",
+    "type": "MEMBERSHIP",
+    "price": 500000.0,
+    "duration_days": 180,
+    "classes_included": 100,
+    "is_active": true,
+    "is_popular": false,
+    "is_highlighted": false,
+    "benefits": [
+      "7e982f17-f9c7-41f9-9b20-5e5b8a6b51fa"
+    ]
+  }
+},
+{
+  "model": "plans.plan",
+  "pk": "f24e4ad1-dce9-4e6c-aab0-40bdfdc87f25",
+  "fields": {
+    "created": "2025-10-22T17:52:49.664Z",
+    "modified": "2025-10-24T18:09:23.417Z",
+    "is_removed": false,
+    "name": "Founders Pass",
+    "type": "MEMBERSHIP",
+    "price": 99000.0,
+    "duration_days": 90,
+    "classes_included": null,
+    "is_active": true,
+    "is_popular": false,
+    "is_highlighted": false,
+    "benefits": [
+      "2e1f2a1c-68e2-47cb-a8cb-ec2f5cdd01f0",
+      "3ed77b9e-7ef2-4021-9c0a-9a3d3e7d6c1e",
+      "b59e2ac2-237a-4a1e-906d-4b8c6a7b242a",
+      "bdf6796f-75d0-48c2-8e8a-f25b21a2de0a",
+      "e6d3bc71-6b9e-4c0d-b5c7-ef4a2e5f7c4b"
+    ]
+  }
+}
 ]
