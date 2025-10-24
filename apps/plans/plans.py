@@ -8,9 +8,11 @@ def get_plans() -> List[Plan]:
     """
     Return all active plans.
     """
-    return list(Plan.objects.filter(is_active=True))
+    return list(
+        Plan.objects.filter(is_active=True).prefetch_related("benefits").order_by("created")
+    )
 
 
 def get_plan_by_id(plan_id: UUID | str) -> Plan:
     """Return a single Plan by id or raise Plan.DoesNotExist."""
-    return Plan.objects.get(id=plan_id)
+    return Plan.objects.prefetch_related("benefits").get(id=plan_id)
