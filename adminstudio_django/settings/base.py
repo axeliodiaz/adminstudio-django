@@ -97,6 +97,10 @@ USE_TZ = True
 # Static files
 STATIC_URL = "/static/"
 
+# Media files (for user uploads like profile images)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 # DRF defaults – JSON only by default; local.py will extend to add browsable renderer
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
