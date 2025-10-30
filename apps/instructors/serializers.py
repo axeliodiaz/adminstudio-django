@@ -6,6 +6,8 @@ class InstructorSerializer(serializers.Serializer):
     first_name = serializers.CharField(required=False, allow_blank=True)
     last_name = serializers.CharField(required=False, allow_blank=True)
     username = serializers.CharField(required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    phone_number = serializers.CharField(required=False, allow_blank=True)
 
     birthdate = serializers.DateField(required=False, allow_null=True)
     address = serializers.CharField(required=False, allow_blank=True)

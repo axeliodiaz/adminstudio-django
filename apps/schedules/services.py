@@ -45,16 +45,18 @@ def to_schedule_schema_list(items: Iterable) -> List[ScheduleSchema]:
 def get_schedule_schema_list(
     *,
     start_time: datetime | None = None,
-    instructor_username: str | None = None,
+    instructor_id: UUID | str | None = None,
     room_name: str | None = None,
 ) -> List[ScheduleSchema]:
     """Fetch schedules ordered by start_time and return as list of ScheduleSchema.
 
-    If start_time is provided, filter schedules by start_time (>= provided). Optionally filter by instructor username and/or room name.
+    If start_time is provided, filter schedules by start_time (>= provided). Optionally filter by instructor id and/or room name.
     """
     return to_schedule_schema_list(
         get_schedules_list(
-            start_time=start_time, instructor_username=instructor_username, room_name=room_name
+            start_time=start_time,
+            instructor_id=instructor_id,
+            room_name=room_name,
         )
     )
 

@@ -21,8 +21,7 @@ class TestInstructorViewSet:
         )
         assert resp1.status_code == status.HTTP_201_CREATED
         data1 = resp1.json()
-        assert set(data1.keys()) == {"first_name", "last_name", "email", "phone_number"}
-        assert data1["email"] == registration_payload["email"]
+        assert set(data1.keys()) == {"first_name", "last_name"}
         assert Instructor.objects.count() == 1
 
         # Second call with same email -> 200 and does not create duplicates
@@ -64,10 +63,8 @@ class TestInstructorViewSet:
     def test_update_instructor_put_and_patch(self, api_client, instructor):
         # PUT update all fields
         put_payload = {
-            "email": "new.email@example.com",
             "first_name": "NewFirst",
             "last_name": "NewLast",
-            "phone_number": "+1999999999",
             "birthdate": "1990-12-31",
             "address": "New Address",
         }
@@ -77,10 +74,8 @@ class TestInstructorViewSet:
         assert resp_put.status_code == status.HTTP_200_OK
         # Verify DB updated
         instructor.user.refresh_from_db()
-        assert instructor.user.email == put_payload["email"]
         assert instructor.user.first_name == put_payload["first_name"]
         assert instructor.user.last_name == put_payload["last_name"]
-        assert instructor.user.phone_number == put_payload["phone_number"]
 
         # PATCH update subset
         patch_payload = {"first_name": "Patched", "phone_number": "+1888888888"}

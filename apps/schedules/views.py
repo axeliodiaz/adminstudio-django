@@ -28,10 +28,12 @@ class ScheduleViewSet(viewsets.ViewSet):
         start_time = self._get_start_time_params(start_time_str)
         if isinstance(start_time, Response):
             return start_time
-        instructor_username = request.query_params.get("instructor")
+        instructor_id = request.query_params.get("instructor_id")
         room_name = request.query_params.get("room_name")
         schemas = get_schedule_schema_list(
-            start_time=start_time, instructor_username=instructor_username, room_name=room_name
+            start_time=start_time,
+            instructor_id=instructor_id,
+            room_name=room_name,
         )
         data = [s.model_dump() for s in schemas]
         return Response(data)

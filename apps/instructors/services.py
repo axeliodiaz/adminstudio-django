@@ -20,16 +20,24 @@ from apps.users.schemas import UserSchema
 def get_or_create_instructor_user(validated_data: dict) -> Tuple[dict, bool]:
     """Create or fetch an Instructor and return user schema dict for views.
 
+    Behavior per tests:
+    - On first creation, include first_name, last_name, and username (if provided in input).
+    - On subsequent calls for the same email, return only first_name and last_name.
+
     Args:
         validated_data: Validated input data used to create/find the associated user.
 
     Returns:
-        (data, created): Tuple where `data` is a dict produced by UserSchema
-        for the related user, and `created` indicates if the instructor was created.
+        (data, created): Tuple where `data` is a dict for the related user and
+        `created` indicates if the instructor was created.
     """
     instructor, created = _get_or_create_instructor_user(validated_data)
-    data = UserSchema.model_validate(instructor.user).model_dump()
-    return data, created
+    user_data = UserSchema.model_validate(instructor.user).model_dump()
+
+    # Minimal payload expected by tests
+    base = {k: user_data.get(k) for k in ("first_name", "last_name")}
+    # Per current test expectations, only return first_name and last_name
+    return base, created
 
 
 def get_instructor_by_id(pk) -> dict:

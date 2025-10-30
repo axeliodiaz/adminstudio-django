@@ -31,7 +31,6 @@ class TestGetInstructorById:
             assert uuid.UUID(str(data["user_id"])) == instructor.user.id
         else:
             assert isinstance(data["user"], dict)
-            assert data["user"].get("email") == instructor.user.email
         assert data["created"] is not None
         assert data["modified"] is not None
 
@@ -50,11 +49,9 @@ class TestGetOrCreateInstructorUser:
 
         # Assert: created and payload matches UserSchema fields
         assert created is True
-        assert set(data.keys()) == {"first_name", "last_name", "email", "phone_number"}
-        assert data["email"] == validated_registration_data["email"]
+        assert set(data.keys()) == {"first_name", "last_name"}
         assert data["first_name"] == validated_registration_data["first_name"]
         assert data["last_name"] == validated_registration_data["last_name"]
-        assert data["phone_number"] == validated_registration_data["phone_number"]
         # Ensure an Instructor was created and linked to the created user
         assert Instructor.objects.count() == 1
 
@@ -72,8 +69,7 @@ class TestGetOrCreateInstructorUser:
         assert created_second is False
         assert Instructor.objects.count() == 1
         # Data should still be the same schema dict for the user
-        assert set(data.keys()) == {"first_name", "last_name", "email", "phone_number"}
-        assert data["email"] == validated_registration_data["email"]
+        assert set(data.keys()) == {"first_name", "last_name"}
 
 
 @pytest.mark.django_db

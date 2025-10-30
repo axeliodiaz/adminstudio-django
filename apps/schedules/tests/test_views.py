@@ -38,8 +38,9 @@ class TestScheduleViewSetList:
         assert "Invalid start_time format" in body.get("detail", "")
 
     @pytest.mark.django_db
-    def test_list_filter_by_instructor_username(self, api_client, schedules_sample):
-        resp = api_client.get(reverse("schedule-list"), {"instructor": "ali"})
+    def test_list_filter_by_instructor_id(self, api_client, schedules_sample):
+        instructor_id = str(schedules_sample[0].instructor_id)
+        resp = api_client.get(reverse("schedule-list"), {"instructor_id": instructor_id})
         assert resp.status_code == status.HTTP_200_OK
         ids = {item["id"] for item in resp.json()}
         assert ids == {str(schedules_sample[0].id), str(schedules_sample[1].id)}
@@ -58,7 +59,11 @@ class TestScheduleViewSetList:
             .isoformat()
             .replace("+00:00", "Z")
         )
-        params = {"start_time": threshold, "instructor": "ali", "room_name": "small"}
+        params = {
+            "start_time": threshold,
+            "instructor_id": str(schedules_sample[0].instructor_id),
+            "room_name": "small",
+        }
         resp = api_client.get(reverse("schedule-list"), params)
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()

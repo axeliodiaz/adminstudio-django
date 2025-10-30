@@ -43,8 +43,6 @@ class TestSendPendingEmails:
                 {
                     "first_name": "User",
                     "last_name": "Zero",
-                    "email": "valid@example.com",
-                    "phone_number": "",
                 }
             ],
         }
