@@ -15,6 +15,8 @@ class PlanAdmin(admin.ModelAdmin):
         "duration_days",
         "classes_included",
         "is_active",
+        "is_highlighted",
+        "is_popular",
     )
     list_filter = ("is_active", "type", "created")
     search_fields = ("name", "benefits__name")

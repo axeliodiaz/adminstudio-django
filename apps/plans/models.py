@@ -62,7 +62,7 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
     )
     price = models.FloatField()
     duration_days = models.IntegerField(null=True)
-    classes_included = models.IntegerField(null=True)
+    classes_included = models.IntegerField(null=True, blank=True)
 
     is_active = models.BooleanField(default=False)
     is_popular = models.BooleanField(default=False)
