@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, time
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +24,8 @@ class StudioSchema(BaseModel):
     name: str
     address: str
     is_active: bool
+    opening_time: Optional[time] = None
+    closing_time: Optional[time] = None
     rooms: list[RoomSchema] | None = Field(default=None, alias="rooms_list")
 
     model_config = {"from_attributes": True}
