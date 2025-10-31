@@ -13,7 +13,7 @@ from apps.instructors.instructors import (
     get_or_create_instructor_user as _get_or_create_instructor_user,
 )
 from apps.instructors.instructors import instructors_queryset
-from apps.instructors.schemas import InstructorSchema
+from apps.instructors.schemas import InstructorSchema, InstructorPublicSchema
 from apps.users.schemas import UserSchema
 
 
@@ -41,21 +41,23 @@ def get_or_create_instructor_user(validated_data: dict) -> Tuple[dict, bool]:
 
 
 def get_instructor_by_id(pk) -> dict:
-    """Return an InstructorSchema as dict by primary key or raise ObjectDoesNotExist with a friendly message."""
+    """Return a public InstructorSchema (without sensitive user fields) by primary key or raise ObjectDoesNotExist with a friendly message."""
     try:
         instructor = get_instructor_from_id(pk)
     except ObjectDoesNotExist as exc:
         raise ObjectDoesNotExist("Instructor not found.") from exc
-    return InstructorSchema.model_validate(instructor).model_dump()
+    return InstructorPublicSchema.model_validate(instructor).model_dump()
 
 
 def get_instructors_list() -> list[dict]:
-    """Return a list of InstructorSchema dicts for all instructors."""
-    return [InstructorSchema.model_validate(obj).model_dump() for obj in instructors_queryset()]
+    """Return a list of public InstructorSchema dicts for all instructors."""
+    return [
+        InstructorPublicSchema.model_validate(obj).model_dump() for obj in instructors_queryset()
+    ]
 
 
 def update_instructor(pk, validated_data: dict, *, partial: bool = False) -> dict:
-    """Update an instructor's related user fields and return InstructorSchema dict.
+    """Update an instructor's related user fields and return public InstructorSchema dict.
 
     Args:
         pk: Instructor primary key.
@@ -64,14 +66,15 @@ def update_instructor(pk, validated_data: dict, *, partial: bool = False) -> dic
             validated and we only set provided fields, behavior is naturally partial.
 
     Returns:
-        dict: InstructorSchema as dict after applying updates.
+        dict: InstructorPublicSchema as dict after applying updates.
     """
     # Will raise ObjectDoesNotExist("Instructor not found.") if missing
     instructor = get_instructor_from_id(pk)
     user = instructor.user
 
     # Only update allowed fields and only those provided in validated_data
-    updatable_fields = {"first_name", "last_name", "email", "phone_number", "birthdate", "address"}
+    # Sensitive fields email and phone_number are intentionally excluded from updates
+    updatable_fields = {"first_name", "last_name", "birthdate", "address"}
     update_fields: list[str] = []
 
     for field in updatable_fields:
@@ -82,5 +85,5 @@ def update_instructor(pk, validated_data: dict, *, partial: bool = False) -> dic
     if update_fields:
         user.save(update_fields=update_fields)  # type: ignore[arg-type]
 
-    # Return the instructor schema payload
-    return InstructorSchema.model_validate(instructor).model_dump()
+    # Return the public instructor schema payload (no email/phone)
+    return InstructorPublicSchema.model_validate(instructor).model_dump()

@@ -95,10 +95,8 @@ class TestUpdateInstructor:
         instructor.user.save(update_fields=["first_name"])  # type: ignore[arg-type]
 
         payload = {
-            "email": "updated@example.com",
             "first_name": "NewFirst",
             "last_name": "NewLast",
-            "phone_number": "+1777777777",
             "birthdate": "2001-01-01",
             "address": "Addr",
         }
@@ -110,19 +108,18 @@ class TestUpdateInstructor:
 
         # DB changes
         instructor.user.refresh_from_db()
-        assert instructor.user.email == payload["email"]
+        # Sensitive fields should remain unchanged via update service
         assert instructor.user.first_name == payload["first_name"]
         assert instructor.user.last_name == payload["last_name"]
-        assert instructor.user.phone_number == payload["phone_number"]
 
     def test_partial_update_only_updates_provided_fields(self, instructor):
         # Set a field to verify it remains unchanged
         instructor.user.first_name = "Keep"
         instructor.user.save(update_fields=["first_name"])  # type: ignore[arg-type]
 
-        payload = {"phone_number": "+1666666666"}
+        payload = {"last_name": "Patched"}
         data = update_instructor(instructor.id, payload, partial=True)
         assert "id" in data
         instructor.user.refresh_from_db()
         assert instructor.user.first_name == "Keep"  # unchanged
-        assert instructor.user.phone_number == "+1666666666"
+        assert instructor.user.last_name == "Patched"

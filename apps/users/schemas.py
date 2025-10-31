@@ -9,3 +9,11 @@ class UserSchema(BaseModel):
     phone_number: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class UserPublicSchema(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    username: str | None = None
+
+    model_config = {"from_attributes": True}

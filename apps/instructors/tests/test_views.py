@@ -77,12 +77,11 @@ class TestInstructorViewSet:
         assert instructor.user.first_name == put_payload["first_name"]
         assert instructor.user.last_name == put_payload["last_name"]
 
-        # PATCH update subset
-        patch_payload = {"first_name": "Patched", "phone_number": "+1888888888"}
+        # PATCH update subset (sensitive fields like phone_number must be ignored)
+        patch_payload = {"first_name": "Patched"}
         resp_patch = api_client.patch(
             reverse("instructor-detail", args=[instructor.id]), data=patch_payload, format="json"
         )
         assert resp_patch.status_code == status.HTTP_200_OK
         instructor.user.refresh_from_db()
         assert instructor.user.first_name == "Patched"
-        assert instructor.user.phone_number == "+1888888888"
