@@ -8,6 +8,8 @@ class StudioSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     address = serializers.CharField(max_length=255)
     is_active = serializers.BooleanField(required=False, default=False)
+    opening_time = serializers.TimeField(required=False, allow_null=True)
+    closing_time = serializers.TimeField(required=False, allow_null=True)
     created = serializers.DateTimeField(read_only=True)
     modified = serializers.DateTimeField(read_only=True)
 

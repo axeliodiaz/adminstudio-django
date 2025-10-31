@@ -4,7 +4,7 @@ from apps.studios.models import Room, Studio
 
 
 class StudioAdmin(admin.ModelAdmin):
-    list_display = ("name", "address", "is_active")
+    list_display = ("name", "opening_time", "closing_time", "address", "is_active")
     list_filter = ("is_active", "created")
 
 

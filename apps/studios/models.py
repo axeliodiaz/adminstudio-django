@@ -6,6 +6,8 @@ class Studio(SoftDeletableModel, UUIDModel, TimeStampedModel):
     name = models.CharField(max_length=100)
     address = models.CharField(max_length=255)
     is_active = models.BooleanField(default=False)
+    opening_time = models.TimeField(blank=True, null=True)
+    closing_time = models.TimeField(blank=True, null=True)
 
     def __str__(self):
         return self.name
