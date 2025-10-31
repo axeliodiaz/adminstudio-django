@@ -6,6 +6,8 @@ from pydantic import BaseModel
 
 class ScheduleSchema(BaseModel):
     id: uuid.UUID
+    title: str = ""
+    description: str | None = None
     created: datetime
     modified: datetime
     instructor_id: uuid.UUID
