@@ -37,6 +37,7 @@ OWN_APPS = [
     "apps.studios",
     "apps.schedules",
     "apps.plans",
+    "apps.wallets",
 ]
 INSTALLED_APPS = CORE_APPS + THIRD_PARTY_APPS + OWN_APPS
 
@@ -180,3 +181,13 @@ CELERY_RESULT_BACKEND = "rpc://"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+
+# Payment Service Provider (PSP) feature flag
+# Set to True to enable monetary transactions with PSP (e.g., Stripe, PayPal)
+# Set to False to disable PSP integration (for testing/development)
+ENABLE_PSP_PAYMENTS = os.environ.get("ENABLE_PSP_PAYMENTS", "False").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
