@@ -45,6 +45,8 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
         duration_days (int or None): The number of days the plan is valid. Can be None if not applicable.
         classes_included (int or None): The number of classes included in the plan.
             Can be None if not applicable.
+        guest_passes_included (int or None): The number of guest passes included in the plan.
+            Can be None if not applicable.
         is_active (bool): Indicates whether the plan is currently active.
         is_popular (bool): Indicates whether the plan is marked as popular.
         is_highlighted (bool): Indicates whether the plan is highlighted.
@@ -63,6 +65,7 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
     price = models.FloatField()
     duration_days = models.IntegerField(null=True)
     classes_included = models.IntegerField(null=True, blank=True)
+    guest_passes_included = models.IntegerField(null=True, blank=True)
 
     is_active = models.BooleanField(default=False)
     is_popular = models.BooleanField(default=False)
@@ -73,3 +76,6 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
     @property
     def benefits_list(self):
         return list(self.benefits.filter(is_active=True).order_by("name"))
+
+    def __str__(self):
+        return f"{self.name}"

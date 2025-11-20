@@ -7,5 +7,10 @@ router = DefaultRouter()
 router.register(r"plans", PlanViewSet, basename="plan")
 
 urlpatterns = [
+    path(
+        "purchase/",
+        PlanViewSet.as_view({"post": "purchase"}),
+        name="plan-purchase",
+    ),
     path("", include(router.urls)),
 ]

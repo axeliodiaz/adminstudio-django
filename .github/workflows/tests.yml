@@ -39,4 +39,4 @@ jobs:
           DJANGO_DEBUG: "0"
           DJANGO_ENV: "prod"
         run: |
-          pytest -q -W ignore
+          pytest -n 10 -q -W ignore

@@ -54,3 +54,24 @@ class TestPlanViewSet:
     def test_retrieve_plan_404(self, api_client):
         resp = api_client.get(reverse("plan-detail", args=[uuid.uuid4()]))
         assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+    @pytest.mark.django_db
+    def test_list_plans_does_not_require_authentication(self, api_client):
+        """Test that list endpoint is public and does not require authentication."""
+        # Create a plan to ensure there's data
+        Plan.objects.create(name="Public Plan", type="MEMBERSHIP", price=10.0, is_active=True)
+
+        # Make request without any authentication headers
+        resp = api_client.get(reverse("plan-list"))
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert isinstance(resp.json(), list)
+
+    @pytest.mark.django_db
+    def test_retrieve_plan_does_not_require_authentication(self, api_client, plan):
+        """Test that retrieve endpoint is public and does not require authentication."""
+        # Make request without any authentication headers
+        resp = api_client.get(reverse("plan-detail", args=[plan.id]))
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.json()["id"] == str(plan.id)

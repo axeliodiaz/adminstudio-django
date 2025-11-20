@@ -1,4 +1,5 @@
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
@@ -18,6 +19,8 @@ from apps.members.models import Reservation
 
 
 class MemberView(ViewSet):
+    permission_classes = [AllowAny]
+
     def create(self, request, *args, **kwargs):
         member_serializer = MemberSerializer(data=request.data)
         member_serializer.is_valid(raise_exception=True)
@@ -29,6 +32,8 @@ class MemberView(ViewSet):
 
 
 class ReservationView(ViewSet):
+    permission_classes = [AllowAny]
+
     def create(self, request, *args, **kwargs):
         serializer = ReservationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -1,6 +1,7 @@
 """Instructor views using DRF ViewSet."""
 
 from rest_framework import status, viewsets
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.instructors.serializers import InstructorCreateSerializer, InstructorUpdateSerializer
@@ -14,6 +15,8 @@ from apps.instructors.services import (
 
 class InstructorViewSet(viewsets.ViewSet):
     """Instructor ViewSet supporting create, list, retrieve, update, and partial update."""
+
+    permission_classes = [AllowAny]
 
     def create(self, request):
         serializer = InstructorCreateSerializer(data=request.data)

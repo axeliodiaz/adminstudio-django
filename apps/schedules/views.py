@@ -1,4 +1,5 @@
 from rest_framework import status, viewsets
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.schedules.models import Schedule
@@ -10,6 +11,8 @@ from django.utils.dateparse import parse_datetime
 
 class ScheduleViewSet(viewsets.ViewSet):
     """Minimal viewset for schedules: list, retrieve, create."""
+
+    permission_classes = [AllowAny]
 
     def _get_start_time_params(self, start_time: str | None = None):
         if start_time:
