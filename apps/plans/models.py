@@ -76,3 +76,6 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
     @property
     def benefits_list(self):
         return list(self.benefits.filter(is_active=True).order_by("name"))
+
+    def __str__(self):
+        return f"{self.name}"

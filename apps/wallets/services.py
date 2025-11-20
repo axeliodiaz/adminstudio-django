@@ -57,7 +57,7 @@ class WalletService:
         Raises:
             PurchaseAlreadyActivatedException: If the purchase is already activated
         """
-        if purchase.is_activated:
+        if purchase.activated_since:
             raise PurchaseAlreadyActivatedException(f"Purchase {purchase.id} is already activated")
 
         plan = purchase.plan
@@ -100,8 +100,12 @@ class WalletService:
                 setattr(wallet, wallet_field, True)
 
         # 6. Mark the purchase as activated and save
-        purchase.is_activated = True
-        purchase.save(update_fields=["is_activated", "modified"])
+        # Ensure plan is loaded for start/end calculation
+        if not purchase.plan:
+            purchase.plan = plan
+        purchase.activated_since = timezone.now().date()
+        # start and end will be automatically included in update_fields by the save method
+        purchase.save(update_fields=["activated_since", "modified"])
 
         # 7. Save the Wallet
         wallet.save()

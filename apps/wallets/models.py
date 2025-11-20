@@ -1,7 +1,10 @@
 # apps/wallet/models.py
+from datetime import datetime, timedelta
+
 from django.conf import settings
 from django.db import models
-from model_utils.models import TimeStampedModel, UUIDModel
+from django.utils import timezone
+from model_utils.models import TimeFramedModel, TimeStampedModel, UUIDModel
 
 
 class Wallet(UUIDModel, TimeStampedModel):
@@ -49,10 +52,11 @@ class Wallet(UUIDModel, TimeStampedModel):
         return f"Wallet for {self.user.username}"
 
 
-class PlanPurchase(UUIDModel, TimeStampedModel):
+class PlanPurchase(UUIDModel, TimeStampedModel, TimeFramedModel):
     """
     Immutable record of a Plan purchase by a User.
     Stores historical information of the purchase transaction.
+    The start and end fields are calculated based on activated_since and plan.duration_days.
     """
 
     user = models.ForeignKey(
@@ -68,12 +72,53 @@ class PlanPurchase(UUIDModel, TimeStampedModel):
         verbose_name="Purchased Plan",
     )
     price_paid = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Price Paid")
-    is_activated = models.BooleanField(default=False, verbose_name="Activated")
+    activated_since = models.DateField(null=True, blank=True, verbose_name="Activated Since")
 
     class Meta:
         verbose_name = "Plan Purchase"
         verbose_name_plural = "Plan Purchases"
         ordering = ["-created"]
+
+    def save(self, *args, **kwargs):
+        """
+        Calculate and set start and end fields based on activated_since and plan.duration_days.
+        Automatically includes start and end in update_fields if they are calculated.
+        """
+        # Ensure plan is loaded if we need to calculate end and it's not already loaded
+        if self.activated_since and self.plan_id and not self.plan:
+            from apps.plans.models import Plan
+
+            try:
+                self.plan = Plan.objects.get(id=self.plan_id)
+            except Plan.DoesNotExist:
+                pass
+
+        if self.activated_since:
+            # Calculate start: beginning of the activation date
+            self.start = timezone.make_aware(
+                datetime.combine(self.activated_since, datetime.min.time())
+            )
+            # Calculate end: end of the day after duration_days
+            if self.plan and self.plan.duration_days:
+                end_date = self.activated_since + timedelta(days=self.plan.duration_days)
+                self.end = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
+            else:
+                self.end = None
+        else:
+            self.start = None
+            self.end = None
+
+        # If update_fields is specified, include start and end if they were calculated
+        update_fields = kwargs.get("update_fields", None)
+        if update_fields is not None:
+            update_fields = set(update_fields)
+            if self.start is not None:
+                update_fields.add("start")
+            if self.end is not None:
+                update_fields.add("end")
+            kwargs["update_fields"] = list(update_fields)
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Purchase of {self.plan.name} by {self.user.username} - ${self.price_paid}"
