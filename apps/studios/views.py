@@ -1,6 +1,7 @@
 """ViewSets for studios app (list and retrieve in same class)."""
 
 from rest_framework import status, viewsets
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.studios.serializers import RoomSerializer, StudioSerializer
@@ -8,6 +9,8 @@ from apps.studios.services import get_list_rooms, get_list_studios, get_room, ge
 
 
 class StudioViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
     def list(self, request):
         data = StudioSerializer(get_list_studios(), many=True).data
         return Response(data, status=status.HTTP_200_OK)
@@ -19,6 +22,8 @@ class StudioViewSet(viewsets.ViewSet):
 
 
 class RoomViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
     def list(self, request):
         data = RoomSerializer(get_list_rooms(), many=True).data
         return Response(data, status=status.HTTP_200_OK)
