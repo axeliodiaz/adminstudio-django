@@ -1,8 +1,8 @@
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
+from drf_expiring_token.models import ExpiringToken
 
 User = get_user_model()
 
@@ -56,7 +56,7 @@ class TestLoginView:
         assert response.data["user"]["username"] == "testuser"
 
         # Verify token was created
-        token = Token.objects.get(user=user)
+        token = ExpiringToken.objects.get(user=user)
         assert response.data["token"] == token.key
 
     def test_login_successful_with_email(self, api_client, user):
@@ -74,13 +74,13 @@ class TestLoginView:
         assert response.data["user"]["email"] == "test@example.com"
 
         # Verify token was created
-        token = Token.objects.get(user=user)
+        token = ExpiringToken.objects.get(user=user)
         assert response.data["token"] == token.key
 
     def test_login_returns_existing_token_if_already_exists(self, api_client, user):
         """Test that login returns existing token if one already exists."""
         # Create a token first
-        existing_token = Token.objects.create(user=user)
+        existing_token = ExpiringToken.objects.create(user=user)
         existing_key = existing_token.key
 
         url = reverse("users:login")
@@ -94,7 +94,7 @@ class TestLoginView:
         assert response.data["token"] == existing_key
 
         # Verify only one token exists
-        assert Token.objects.filter(user=user).count() == 1
+        assert ExpiringToken.objects.filter(user=user).count() == 1
 
     def test_login_fails_with_invalid_username(self, api_client, user):
         """Test login fails with non-existent username."""
@@ -177,3 +177,26 @@ class TestLoginView:
 
         assert response.status_code == 200
         assert "token" in response.data
+
+    def test_token_has_expiration_date(self, api_client, user):
+        """Test that tokens have an expiration date."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.conf import settings
+
+        url = reverse("users:login")
+        payload = {
+            "username": "testuser",
+            "password": "testpass123",
+        }
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 200
+        token = ExpiringToken.objects.get(user=user)
+        assert token.expires is not None
+        # Token should expire in the future
+        assert token.expires > timezone.now()
+        # Should be approximately configured lifespan from now (within 1 minute tolerance)
+        expected_lifespan = getattr(settings, "EXPIRING_TOKEN_LIFESPAN", timedelta(hours=24))
+        expected_expiry = timezone.now() + expected_lifespan
+        assert abs((token.expires - expected_expiry).total_seconds()) < 60

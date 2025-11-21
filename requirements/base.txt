@@ -1,6 +1,7 @@
 Django==5.2.7
 black==25.9.0
 djangorestframework==3.16.1
+drf-expiring-token==1.1.2
 pytest==8.4.2
 pytest-xdist==3.8.0
 pytest-django==4.11.1
