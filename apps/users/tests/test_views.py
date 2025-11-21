@@ -193,10 +193,10 @@ class TestLoginView:
 
         assert response.status_code == 200
         token = ExpiringToken.objects.get(user=user)
-        assert token.expires_at is not None
+        assert token.expires is not None
         # Token should expire in the future
-        assert token.expires_at > timezone.now()
+        assert token.expires > timezone.now()
         # Should be approximately configured lifespan from now (within 1 minute tolerance)
         expected_lifespan = getattr(settings, "EXPIRING_TOKEN_LIFESPAN", timedelta(hours=24))
         expected_expiry = timezone.now() + expected_lifespan
-        assert abs((token.expires_at - expected_expiry).total_seconds()) < 60
+        assert abs((token.expires - expected_expiry).total_seconds()) < 60

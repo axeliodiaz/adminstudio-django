@@ -176,7 +176,7 @@ class TestWalletViewSetList:
             is_staff=True,
         )
 
-        token = Token.objects.create(user=staff_user)
+        token = ExpiringToken.objects.create(user=staff_user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-list")
@@ -196,7 +196,7 @@ class TestWalletViewSetList:
             is_superuser=True,
         )
 
-        token = Token.objects.create(user=superuser)
+        token = ExpiringToken.objects.create(user=superuser)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-list")
@@ -215,7 +215,7 @@ class TestWalletViewSetList:
             password="pass",
         )
 
-        token = Token.objects.create(user=other_user)
+        token = ExpiringToken.objects.create(user=other_user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-list")
@@ -243,7 +243,7 @@ class TestWalletViewSetList:
             password="pass",
             is_staff=True,
         )
-        token = Token.objects.create(user=staff_user)
+        token = ExpiringToken.objects.create(user=staff_user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-list")
