@@ -1,9 +1,9 @@
 from django.contrib.auth import authenticate
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from drf_expiring_token.models import ExpiringToken
 
 from apps.users.serializers import LoginSerializer
 from apps.users.schemas import UserSchema
@@ -50,8 +50,8 @@ class LoginView(APIView):
         if not user.check_password(password):
             return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Obtener o crear token
-        token, created = Token.objects.get_or_create(user=user)
+        # Obtener o crear token (el paquete maneja la expiración automáticamente)
+        token, created = ExpiringToken.objects.get_or_create(user=user)
 
         # Serializar datos del usuario
         user_data = UserSchema.model_validate(user).model_dump()

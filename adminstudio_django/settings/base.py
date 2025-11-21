@@ -26,7 +26,7 @@ CORE_APPS = [
 ]
 THIRD_PARTY_APPS = [
     "rest_framework",
-    "rest_framework.authtoken",
+    "drf_expiring_token",
 ]
 OWN_APPS = [
     "apps.healthcheck",
@@ -109,7 +109,7 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        "drf_expiring_token.authentication.ExpiringTokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
@@ -133,6 +133,12 @@ SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
 VERIFICATION_CODE_EXPIRATION_MINUTES = 5
+
+# Token expiration settings for drf-expiring-token
+# Tokens will expire after this time period (default: 24 hours)
+from datetime import timedelta
+
+EXPIRING_TOKEN_LIFESPAN = timedelta(hours=int(os.environ.get("TOKEN_EXPIRATION_HOURS", "24")))
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 

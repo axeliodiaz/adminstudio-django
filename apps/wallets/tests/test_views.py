@@ -7,8 +7,8 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
+from drf_expiring_token.models import ExpiringToken
 
 from apps.plans.models import Benefit, Plan
 from apps.wallets.models import PlanPurchase, Wallet
@@ -29,7 +29,7 @@ class TestWalletViewSetActivatePurchase:
         )
 
         # Authenticate
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         # Act
@@ -53,7 +53,7 @@ class TestWalletViewSetActivatePurchase:
 
     def test_activate_purchase_already_activated(self, api_client, user, activated_plan_purchase):
         """Test that activating an already activated purchase returns 400."""
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-activate-purchase")
@@ -66,7 +66,7 @@ class TestWalletViewSetActivatePurchase:
 
     def test_activate_purchase_not_found(self, api_client, user):
         """Test that activating a non-existent purchase returns 404."""
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-activate-purchase")
@@ -77,7 +77,7 @@ class TestWalletViewSetActivatePurchase:
 
     def test_activate_purchase_invalid_serializer(self, api_client, user):
         """Test that invalid serializer data returns 400."""
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-activate-purchase")
@@ -87,7 +87,7 @@ class TestWalletViewSetActivatePurchase:
 
     def test_activate_purchase_missing_purchase_id(self, api_client, user):
         """Test that missing purchase_id returns 400."""
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-activate-purchase")
@@ -100,7 +100,7 @@ class TestWalletViewSetActivatePurchase:
 class TestWalletViewSetList:
     def test_list_wallet_authenticated_user(self, api_client, user, wallet):
         """Test that authenticated user can view their own wallet."""
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-list")
@@ -116,7 +116,7 @@ class TestWalletViewSetList:
 
     def test_list_wallet_creates_wallet_if_not_exists(self, api_client, user):
         """Test that wallet is created if it doesn't exist."""
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-list")
@@ -151,7 +151,7 @@ class TestWalletViewSetList:
             activated_since=None,
         )
 
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-list")
@@ -226,7 +226,7 @@ class TestWalletViewSetList:
 
     def test_list_wallet_invalid_user_id(self, api_client, user):
         """Test that invalid user_id returns 400."""
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-list")
@@ -276,7 +276,7 @@ class TestWalletViewSetList:
             activated_since=None,
         )
 
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-list")
@@ -301,7 +301,7 @@ class TestWalletViewSetList:
             activated_since=None,
         )
 
-        token = Token.objects.create(user=user)
+        token = ExpiringToken.objects.create(user=user)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         url = reverse("wallet-list")
