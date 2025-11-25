@@ -109,14 +109,29 @@ def cancel_reservation(reservation_id: str) -> Reservation:
 
 
 def list_reservations_by_date_range(
-    *, start_date, end_date, member_id=None, instructor_id=None, room_id=None
+    *,
+    start_date=None,
+    end_date=None,
+    member_id=None,
+    schedule_id=None,
+    instructor_id=None,
+    room_id=None,
 ) -> QuerySet[Reservation]:
     """
     Return reservations filtered by schedule start date range and optional filters.
 
     Uses __range for date filtering (inclusive) as requested.
+    Can filter by schedule_id directly, or by date range with optional filters.
     """
-    filters = {"schedule__start_time__date__range": (start_date, end_date)}
+    filters = {}
+
+    # If schedule_id is provided, filter by it directly
+    if schedule_id is not None:
+        filters["schedule_id"] = schedule_id
+    # Otherwise, use date range if provided
+    elif start_date is not None and end_date is not None:
+        filters["schedule__start_time__date__range"] = (start_date, end_date)
+
     if member_id is not None:
         filters["member_id"] = member_id
     if instructor_id is not None:

@@ -173,7 +173,7 @@ class TestMembersServices:
             {
                 "start_date": start_date,
                 "end_date": end_date,
-                "instructor_id": str(instr2.id),
+                "schedule__instructor_id": str(instr2.id),
             }
         )
         assert {str(x.id) for x in res_instr} == {str(r2.id)}
@@ -183,7 +183,45 @@ class TestMembersServices:
             {
                 "start_date": start_date,
                 "end_date": end_date,
-                "room_id": str(room_a.id),
+                "schedule__room_id": str(room_a.id),
             }
         )
         assert {str(x.id) for x in res_room} == {str(r1.id)}
+
+    def test_list_reservations_filters_by_schedule_id(self):
+        User = get_user_model()
+        user_member = User.objects.create_user(
+            username=f"member_{uuid.uuid4()}", email=f"m_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        member = Member.objects.create(user=user_member)
+        studio = Studio.objects.create(name="S4", address="Addr4", is_active=True)
+        room = Room.objects.create(studio=studio, name="R4", capacity=10, is_active=True)
+        instructor_user = User.objects.create_user(
+            username=f"instr_{uuid.uuid4()}", email=f"i4_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        instructor = Instructor.objects.create(user=instructor_user)
+
+        base = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        s1 = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base,
+            duration_minutes=60,
+            room=room,
+        )
+        s2 = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base + datetime.timedelta(days=1),
+            duration_minutes=60,
+            room=room,
+        )
+
+        r1 = Reservation.objects.create(member=member, schedule=s1)
+        r2 = Reservation.objects.create(member=member, schedule=s2)
+
+        # Filter by schedule_id - should only return reservations for s1
+        result = service_list_reservations({"schedule_id": str(s1.id)})
+
+        assert isinstance(result, list)
+        ids = {str(obj.id) for obj in result}
+        assert ids == {str(r1.id)}
+        assert str(result[0].schedule_id) == str(s1.id)

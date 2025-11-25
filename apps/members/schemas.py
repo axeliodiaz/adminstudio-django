@@ -23,6 +23,5 @@ class ReservationSchema(BaseModel):
     schedule_id: uuid.UUID
     status: str
     spot: int | None = None
-    notes: str | None = None
 
     model_config = {"from_attributes": True}

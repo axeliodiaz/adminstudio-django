@@ -10,8 +10,11 @@ from typing import Iterable, List
 from uuid import UUID
 
 from apps.schedules.models import Schedule
-from apps.schedules.schedules import create_schedule as create_schedule_model
-from apps.schedules.schedules import get_schedules_list
+from apps.schedules.schedules import (
+    create_schedule as create_schedule_model,
+    get_schedule_by_id as get_schedule_by_id_domain,
+    get_schedules_list,
+)
 from apps.schedules.schemas import ScheduleSchema
 
 
@@ -62,5 +65,9 @@ def get_schedule_schema_list(
 
 
 def get_schedule_schema_by_id(schedule_id: UUID) -> ScheduleSchema:
-    """Fetch schedule by id and return as ScheduleSchema."""
-    return ScheduleSchema.model_validate(Schedule.objects.get(pk=schedule_id))
+    """Fetch schedule by id and return as ScheduleSchema.
+
+    Delegates to apps.schedules.schedules.get_schedule_by_id.
+    """
+    schedule = get_schedule_by_id_domain(schedule_id)
+    return ScheduleSchema.model_validate(schedule)

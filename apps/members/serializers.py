@@ -41,8 +41,25 @@ class ReservationSerializer(serializers.Serializer):
 
 
 class ReservationListQuerySerializer(serializers.Serializer):
-    start_date = serializers.DateField(required=True)
-    end_date = serializers.DateField(required=True)
+    start_date = serializers.DateField(required=False)
+    end_date = serializers.DateField(required=False)
     member_id = serializers.UUIDField(required=False)
+    schedule_id = serializers.UUIDField(required=False)
     schedule__instructor_id = serializers.UUIDField(required=False)
     schedule__room_id = serializers.UUIDField(required=False)
+
+    def validate(self, attrs):
+        """Validate that either schedule_id or both start_date and end_date are provided."""
+        schedule_id = attrs.get("schedule_id")
+        start_date = attrs.get("start_date")
+        end_date = attrs.get("end_date")
+
+        if not schedule_id and not (start_date and end_date):
+            raise serializers.ValidationError(
+                "Either 'schedule_id' or both 'start_date' and 'end_date' must be provided."
+            )
+
+        if start_date and end_date and start_date > end_date:
+            raise serializers.ValidationError("'start_date' must be before or equal to 'end_date'.")
+
+        return attrs
