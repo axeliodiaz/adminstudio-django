@@ -35,3 +35,6 @@ class Schedule(UUIDModel, SoftDeletableModel, TimeStampedModel):
 
     class Meta:
         ordering = ["start_time"]
+
+    def __str__(self):
+        return f"{self.title} - {self.start_time})"
