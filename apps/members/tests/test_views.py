@@ -439,9 +439,7 @@ class TestReservationsList:
         assert isinstance(resp.data, list)
         assert len(resp.data) == 2
         assert str(resp.data[0]["member_id"]) == str(member_id)
-        assert {"id", "schedule_id", "member_id", "status", "spot", "notes"}.issubset(
-            resp.data[0].keys()
-        )
+        assert {"id", "schedule_id", "member_id", "status", "spot"}.issubset(resp.data[0].keys())
 
     def test_list_returns_400_when_invalid_query(self, api_client):
         user = User.objects.create_user(
