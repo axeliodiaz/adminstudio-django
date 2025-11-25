@@ -5,8 +5,10 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from apps.members.members import list_reservations_by_date_range
+from apps.members import constants
+from apps.members.members import list_reservations_by_date_range, change_reservation_spot
 from apps.members.models import Member, Reservation
+from apps.members.exceptions import InvalidSpotException, ReservationInvalidStateException
 from apps.studios.models import Studio, Room
 from apps.instructors.models import Instructor
 from apps.schedules.models import Schedule
@@ -107,3 +109,156 @@ class TestMembersDomain:
             start_date=start_date, end_date=end_date, room_id=str(room_a.id)
         )
         assert {str(x.id) for x in qs_room} == {str(r1.id)}
+
+    def test_change_reservation_spot_success_updates_spot(self):
+        User = get_user_model()
+        user = User.objects.create_user(
+            username=f"member_{uuid.uuid4()}", email=f"m_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        member = Member.objects.create(user=user)
+        user_instructor = User.objects.create_user(
+            username=f"instr_{uuid.uuid4()}", email=f"i_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        instructor = Instructor.objects.create(user=user_instructor)
+        studio = Studio.objects.create(name="S1", address="Addr", is_active=True)
+        room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=1,
+        )
+
+        updated_reservation = change_reservation_spot(str(schedule.id), str(user.id), 5)
+
+        assert updated_reservation.spot == 5
+        reservation.refresh_from_db()
+        assert reservation.spot == 5
+
+    def test_change_reservation_spot_not_found_raises_exception(self):
+        User = get_user_model()
+        user = User.objects.create_user(
+            username=f"member_{uuid.uuid4()}", email=f"m_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        Member.objects.create(user=user)
+        user_instructor = User.objects.create_user(
+            username=f"instr_{uuid.uuid4()}", email=f"i_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        instructor = Instructor.objects.create(user=user_instructor)
+        studio = Studio.objects.create(name="S1", address="Addr", is_active=True)
+        room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+
+        with pytest.raises(Reservation.DoesNotExist):
+            change_reservation_spot(str(schedule.id), str(user.id), 5)
+
+    def test_change_reservation_spot_invalid_state_raises_exception(self):
+        User = get_user_model()
+        user = User.objects.create_user(
+            username=f"member_{uuid.uuid4()}", email=f"m_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        member = Member.objects.create(user=user)
+        user_instructor = User.objects.create_user(
+            username=f"instr_{uuid.uuid4()}", email=f"i_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        instructor = Instructor.objects.create(user=user_instructor)
+        studio = Studio.objects.create(name="S1", address="Addr", is_active=True)
+        room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+        Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_CANCELLED,
+            spot=1,
+        )
+
+        with pytest.raises(ReservationInvalidStateException):
+            change_reservation_spot(str(schedule.id), str(user.id), 5)
+
+    def test_change_reservation_spot_invalid_spot_range_raises_exception(self):
+        User = get_user_model()
+        user = User.objects.create_user(
+            username=f"member_{uuid.uuid4()}", email=f"m_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        member = Member.objects.create(user=user)
+        user_instructor = User.objects.create_user(
+            username=f"instr_{uuid.uuid4()}", email=f"i_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        instructor = Instructor.objects.create(user=user_instructor)
+        studio = Studio.objects.create(name="S1", address="Addr", is_active=True)
+        room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+        Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=1,
+        )
+
+        # Test spot < 1
+        with pytest.raises(InvalidSpotException):
+            change_reservation_spot(str(schedule.id), str(user.id), 0)
+
+        # Test spot > capacity
+        with pytest.raises(InvalidSpotException):
+            change_reservation_spot(str(schedule.id), str(user.id), 11)
+
+    def test_change_reservation_spot_spot_already_taken_raises_exception(self):
+        User = get_user_model()
+        user1 = User.objects.create_user(
+            username=f"member1_{uuid.uuid4()}", email=f"m1_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        user2 = User.objects.create_user(
+            username=f"member2_{uuid.uuid4()}", email=f"m2_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        member1 = Member.objects.create(user=user1)
+        member2 = Member.objects.create(user=user2)
+        user_instructor = User.objects.create_user(
+            username=f"instr_{uuid.uuid4()}", email=f"i_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        instructor = Instructor.objects.create(user=user_instructor)
+        studio = Studio.objects.create(name="S1", address="Addr", is_active=True)
+        room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+        Reservation.objects.create(
+            member=member1,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=1,
+        )
+        Reservation.objects.create(
+            member=member2,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=5,
+        )
+
+        # Try to change member1's spot to 5, which is already taken by member2
+        with pytest.raises(InvalidSpotException):
+            change_reservation_spot(str(schedule.id), str(user1.id), 5)

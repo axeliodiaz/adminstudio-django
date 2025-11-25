@@ -7,7 +7,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.members.models import Reservation
-from apps.members.exceptions import ReservationInvalidStateException
+from apps.members.exceptions import ReservationInvalidStateException, InvalidSpotException
 from apps.members.schemas import MemberSchema, ReservationSchema
 from apps.users.schemas import UserSchema
 
@@ -457,5 +457,136 @@ class TestReservationsList:
                 # "end_date" is missing
             },
         )
+
+        assert resp.status_code == 400
+
+
+@pytest.mark.django_db
+class TestReservationChangeSpotViewSet:
+    @pytest.fixture
+    def api_client(self):
+        return APIClient()
+
+    def _make_reservation_schema_mock(
+        self, reservation_id: uuid.UUID, schedule_id: uuid.UUID, member_id: uuid.UUID, spot: int = 5
+    ):
+        class _ReservationSchemaLike:
+            def __init__(self):
+                self.id = reservation_id
+                self.schedule_id = schedule_id
+                self.member_id = member_id
+                self.status = "RESERVED"
+                self.spot = spot
+                self.notes = ""
+
+            def model_dump(self):
+                return {
+                    "id": self.id,
+                    "schedule_id": self.schedule_id,
+                    "member_id": self.member_id,
+                    "status": self.status,
+                    "spot": self.spot,
+                    "notes": self.notes,
+                }
+
+        return _ReservationSchemaLike()
+
+    def test_change_spot_returns_200_and_payload_forwarded(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
+        schedule_id = uuid.uuid4()
+        reservation_id = uuid.uuid4()
+        member_id = uuid.uuid4()
+        reservation_schema = self._make_reservation_schema_mock(
+            reservation_id, schedule_id, member_id, spot=5
+        )
+
+        change_spot_mock = mocker.patch(
+            "apps.members.views.change_reservation_spot", return_value=reservation_schema
+        )
+
+        url = reverse("reservation-change-spot", kwargs={"schedule_id": str(schedule_id)})
+        payload = {"new_spot": 5}
+        resp = api_client.patch(url, data=payload, format="json")
+
+        assert resp.status_code == 200
+        change_spot_mock.assert_called_once_with(schedule_id, str(user.id), 5)
+        assert str(resp.data["id"]) == str(reservation_id)
+        assert resp.data["spot"] == 5
+
+    def test_change_spot_returns_404_when_not_found(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
+        schedule_id = uuid.uuid4()
+        mocker.patch(
+            "apps.members.views.change_reservation_spot", side_effect=Reservation.DoesNotExist
+        )
+        url = reverse("reservation-change-spot", kwargs={"schedule_id": str(schedule_id)})
+        payload = {"new_spot": 5}
+        resp = api_client.patch(url, data=payload, format="json")
+
+        assert resp.status_code == 404
+        assert resp.data["detail"] == "Not found."
+
+    def test_change_spot_returns_400_when_invalid_state(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
+        schedule_id = uuid.uuid4()
+        mocker.patch(
+            "apps.members.views.change_reservation_spot",
+            side_effect=ReservationInvalidStateException(
+                "Only RESERVED reservations can change spots."
+            ),
+        )
+        url = reverse("reservation-change-spot", kwargs={"schedule_id": str(schedule_id)})
+        payload = {"new_spot": 5}
+        resp = api_client.patch(url, data=payload, format="json")
+
+        assert resp.status_code == 400
+        assert resp.data["detail"] == "Only RESERVED reservations can change spots."
+
+    def test_change_spot_returns_400_when_invalid_spot(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
+        schedule_id = uuid.uuid4()
+        mocker.patch(
+            "apps.members.views.change_reservation_spot",
+            side_effect=InvalidSpotException("Spot 5 is already taken."),
+        )
+        url = reverse("reservation-change-spot", kwargs={"schedule_id": str(schedule_id)})
+        payload = {"new_spot": 5}
+        resp = api_client.patch(url, data=payload, format="json")
+
+        assert resp.status_code == 400
+        assert resp.data["detail"] == "Spot 5 is already taken."
+
+    def test_change_spot_returns_400_when_invalid_serializer(self, api_client):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
+        schedule_id = uuid.uuid4()
+        url = reverse("reservation-change-spot", kwargs={"schedule_id": str(schedule_id)})
+        # Missing new_spot or invalid value
+        payload = {}
+        resp = api_client.patch(url, data=payload, format="json")
 
         assert resp.status_code == 400

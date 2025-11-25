@@ -12,12 +12,14 @@ from apps.members.serializers import (
     MemberSerializer,
     ReservationSerializer,
     ReservationListQuerySerializer,
+    ReservationChangeSpotSerializer,
 )
 from apps.members.services import (
     get_or_create_member_user,
     get_member_from_user_id,
     create_reservation,
     cancel_reservation,
+    change_reservation_spot,
     list_reservations,
 )
 from apps.members.models import Member, Reservation
@@ -82,5 +84,19 @@ class ReservationView(ViewSet):
         except Reservation.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         except ReservationInvalidStateException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(reservation.model_dump(), status=status.HTTP_200_OK)
+
+    def change_spot(self, request, schedule_id=None, *args, **kwargs):
+        serializer = ReservationChangeSpotSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            reservation = change_reservation_spot(
+                schedule_id, str(request.user.id), serializer.validated_data["new_spot"]
+            )
+        except Reservation.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        except (ReservationInvalidStateException, InvalidSpotException) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation.model_dump(), status=status.HTTP_200_OK)

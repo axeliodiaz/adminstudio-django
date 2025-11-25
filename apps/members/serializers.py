@@ -63,3 +63,7 @@ class ReservationListQuerySerializer(serializers.Serializer):
             raise serializers.ValidationError("'start_date' must be before or equal to 'end_date'.")
 
         return attrs
+
+
+class ReservationChangeSpotSerializer(serializers.Serializer):
+    new_spot = serializers.IntegerField(min_value=1)

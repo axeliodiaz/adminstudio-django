@@ -36,6 +36,12 @@ def cancel_reservation(reservation_id: str) -> ReservationSchema:
     return ReservationSchema.model_validate(reservation)
 
 
+def change_reservation_spot(schedule_id: str, user_id: str, new_spot: int) -> ReservationSchema:
+    """Application service: change reservation spot and return ReservationSchema."""
+    reservation = members.change_reservation_spot(schedule_id, user_id, new_spot)
+    return ReservationSchema.model_validate(reservation)
+
+
 def list_reservations(validated_query: dict) -> list[ReservationSchema]:
     """Application service: list reservations via domain and return schemas."""
     # Map serializer field names to function parameter names
