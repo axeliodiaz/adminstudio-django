@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import QuerySet
 
 from apps.members import constants
@@ -106,6 +107,69 @@ def cancel_reservation(reservation_id: str) -> Reservation:
     reservation.status = constants.RESERVATION_STATUS_CANCELLED
     reservation.save(update_fields=["status", "modified"])
     return reservation
+
+
+def change_reservation_spot(schedule_id: str, user_id: str, new_spot: int) -> Reservation:
+    """Change the spot of an existing reservation atomically.
+
+    This function:
+    1. Finds the reservation for the given schedule and user
+    2. Validates the reservation exists and is in RESERVED status
+    3. Validates the new spot is available and valid
+    4. Updates the spot in a single transaction
+
+    Raises:
+        Reservation.DoesNotExist: If reservation doesn't exist
+        ReservationInvalidStateException: If reservation is not RESERVED
+        InvalidSpotException: If new spot is invalid or unavailable
+    """
+    with transaction.atomic():
+        # Get member from user_id
+        member = get_member_by_user_id(user_id)
+
+        # Find the reservation for this schedule and member (without status filter first)
+        reservation = Reservation.objects.filter(
+            schedule_id=schedule_id,
+            member=member,
+        ).first()
+
+        if not reservation:
+            raise Reservation.DoesNotExist(
+                f"Reservation not found for schedule {schedule_id} and user {user_id}"
+            )
+
+        # Validate reservation is in RESERVED status
+        if reservation.status != constants.RESERVATION_STATUS_RESERVED:
+            raise ReservationInvalidStateException("Only RESERVED reservations can change spots.")
+
+        schedule = reservation.schedule
+        room_capacity = schedule.room.capacity
+
+        # Validate spot range
+        if new_spot < 1:
+            raise InvalidSpotException("Spot must be greater than or equal to 1.")
+        if new_spot > room_capacity:
+            raise InvalidSpotException(
+                f"Spot must be less than or equal to the room capacity ({room_capacity})."
+            )
+
+        # Check if new spot is already taken by another reservation
+        existing_reservation = (
+            Reservation.objects.filter(
+                schedule=schedule, spot=new_spot, status=constants.RESERVATION_STATUS_RESERVED
+            )
+            .exclude(id=reservation.id)
+            .first()
+        )
+
+        if existing_reservation:
+            raise InvalidSpotException(f"Spot {new_spot} is already taken.")
+
+        # Update the spot
+        reservation.spot = new_spot
+        reservation.save(update_fields=["spot", "modified"])
+
+        return reservation
 
 
 def list_reservations_by_date_range(

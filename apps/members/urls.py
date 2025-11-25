@@ -19,4 +19,9 @@ urlpatterns = [
         ReservationView.as_view({"post": "cancel"}),
         name="reservation-cancel",
     ),
+    path(
+        "reservations/<uuid:schedule_id>/change-spot/",
+        ReservationView.as_view({"patch": "change_spot"}),
+        name="reservation-change-spot",
+    ),
 ]

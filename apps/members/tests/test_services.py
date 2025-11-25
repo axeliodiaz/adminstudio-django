@@ -3,9 +3,12 @@ import pytest
 
 from apps.members import constants
 from apps.members.models import Reservation, Member
-from apps.members.exceptions import ReservationInvalidStateException
-from apps.members.services import cancel_reservation as service_cancel_reservation
-from apps.members.services import list_reservations as service_list_reservations
+from apps.members.exceptions import ReservationInvalidStateException, InvalidSpotException
+from apps.members.services import (
+    cancel_reservation as service_cancel_reservation,
+    list_reservations as service_list_reservations,
+    change_reservation_spot as service_change_reservation_spot,
+)
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -225,3 +228,52 @@ class TestMembersServices:
         ids = {str(obj.id) for obj in result}
         assert ids == {str(r1.id)}
         assert str(result[0].schedule_id) == str(s1.id)
+
+    def test_change_reservation_spot_success_returns_schema_and_updates_db(self):
+        member, schedule = self._build_graph()
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=1,
+        )
+
+        schema = service_change_reservation_spot(str(schedule.id), str(member.user.id), 5)
+
+        # Returned object is a Pydantic ReservationSchema-like with attributes
+        assert str(schema.id) == str(reservation.id)
+        assert schema.spot == 5
+
+        # DB is updated
+        reservation.refresh_from_db()
+        assert reservation.spot == 5
+
+    def test_change_reservation_spot_not_found_bubbles_up(self):
+        member, schedule = self._build_graph()
+        with pytest.raises(Reservation.DoesNotExist):
+            service_change_reservation_spot(str(schedule.id), str(member.user.id), 5)
+
+    def test_change_reservation_spot_invalid_state_bubbles_custom_exception(self):
+        member, schedule = self._build_graph()
+        Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_CANCELLED,
+            spot=1,
+        )
+
+        with pytest.raises(ReservationInvalidStateException):
+            service_change_reservation_spot(str(schedule.id), str(member.user.id), 5)
+
+    def test_change_reservation_spot_invalid_spot_bubbles_exception(self):
+        member, schedule = self._build_graph()
+        Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=1,
+        )
+
+        # Test spot out of range
+        with pytest.raises(InvalidSpotException):
+            service_change_reservation_spot(str(schedule.id), str(member.user.id), 11)
