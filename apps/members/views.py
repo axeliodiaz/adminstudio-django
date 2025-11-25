@@ -15,15 +15,25 @@ from apps.members.serializers import (
 )
 from apps.members.services import (
     get_or_create_member_user,
+    get_member_from_user_id,
     create_reservation,
     cancel_reservation,
     list_reservations,
 )
-from apps.members.models import Reservation
+from apps.members.models import Member, Reservation
 
 
 class MemberView(ViewSet):
     permission_classes = [AllowAny]
+
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        get_member action requires authentication.
+        """
+        if self.action == "get_member":
+            return [IsAuthenticated()]
+        return [AllowAny()]
 
     def create(self, request, *args, **kwargs):
         member_serializer = MemberSerializer(data=request.data)
@@ -33,6 +43,13 @@ class MemberView(ViewSet):
         if created:
             return Response(data, status=status.HTTP_201_CREATED)
         return Response(data, status=status.HTTP_200_OK)
+
+    def get_member(self, request, *args, **kwargs):
+        try:
+            member_schema = get_member_from_user_id(request.user.id)
+            return Response(member_schema.model_dump(), status=status.HTTP_200_OK)
+        except Member.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ReservationView(ViewSet):
