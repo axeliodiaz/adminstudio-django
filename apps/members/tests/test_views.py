@@ -27,6 +27,7 @@ class TestReservationViewSet:
                 self.schedule_id = schedule_id
                 self.member_id = member_id
                 self.status = "RESERVED"
+                self.spot = 1
                 self.notes = ""
 
             def model_dump(self):
@@ -35,6 +36,7 @@ class TestReservationViewSet:
                     "schedule_id": self.schedule_id,
                     "member_id": self.member_id,
                     "status": self.status,
+                    "spot": self.spot,
                     "notes": self.notes,
                 }
 
@@ -54,9 +56,17 @@ class TestReservationViewSet:
             "apps.members.views.create_reservation", return_value=reservation_schema
         )
 
+        # Mock schedule with room for serializer validation
+        mock_room = mocker.Mock()
+        mock_room.capacity = 10
+        mock_schedule = mocker.Mock()
+        mock_schedule.room = mock_room
+        mocker.patch("apps.members.serializers.get_schedule_by_id", return_value=mock_schedule)
+
         url = reverse("reservations")
         payload = {
             "schedule_id": str(schedule_id),
+            "spot": 1,
             "notes": "Bring towel",
         }
         resp = api_client.post(url, data=payload, format="json")
@@ -153,6 +163,7 @@ class TestReservationViewSet:
                 self.schedule_id = schedule_id
                 self.member_id = member_id
                 self.status = "RESERVED"
+                self.spot = 1
                 self.notes = ""
 
             def model_dump(self):
@@ -161,6 +172,7 @@ class TestReservationViewSet:
                     "schedule_id": self.schedule_id,
                     "member_id": self.member_id,
                     "status": self.status,
+                    "spot": self.spot,
                     "notes": self.notes,
                 }
 
@@ -180,9 +192,17 @@ class TestReservationViewSet:
             "apps.members.views.create_reservation", return_value=reservation_schema
         )
 
+        # Mock schedule with room for serializer validation
+        mock_room = mocker.Mock()
+        mock_room.capacity = 10
+        mock_schedule = mocker.Mock()
+        mock_schedule.room = mock_room
+        mocker.patch("apps.members.serializers.get_schedule_by_id", return_value=mock_schedule)
+
         url = reverse("reservations")
         payload = {
             "schedule_id": str(schedule_id),
+            "spot": 1,
             "notes": "Bring towel",
         }
         resp = api_client.post(url, data=payload, format="json")
@@ -281,6 +301,7 @@ class TestReservationCancelViewSet:
                 self.schedule_id = schedule_id
                 self.member_id = member_id
                 self.status = "CANCELLED"
+                self.spot = 1
                 self.notes = ""
 
             def model_dump(self):
@@ -289,6 +310,7 @@ class TestReservationCancelViewSet:
                     "schedule_id": self.schedule_id,
                     "member_id": self.member_id,
                     "status": self.status,
+                    "spot": self.spot,
                     "notes": self.notes,
                 }
 
@@ -382,6 +404,7 @@ class TestReservationsList:
                 schedule_id=uuid.uuid4(),
                 member_id=member_id,
                 status="RESERVED",
+                spot=1,
                 notes="",
             ),
             ReservationSchema(
@@ -391,6 +414,7 @@ class TestReservationsList:
                 schedule_id=uuid.uuid4(),
                 member_id=member_id,
                 status="RESERVED",
+                spot=2,
                 notes="",
             ),
         ]
@@ -415,7 +439,9 @@ class TestReservationsList:
         assert isinstance(resp.data, list)
         assert len(resp.data) == 2
         assert str(resp.data[0]["member_id"]) == str(member_id)
-        assert {"id", "schedule_id", "member_id", "status", "notes"}.issubset(resp.data[0].keys())
+        assert {"id", "schedule_id", "member_id", "status", "spot", "notes"}.issubset(
+            resp.data[0].keys()
+        )
 
     def test_list_returns_400_when_invalid_query(self, api_client):
         user = User.objects.create_user(
