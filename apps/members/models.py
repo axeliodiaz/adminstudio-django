@@ -44,6 +44,11 @@ class Reservation(SoftDeletableModel, UUIDModel, TimeStampedModel):
             "Optional notes or remarks related to this reservation (e.g. late arrival, injury, manual adjustment)."
         ),
     )
+    spot = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="The bike spot/puesto number chosen for this reservation.",
+    )
 
     def __str__(self):
         return f"{self.member} → {self.schedule} ({self.status})"

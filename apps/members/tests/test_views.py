@@ -2,6 +2,7 @@ import datetime
 import uuid
 
 import pytest
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -9,6 +10,8 @@ from apps.members.models import Reservation
 from apps.members.exceptions import ReservationInvalidStateException
 from apps.members.schemas import MemberSchema, ReservationSchema
 from apps.users.schemas import UserSchema
+
+User = get_user_model()
 
 
 @pytest.mark.django_db
@@ -24,6 +27,7 @@ class TestReservationViewSet:
                 self.schedule_id = schedule_id
                 self.member_id = member_id
                 self.status = "RESERVED"
+                self.spot = 1
                 self.notes = ""
 
             def model_dump(self):
@@ -32,6 +36,7 @@ class TestReservationViewSet:
                     "schedule_id": self.schedule_id,
                     "member_id": self.member_id,
                     "status": self.status,
+                    "spot": self.spot,
                     "notes": self.notes,
                 }
 
@@ -40,15 +45,28 @@ class TestReservationViewSet:
     def test_create_returns_201_and_payload_forwarded(self, mocker, api_client):
         schedule_id = uuid.uuid4()
         member_id = uuid.uuid4()
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
         reservation_schema = self._make_reservation_schema_mock(schedule_id, member_id)
         create_res_mock = mocker.patch(
             "apps.members.views.create_reservation", return_value=reservation_schema
         )
 
+        # Mock schedule with room for serializer validation
+        mock_room = mocker.Mock()
+        mock_room.capacity = 10
+        mock_schedule = mocker.Mock()
+        mock_schedule.room = mock_room
+        mocker.patch("apps.members.serializers.get_schedule_by_id", return_value=mock_schedule)
+
         url = reverse("reservations")
         payload = {
-            "user_id": str(member_id),
             "schedule_id": str(schedule_id),
+            "spot": 1,
             "notes": "Bring towel",
         }
         resp = api_client.post(url, data=payload, format="json")
@@ -56,7 +74,7 @@ class TestReservationViewSet:
         assert resp.status_code == 201
         called_args, _ = create_res_mock.call_args
         assert called_args
-        assert str(called_args[0]["user_id"]) == payload["user_id"]
+        assert str(called_args[0]["user_id"]) == str(user.id)
         assert str(resp.data["schedule_id"]) == str(schedule_id)
 
 
@@ -145,6 +163,7 @@ class TestReservationViewSet:
                 self.schedule_id = schedule_id
                 self.member_id = member_id
                 self.status = "RESERVED"
+                self.spot = 1
                 self.notes = ""
 
             def model_dump(self):
@@ -153,6 +172,7 @@ class TestReservationViewSet:
                     "schedule_id": self.schedule_id,
                     "member_id": self.member_id,
                     "status": self.status,
+                    "spot": self.spot,
                     "notes": self.notes,
                 }
 
@@ -161,15 +181,28 @@ class TestReservationViewSet:
     def test_create_returns_201_and_payload_forwarded(self, mocker, api_client):
         schedule_id = uuid.uuid4()
         member_id = uuid.uuid4()
+        user = User.objects.create_user(
+            username="testuser2",
+            email="test2@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
         reservation_schema = self._make_reservation_schema_mock(schedule_id, member_id)
         create_res_mock = mocker.patch(
             "apps.members.views.create_reservation", return_value=reservation_schema
         )
 
+        # Mock schedule with room for serializer validation
+        mock_room = mocker.Mock()
+        mock_room.capacity = 10
+        mock_schedule = mocker.Mock()
+        mock_schedule.room = mock_room
+        mocker.patch("apps.members.serializers.get_schedule_by_id", return_value=mock_schedule)
+
         url = reverse("reservations")
         payload = {
-            "user_id": str(member_id),
             "schedule_id": str(schedule_id),
+            "spot": 1,
             "notes": "Bring towel",
         }
         resp = api_client.post(url, data=payload, format="json")
@@ -177,7 +210,7 @@ class TestReservationViewSet:
         assert resp.status_code == 201
         called_args, _ = create_res_mock.call_args
         assert called_args
-        assert str(called_args[0]["user_id"]) == payload["user_id"]
+        assert str(called_args[0]["user_id"]) == str(user.id)
         assert str(resp.data["schedule_id"]) == str(schedule_id)
 
 
@@ -268,6 +301,7 @@ class TestReservationCancelViewSet:
                 self.schedule_id = schedule_id
                 self.member_id = member_id
                 self.status = "CANCELLED"
+                self.spot = 1
                 self.notes = ""
 
             def model_dump(self):
@@ -276,12 +310,19 @@ class TestReservationCancelViewSet:
                     "schedule_id": self.schedule_id,
                     "member_id": self.member_id,
                     "status": self.status,
+                    "spot": self.spot,
                     "notes": self.notes,
                 }
 
         return _ReservationSchemaLike()
 
     def test_cancel_returns_200_and_payload_forwarded(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
         reservation_id = uuid.uuid4()
         schedule_id = uuid.uuid4()
         member_id = uuid.uuid4()
@@ -302,6 +343,12 @@ class TestReservationCancelViewSet:
         assert resp.data["status"] == "CANCELLED"
 
     def test_cancel_returns_404_when_not_found(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
         reservation_id = uuid.uuid4()
         mocker.patch("apps.members.views.cancel_reservation", side_effect=Reservation.DoesNotExist)
         url = reverse("reservation-cancel", kwargs={"pk": str(reservation_id)})
@@ -311,6 +358,12 @@ class TestReservationCancelViewSet:
         assert resp.data["detail"] == "Not found."
 
     def test_cancel_returns_400_when_invalid_state(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
         reservation_id = uuid.uuid4()
         mocker.patch(
             "apps.members.views.cancel_reservation",
@@ -329,6 +382,12 @@ class TestReservationCancelViewSet:
 class TestReservationsList:
 
     def test_list_returns_200_and_payload_forwarded(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
         # Arrange
         start_date = datetime.date(2025, 1, 1)
         end_date = datetime.date(2025, 1, 31)
@@ -345,6 +404,7 @@ class TestReservationsList:
                 schedule_id=uuid.uuid4(),
                 member_id=member_id,
                 status="RESERVED",
+                spot=1,
                 notes="",
             ),
             ReservationSchema(
@@ -354,6 +414,7 @@ class TestReservationsList:
                 schedule_id=uuid.uuid4(),
                 member_id=member_id,
                 status="RESERVED",
+                spot=2,
                 notes="",
             ),
         ]
@@ -378,9 +439,17 @@ class TestReservationsList:
         assert isinstance(resp.data, list)
         assert len(resp.data) == 2
         assert str(resp.data[0]["member_id"]) == str(member_id)
-        assert {"id", "schedule_id", "member_id", "status", "notes"}.issubset(resp.data[0].keys())
+        assert {"id", "schedule_id", "member_id", "status", "spot", "notes"}.issubset(
+            resp.data[0].keys()
+        )
 
     def test_list_returns_400_when_invalid_query(self, api_client):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
         # Missing required end_date
         url = reverse("reservations")
         resp = api_client.get(
