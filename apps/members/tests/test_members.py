@@ -110,6 +110,38 @@ class TestMembersDomain:
         )
         assert {str(x.id) for x in qs_room} == {str(r1.id)}
 
+    def test_list_reservations_by_date_range_excludes_cancelled_reservations(self, base_graph):
+        member, instructor, room = base_graph
+
+        base = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        s_today = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base,
+            duration_minutes=60,
+            room=room,
+        )
+
+        r1 = Reservation.objects.create(
+            member=member, schedule=s_today, status=constants.RESERVATION_STATUS_RESERVED
+        )
+        r2 = Reservation.objects.create(
+            member=member, schedule=s_today, status=constants.RESERVATION_STATUS_CANCELLED
+        )
+        r3 = Reservation.objects.create(
+            member=member, schedule=s_today, status=constants.RESERVATION_STATUS_ATTENDED
+        )
+
+        start_date = base.date()
+        end_date = base.date()
+
+        qs = list_reservations_by_date_range(start_date=start_date, end_date=end_date)
+
+        ids = {str(x.id) for x in qs}
+        # Should include RESERVED and ATTENDED, but exclude CANCELLED
+        assert str(r1.id) in ids
+        assert str(r3.id) in ids
+        assert str(r2.id) not in ids
+
     def test_change_reservation_spot_success_updates_spot(self):
         User = get_user_model()
         user = User.objects.create_user(

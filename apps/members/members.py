@@ -127,20 +127,31 @@ def change_reservation_spot(schedule_id: str, user_id: str, new_spot: int) -> Re
         # Get member from user_id
         member = get_member_by_user_id(user_id)
 
-        # Find the reservation for this schedule and member (without status filter first)
+        # Find the RESERVED reservation for this schedule and member
         reservation = Reservation.objects.filter(
             schedule_id=schedule_id,
             member=member,
+            status=constants.RESERVATION_STATUS_RESERVED,
         ).first()
 
+        # If no RESERVED reservation found, check if any reservation exists
+        # to provide a more specific error message
         if not reservation:
-            raise Reservation.DoesNotExist(
-                f"Reservation not found for schedule {schedule_id} and user {user_id}"
-            )
+            any_reservation = Reservation.objects.filter(
+                schedule_id=schedule_id,
+                member=member,
+            ).first()
 
-        # Validate reservation is in RESERVED status
-        if reservation.status != constants.RESERVATION_STATUS_RESERVED:
-            raise ReservationInvalidStateException("Only RESERVED reservations can change spots.")
+            if any_reservation:
+                # Reservation exists but is not RESERVED
+                raise ReservationInvalidStateException(
+                    "Only RESERVED reservations can change spots."
+                )
+            else:
+                # No reservation found at all
+                raise Reservation.DoesNotExist(
+                    f"Reservation not found for schedule {schedule_id} and user {user_id}"
+                )
 
         schedule = reservation.schedule
         room_capacity = schedule.room.capacity
@@ -186,6 +197,7 @@ def list_reservations_by_date_range(
 
     Uses __range for date filtering (inclusive) as requested.
     Can filter by schedule_id directly, or by date range with optional filters.
+    Excludes cancelled reservations from the results.
     """
     filters = {}
 
@@ -202,4 +214,8 @@ def list_reservations_by_date_range(
         filters["schedule__instructor_id"] = instructor_id
     if room_id is not None:
         filters["schedule__room_id"] = room_id
-    return Reservation.objects.filter(**filters)
+
+    # Exclude cancelled reservations
+    return Reservation.objects.filter(**filters).exclude(
+        status=constants.RESERVATION_STATUS_CANCELLED
+    )

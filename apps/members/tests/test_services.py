@@ -229,6 +229,49 @@ class TestMembersServices:
         assert ids == {str(r1.id)}
         assert str(result[0].schedule_id) == str(s1.id)
 
+    def test_list_reservations_excludes_cancelled_reservations(self):
+        User = get_user_model()
+        user_member = User.objects.create_user(
+            username=f"member_{uuid.uuid4()}", email=f"m_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        member = Member.objects.create(user=user_member)
+        studio = Studio.objects.create(name="S5", address="Addr5", is_active=True)
+        room = Room.objects.create(studio=studio, name="R5", capacity=10, is_active=True)
+        instructor_user = User.objects.create_user(
+            username=f"instr_{uuid.uuid4()}", email=f"i5_{uuid.uuid4()}@ex.com", password="pass"
+        )
+        instructor = Instructor.objects.create(user=instructor_user)
+
+        base = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base,
+            duration_minutes=60,
+            room=room,
+        )
+
+        r1 = Reservation.objects.create(
+            member=member, schedule=schedule, status=constants.RESERVATION_STATUS_RESERVED
+        )
+        r2 = Reservation.objects.create(
+            member=member, schedule=schedule, status=constants.RESERVATION_STATUS_CANCELLED
+        )
+        r3 = Reservation.objects.create(
+            member=member, schedule=schedule, status=constants.RESERVATION_STATUS_ATTENDED
+        )
+
+        start_date = base.date()
+        end_date = base.date()
+
+        result = service_list_reservations({"start_date": start_date, "end_date": end_date})
+
+        assert isinstance(result, list)
+        ids = {str(obj.id) for obj in result}
+        # Should include RESERVED and ATTENDED, but exclude CANCELLED
+        assert str(r1.id) in ids
+        assert str(r3.id) in ids
+        assert str(r2.id) not in ids
+
     def test_change_reservation_spot_success_returns_schema_and_updates_db(self):
         member, schedule = self._build_graph()
         reservation = Reservation.objects.create(
