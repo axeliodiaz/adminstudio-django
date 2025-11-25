@@ -1,9 +1,13 @@
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
-from apps.members.exceptions import RoomFullException, ReservationInvalidStateException
+from apps.members.exceptions import (
+    InvalidSpotException,
+    RoomFullException,
+    ReservationInvalidStateException,
+)
 from apps.members.serializers import (
     MemberSerializer,
     ReservationSerializer,
@@ -32,14 +36,18 @@ class MemberView(ViewSet):
 
 
 class ReservationView(ViewSet):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         serializer = ReservationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data.copy()
+        validated_data["user_id"] = request.user.id
         try:
-            reservation = create_reservation(serializer.validated_data)
+            reservation = create_reservation(validated_data)
         except RoomFullException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InvalidSpotException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation.model_dump(), status=status.HTTP_201_CREATED)
 

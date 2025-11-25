@@ -1,7 +1,11 @@
 from django.db.models import QuerySet
 
 from apps.members import constants
-from apps.members.exceptions import RoomFullException, ReservationInvalidStateException
+from apps.members.exceptions import (
+    InvalidSpotException,
+    RoomFullException,
+    ReservationInvalidStateException,
+)
 from apps.members.models import Member, Reservation
 from apps.schedules.schedules import get_schedule_by_id
 from apps.users.services import get_or_create_user
@@ -43,7 +47,7 @@ def get_scheduled_reservations_by_member_id_and_schedule_id(
 def create_reservation(validated_data: dict) -> Reservation:
     """Domain logic: create a Reservation for a member and schedule.
 
-    Expects keys: user_id (UUID), schedule_id (UUID), optional notes.
+    Expects keys: user_id (UUID), schedule_id (UUID), spot (int), optional notes.
     """
     # First, ensure the referenced user exists to avoid FK violations when creating Member
     from django.contrib.auth import get_user_model
@@ -59,6 +63,16 @@ def create_reservation(validated_data: dict) -> Reservation:
     # Fetch Schedule model instance via domain function
     schedule = get_schedule_by_id(validated_data["schedule_id"])
 
+    # Validate spot range
+    spot = validated_data["spot"]
+    room_capacity = schedule.room.capacity
+    if spot < 1:
+        raise InvalidSpotException("Spot must be greater than or equal to 1.")
+    if spot > room_capacity:
+        raise InvalidSpotException(
+            f"Spot must be less than or equal to the room capacity ({room_capacity})."
+        )
+
     members_in_schedule = get_scheduled_reservations_by_member_id_and_schedule_id(
         member.id, schedule.id
     )
@@ -69,6 +83,7 @@ def create_reservation(validated_data: dict) -> Reservation:
     reservation = Reservation.objects.create(
         member=member,
         schedule=schedule,
+        spot=spot,
         notes=validated_data.get("notes") or "",
     )
     return reservation
