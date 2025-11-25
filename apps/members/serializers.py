@@ -67,3 +67,7 @@ class ReservationListQuerySerializer(serializers.Serializer):
 
 class ReservationChangeSpotSerializer(serializers.Serializer):
     new_spot = serializers.IntegerField(min_value=1)
+
+
+class ReservationCancelSerializer(serializers.Serializer):
+    reservation_id = serializers.UUIDField()

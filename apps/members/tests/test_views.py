@@ -334,8 +334,8 @@ class TestReservationCancelViewSet:
             "apps.members.views.cancel_reservation", return_value=reservation_schema
         )
 
-        url = reverse("reservation-cancel", kwargs={"pk": str(reservation_id)})
-        resp = api_client.post(url, data={}, format="json")
+        url = reverse("reservation-cancel")
+        resp = api_client.post(url, data={"reservation_id": str(reservation_id)}, format="json")
 
         assert resp.status_code == 200
         cancel_mock.assert_called_once_with(reservation_id)
@@ -351,8 +351,8 @@ class TestReservationCancelViewSet:
         api_client.force_authenticate(user=user)
         reservation_id = uuid.uuid4()
         mocker.patch("apps.members.views.cancel_reservation", side_effect=Reservation.DoesNotExist)
-        url = reverse("reservation-cancel", kwargs={"pk": str(reservation_id)})
-        resp = api_client.post(url, data={}, format="json")
+        url = reverse("reservation-cancel")
+        resp = api_client.post(url, data={"reservation_id": str(reservation_id)}, format="json")
 
         assert resp.status_code == 404
         assert resp.data["detail"] == "Not found."
@@ -371,8 +371,8 @@ class TestReservationCancelViewSet:
                 "Only RESERVED reservations can be cancelled."
             ),
         )
-        url = reverse("reservation-cancel", kwargs={"pk": str(reservation_id)})
-        resp = api_client.post(url, data={}, format="json")
+        url = reverse("reservation-cancel")
+        resp = api_client.post(url, data={"reservation_id": str(reservation_id)}, format="json")
 
         assert resp.status_code == 400
         assert resp.data["detail"] == "Only RESERVED reservations can be cancelled."

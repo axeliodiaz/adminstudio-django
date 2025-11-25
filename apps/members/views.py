@@ -13,6 +13,7 @@ from apps.members.serializers import (
     ReservationSerializer,
     ReservationListQuerySerializer,
     ReservationChangeSpotSerializer,
+    ReservationCancelSerializer,
 )
 from apps.members.services import (
     get_or_create_member_user,
@@ -78,9 +79,12 @@ class ReservationView(ViewSet):
         payload = [schema.model_dump() for schema in schemas]
         return Response(payload, status=status.HTTP_200_OK)
 
-    def cancel(self, request, pk=None, *args, **kwargs):
+    def cancel(self, request, *args, **kwargs):
+        serializer = ReservationCancelSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        reservation_id = serializer.validated_data["reservation_id"]
         try:
-            reservation = cancel_reservation(pk)
+            reservation = cancel_reservation(reservation_id)
         except Reservation.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         except ReservationInvalidStateException as exc:
