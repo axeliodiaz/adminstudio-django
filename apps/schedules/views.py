@@ -1,10 +1,16 @@
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
+from apps.members.services import list_reservations
 from apps.schedules.models import Schedule
 from apps.schedules.serializers import ScheduleCreateSerializer, ScheduleSerializer
-from apps.schedules.services import create_schedule, get_schedule_schema_list
+from apps.schedules.services import (
+    create_schedule,
+    get_schedule_schema_by_id,
+    get_schedule_schema_list,
+)
 
 from django.utils.dateparse import parse_datetime
 
@@ -42,8 +48,15 @@ class ScheduleViewSet(viewsets.ViewSet):
         return Response(data)
 
     def retrieve(self, request, pk=None):
-        schedule = Schedule.objects.get(pk=pk)
-        data = ScheduleSerializer(schedule).data
+        try:
+            schedule_schema = get_schedule_schema_by_id(pk)
+        except Schedule.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        # Convert schema to dict and adjust field names to match serializer output
+        data = schedule_schema.model_dump()
+        # Map instructor_id -> instructor and room_id -> room to match serializer
+        data["instructor"] = str(data.pop("instructor_id"))
+        data["room"] = str(data.pop("room_id"))
         return Response(data)
 
     def create(self, request):
@@ -51,3 +64,16 @@ class ScheduleViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         schedule_schema = create_schedule(**serializer.validated_data)
         return Response(schedule_schema.model_dump(), status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get"], url_path="reservations")
+    def reservations(self, request, pk=None):
+        """List reservations for a specific schedule."""
+        try:
+            schedule_schema = get_schedule_schema_by_id(pk)
+        except Schedule.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Use the list_reservations service with schedule_id filter
+        reservation_schemas = list_reservations({"schedule_id": str(schedule_schema.id)})
+        data = [schema.model_dump() for schema in reservation_schemas]
+        return Response(data, status=status.HTTP_200_OK)

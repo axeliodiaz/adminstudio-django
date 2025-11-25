@@ -38,5 +38,20 @@ def cancel_reservation(reservation_id: str) -> ReservationSchema:
 
 def list_reservations(validated_query: dict) -> list[ReservationSchema]:
     """Application service: list reservations via domain and return schemas."""
-    qs = members.list_reservations_by_date_range(**validated_query)
+    # Map serializer field names to function parameter names
+    query_params = {}
+    if "start_date" in validated_query:
+        query_params["start_date"] = validated_query["start_date"]
+    if "end_date" in validated_query:
+        query_params["end_date"] = validated_query["end_date"]
+    if "member_id" in validated_query:
+        query_params["member_id"] = validated_query["member_id"]
+    if "schedule_id" in validated_query:
+        query_params["schedule_id"] = validated_query["schedule_id"]
+    if "schedule__instructor_id" in validated_query:
+        query_params["instructor_id"] = validated_query["schedule__instructor_id"]
+    if "schedule__room_id" in validated_query:
+        query_params["room_id"] = validated_query["schedule__room_id"]
+
+    qs = members.list_reservations_by_date_range(**query_params)
     return [ReservationSchema.model_validate(obj) for obj in qs]

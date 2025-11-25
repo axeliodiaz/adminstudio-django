@@ -5,6 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.members.models import Member, Reservation
 from apps.schedules import constants
 from apps.schedules.models import Schedule
 
@@ -86,10 +87,12 @@ class TestScheduleViewSetRetrieve:
         assert "created" in data and "modified" in data
 
     @pytest.mark.django_db
-    def test_retrieve_not_found_returns_500(self, api_client):
-        api_client.raise_request_exception = False
+    def test_retrieve_not_found_returns_404(self, api_client):
         resp = api_client.get(reverse("schedule-detail", args=[uuid.uuid4()]))
-        assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        data = resp.json()
+        assert "detail" in data
+        assert "Not found" in data["detail"]
 
 
 class TestScheduleViewSetCreate:
@@ -183,3 +186,62 @@ class TestScheduleViewSetCreate:
         }
         resp = api_client.post(reverse("schedule-list"), data=payload, format="json")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+class TestScheduleViewSetReservations:
+    @pytest.mark.django_db
+    def test_reservations_list_success(self, api_client, schedules_sample):
+        """Test listing reservations for a specific schedule."""
+        from model_bakery import baker
+
+        schedule = schedules_sample[0]
+        # Create a member and reservations for this schedule
+        member = baker.make("members.Member")
+        reservation1 = Reservation.objects.create(member=member, schedule=schedule, spot=1)
+        reservation2 = Reservation.objects.create(member=member, schedule=schedule, spot=2)
+
+        # Create a reservation for a different schedule (should not appear)
+        other_schedule = schedules_sample[1]
+        Reservation.objects.create(member=member, schedule=other_schedule, spot=1)
+
+        # Call the reservations endpoint
+        url = reverse("schedule-reservations", args=[schedule.id])
+        resp = api_client.get(url)
+
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.json()
+        assert isinstance(data, list)
+        assert len(data) == 2
+
+        # Verify the reservations belong to the correct schedule
+        reservation_ids = {item["id"] for item in data}
+        assert reservation_ids == {str(reservation1.id), str(reservation2.id)}
+        for item in data:
+            assert item["schedule_id"] == str(schedule.id)
+            assert "member_id" in item
+            assert "status" in item
+            assert "spot" in item
+
+    @pytest.mark.django_db
+    def test_reservations_list_empty(self, api_client, schedules_sample):
+        """Test listing reservations for a schedule with no reservations."""
+        schedule = schedules_sample[0]
+
+        url = reverse("schedule-reservations", args=[schedule.id])
+        resp = api_client.get(url)
+
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.json()
+        assert isinstance(data, list)
+        assert len(data) == 0
+
+    @pytest.mark.django_db
+    def test_reservations_list_not_found(self, api_client):
+        """Test listing reservations for a non-existent schedule."""
+        url = reverse("schedule-reservations", args=[uuid.uuid4()])
+        resp = api_client.get(url)
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        data = resp.json()
+        assert "detail" in data
+        assert "Not found" in data["detail"]
