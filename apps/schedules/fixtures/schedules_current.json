@@ -1,0 +1,114 @@
+[
+{
+  "model": "schedules.schedule",
+  "pk": "30c45440-33b6-4ff3-b256-e975a640ef8a",
+  "fields": {
+    "created": "2025-10-30T12:39:04.360Z",
+    "modified": "2025-10-30T13:16:52.400Z",
+    "is_removed": false,
+    "title": "Fondo al Ritmo del Beat",
+    "description": "",
+    "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+    "start_time": "2025-12-28T12:38:52Z",
+    "duration_minutes": 45,
+    "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+    "status": "scheduled"
+  }
+},
+{
+  "model": "schedules.schedule",
+  "pk": "5db85a4f-5d11-4602-b961-c53f7a5ae014",
+  "fields": {
+    "created": "2025-10-30T12:39:04.360Z",
+    "modified": "2025-10-31T20:19:48.726Z",
+    "is_removed": false,
+    "title": "Clase Temática: Ascenso Épico",
+    "description": "",
+    "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+    "start_time": "2025-11-29T11:15:00Z",
+    "duration_minutes": 45,
+    "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+    "status": "scheduled"
+  }
+},
+{
+  "model": "schedules.schedule",
+  "pk": "81d70d6b-ec6f-46d1-be3b-21cbe505392e",
+  "fields": {
+    "created": "2025-10-30T12:39:04.360Z",
+    "modified": "2025-10-31T14:35:02.619Z",
+    "is_removed": false,
+    "title": "Intervalos de Potencia Extrema (IPE)",
+    "description": "",
+    "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+    "start_time": "2025-11-28T10:15:00Z",
+    "duration_minutes": 45,
+    "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+    "status": "scheduled"
+  }
+},
+{
+  "model": "schedules.schedule",
+  "pk": "88a26b99-12ec-4335-91f7-fee8a1ed5c0d",
+  "fields": {
+    "created": "2025-10-30T12:39:04.360Z",
+    "modified": "2025-10-31T20:20:15.409Z",
+    "is_removed": false,
+    "title": "Resistencia Total: La Ruta Larga",
+    "description": "",
+    "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+    "start_time": "2025-11-27T12:15:00Z",
+    "duration_minutes": 45,
+    "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+    "status": "scheduled"
+  }
+},
+{
+  "model": "schedules.schedule",
+  "pk": "88d75c17-055f-429a-85b1-962881346e60",
+  "fields": {
+    "created": "2025-10-30T12:39:04.360Z",
+    "modified": "2025-10-31T20:20:33.753Z",
+    "is_removed": false,
+    "title": "Sprint & Strength: La Explosión",
+    "description": "",
+    "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+    "start_time": "2025-11-26T10:15:00Z",
+    "duration_minutes": 45,
+    "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+    "status": "scheduled"
+  }
+},
+{
+  "model": "schedules.schedule",
+  "pk": "ac2e67a8-8aad-4d6d-8e69-1504cb206360",
+  "fields": {
+    "created": "2025-10-04T00:20:03.273Z",
+    "modified": "2025-10-30T13:16:52.391Z",
+    "is_removed": false,
+    "title": "Montaña Rusa de Ritmo",
+    "description": "",
+    "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+    "start_time": "2025-11-15T14:30:00Z",
+    "duration_minutes": 60,
+    "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+    "status": "scheduled"
+  }
+},
+{
+  "model": "schedules.schedule",
+  "pk": "e9db03ca-6407-4a0f-b74e-3b492592cc45",
+  "fields": {
+    "created": "2025-10-30T12:39:04.360Z",
+    "modified": "2025-10-31T20:20:23.263Z",
+    "is_removed": false,
+    "title": "Recuperación Activa en Bici",
+    "description": "",
+    "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+    "start_time": "2025-11-30T10:15:00Z",
+    "duration_minutes": 45,
+    "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+    "status": "scheduled"
+  }
+}
+]

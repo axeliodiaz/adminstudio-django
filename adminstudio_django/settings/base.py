@@ -27,6 +27,7 @@ CORE_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "drf_expiring_token",
+    "django_extensions",
 ]
 OWN_APPS = [
     "apps.healthcheck",
@@ -39,6 +40,7 @@ OWN_APPS = [
     "apps.schedules",
     "apps.plans",
     "apps.wallets",
+    "apps.faqs",
 ]
 INSTALLED_APPS = CORE_APPS + THIRD_PARTY_APPS + OWN_APPS
 
