@@ -341,6 +341,7 @@ class TestReservationCancelViewSet:
         cancel_mock.assert_called_once_with(reservation_id)
         assert str(resp.data["id"]) == str(reservation_id)
         assert resp.data["status"] == "CANCELLED"
+        assert resp.data["message"] == "Reservation cancelled successfully."
 
     def test_cancel_returns_404_when_not_found(self, mocker, api_client):
         user = User.objects.create_user(

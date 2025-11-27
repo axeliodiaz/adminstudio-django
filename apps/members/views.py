@@ -3,6 +3,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
+from apps.members import constants
 from apps.members.exceptions import (
     InvalidSpotException,
     RoomFullException,
@@ -89,7 +90,13 @@ class ReservationView(ViewSet):
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         except ReservationInvalidStateException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(reservation.model_dump(), status=status.HTTP_200_OK)
+        return Response(
+            {
+                "message": constants.RESERVATION_CANCELLED_SUCCESS_MESSAGE,
+                **reservation.model_dump(),
+            },
+            status=status.HTTP_200_OK,
+        )
 
     def change_spot(self, request, schedule_id=None, *args, **kwargs):
         serializer = ReservationChangeSpotSerializer(data=request.data)
