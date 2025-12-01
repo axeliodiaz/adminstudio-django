@@ -77,8 +77,8 @@ class TestLoginView:
         token = ExpiringToken.objects.get(user=user)
         assert response.data["token"] == token.key
 
-    def test_login_returns_existing_token_if_already_exists(self, api_client, user):
-        """Test that login returns existing token if one already exists."""
+    def test_login_regenerates_token_each_time(self, api_client, user):
+        """Test that login always regenerates token, deleting old ones."""
         # Create a token first
         existing_token = ExpiringToken.objects.create(user=user)
         existing_key = existing_token.key
@@ -91,10 +91,14 @@ class TestLoginView:
         response = api_client.post(url, data=payload, format="json")
 
         assert response.status_code == 200
-        assert response.data["token"] == existing_key
+        # Token should be different (regenerated)
+        assert response.data["token"] != existing_key
 
-        # Verify only one token exists
+        # Verify only one token exists (old one was deleted)
         assert ExpiringToken.objects.filter(user=user).count() == 1
+        # And it's the new one
+        new_token = ExpiringToken.objects.get(user=user)
+        assert new_token.key == response.data["token"]
 
     def test_login_fails_with_invalid_username(self, api_client, user):
         """Test login fails with non-existent username."""

@@ -33,6 +33,7 @@ OWN_APPS = [
     "apps.healthcheck",
     "apps.users",
     "apps.members",
+    "apps.profiles",
     "apps.verifications",
     "apps.notifications",
     "apps.instructors",
