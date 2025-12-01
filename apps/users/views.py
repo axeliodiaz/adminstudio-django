@@ -50,8 +50,10 @@ class LoginView(APIView):
         if not user.check_password(password):
             return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Obtener o crear token (el paquete maneja la expiración automáticamente)
-        token, created = ExpiringToken.objects.get_or_create(user=user)
+        # Regenerar siempre el token en cada login:
+        # eliminamos cualquier token previo y creamos uno nuevo y válido.
+        ExpiringToken.objects.filter(user=user).delete()
+        token = ExpiringToken.objects.create(user=user)
 
         # Serializar datos del usuario
         user_data = UserSchema.model_validate(user).model_dump()

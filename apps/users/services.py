@@ -1,11 +1,12 @@
 import secrets
 from uuid import UUID
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 
-from apps.users.schemas import UserSchema
+from apps.users.schemas import UserSchema, UserProfileSchema, UserProfileResponseSchema
 
 User = get_user_model()
 
@@ -68,3 +69,44 @@ def get_or_create_user(data: dict) -> User:
     except User.DoesNotExist:
         user = create_user(data)
     return user
+
+
+def get_user_profile(user: User) -> UserProfileResponseSchema:
+    """
+    Devuelve el perfil del usuario estructurado por categorías.
+    """
+    return UserProfileResponseSchema.from_user(user)
+
+
+def update_user_profile(user: User, profile_data: dict[str, Any]) -> UserProfileResponseSchema:
+    """
+    Actualiza los datos de perfil del usuario usando los campos permitidos.
+    """
+    # Campos que se pueden actualizar desde el endpoint de profiles.
+    # Importante: email, username y phone_number NO se actualizan aquí.
+    allowed_fields = {
+        # Personal info
+        "first_name",
+        "last_name",
+        "gender",
+        "birthdate",
+        "height_cm",
+        "weight_kg",
+        "address",
+        # Cycling
+        "seat_height",
+        "seat_distance",
+        "handlebar_distance",
+        "cycling_shoe_size",
+    }
+
+    dirty_fields: list[str] = []
+    for field, value in profile_data.items():
+        if field in allowed_fields:
+            setattr(user, field, value)
+            dirty_fields.append(field)
+
+    if dirty_fields:
+        user.save(update_fields=dirty_fields)
+
+    return UserProfileResponseSchema.from_user(user)
