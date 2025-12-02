@@ -73,17 +73,17 @@ def get_or_create_user(data: dict) -> User:
 
 def get_user_profile(user: User) -> UserProfileResponseSchema:
     """
-    Devuelve el perfil del usuario estructurado por categorías.
+    Return the user's profile structured by categories.
     """
     return UserProfileResponseSchema.from_user(user)
 
 
 def update_user_profile(user: User, profile_data: dict[str, Any]) -> UserProfileResponseSchema:
     """
-    Actualiza los datos de perfil del usuario usando los campos permitidos.
+    Update the user's profile data using only allowed fields.
     """
-    # Campos que se pueden actualizar desde el endpoint de profiles.
-    # Importante: email, username y phone_number NO se actualizan aquí.
+    # Fields that can be updated from the profiles endpoint.
+    # Important: email, username and phone_number are NOT updated here.
     allowed_fields = {
         # Personal info
         "first_name",
@@ -110,3 +110,22 @@ def update_user_profile(user: User, profile_data: dict[str, Any]) -> UserProfile
         user.save(update_fields=dirty_fields)
 
     return UserProfileResponseSchema.from_user(user)
+
+
+def change_user_password(user: User, old_password: str, new_password: str) -> None:
+    """
+    Change the user's password after validating the current password.
+
+    Args:
+        user: The user whose password will be changed.
+        old_password: The user's current password.
+        new_password: The new password to set.
+
+    Raises:
+        ValueError: If the current password is not valid.
+    """
+    if not user.check_password(old_password):
+        raise ValueError("Contraseña actual incorrecta.")
+
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
