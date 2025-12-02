@@ -7,37 +7,40 @@ from drf_expiring_token.models import ExpiringToken
 User = get_user_model()
 
 
+@pytest.fixture
+def api_client():
+    return APIClient()
+
+
+@pytest.fixture
+def user():
+    """Create a test user with known credentials."""
+    user = User.objects.create_user(
+        username="testuser",
+        email="test@example.com",
+        password="testpass123",
+        first_name="Test",
+        last_name="User",
+        phone_number="+1234567890",
+    )
+    return user
+
+
+@pytest.fixture
+def inactive_user():
+    """Create an inactive test user."""
+    user = User.objects.create_user(
+        username="inactiveuser",
+        email="inactive@example.com",
+        password="testpass123",
+    )
+    user.is_active = False
+    user.save()
+    return user
+
+
 @pytest.mark.django_db
 class TestLoginView:
-    @pytest.fixture
-    def api_client(self):
-        return APIClient()
-
-    @pytest.fixture
-    def user(self):
-        """Create a test user with known credentials."""
-        user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="testpass123",
-            first_name="Test",
-            last_name="User",
-            phone_number="+1234567890",
-        )
-        return user
-
-    @pytest.fixture
-    def inactive_user(self):
-        """Create an inactive test user."""
-        user = User.objects.create_user(
-            username="inactiveuser",
-            email="inactive@example.com",
-            password="testpass123",
-        )
-        user.is_active = False
-        user.save()
-        return user
-
     def test_login_successful_with_username(self, api_client, user):
         """Test successful login using username."""
         url = reverse("users:login")
@@ -204,3 +207,46 @@ class TestLoginView:
         expected_lifespan = getattr(settings, "EXPIRING_TOKEN_LIFESPAN", timedelta(hours=24))
         expected_expiry = timezone.now() + expected_lifespan
         assert abs((token.expires - expected_expiry).total_seconds()) < 60
+
+
+@pytest.mark.django_db
+class TestChangePasswordView:
+    def test_change_password_requires_authentication(self, api_client):
+        url = reverse("users:change-password")
+        payload = {
+            "old_password": "oldpassword123",
+            "new_password": "newpassword456",
+        }
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 401
+
+    def test_change_password_success_with_valid_current_password(self, api_client, user):
+        url = reverse("users:change-password")
+        payload = {
+            "old_password": "testpass123",
+            "new_password": "newpass456",
+        }
+
+        api_client.force_authenticate(user=user)
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 200
+        assert response.data["detail"] == "Password changed successfully."
+
+        user.refresh_from_db()
+        assert user.check_password("newpass456")
+
+    def test_change_password_fails_with_invalid_current_password(self, api_client, user):
+        url = reverse("users:change-password")
+        payload = {
+            "old_password": "wrongpassword",
+            "new_password": "newpass456",
+        }
+
+        api_client.force_authenticate(user=user)
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 400
+        assert response.data["detail"] == "Contraseña actual incorrecta."

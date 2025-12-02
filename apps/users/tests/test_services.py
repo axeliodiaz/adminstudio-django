@@ -1,8 +1,11 @@
 """Tests for users services module, mirroring notifications tests structure."""
 
 import pytest
+from django.contrib.auth import get_user_model
 
-from apps.users.services import create_user, get_user_from_id
+from apps.users.services import create_user, get_user_from_id, change_user_password
+
+User = get_user_model()
 
 
 class TestCreateUser:
@@ -92,3 +95,30 @@ class TestGetUserFromId:
         get_obj_mock.assert_called_once_with(User, id="some-id")
         model_validate_mock.assert_called_once_with(fake_user)
         assert payload == schema_instance.model_dump.return_value
+
+
+@pytest.mark.django_db
+class TestChangeUserPassword:
+    def test_change_user_password_updates_password_when_old_password_is_correct(self):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="oldpassword123",
+        )
+
+        change_user_password(user, "oldpassword123", "newpassword456")
+
+        user.refresh_from_db()
+        assert user.check_password("newpassword456")
+
+    def test_change_user_password_raises_value_error_when_old_password_is_invalid(self):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="oldpassword123",
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            change_user_password(user, "wrongpassword", "newpassword456")
+
+        assert "Contraseña actual incorrecta." in str(excinfo.value)
