@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from apps.members.models import Reservation
+from apps.members.models import Reservation, Member
 from apps.members.exceptions import ReservationInvalidStateException, InvalidSpotException
 from apps.members.schemas import MemberSchema, ReservationSchema
 from apps.users.schemas import UserSchema
@@ -441,6 +441,36 @@ class TestReservationsList:
         assert len(resp.data) == 2
         assert str(resp.data[0]["member_id"]) == str(member_id)
         assert {"id", "schedule_id", "member_id", "status", "spot"}.issubset(resp.data[0].keys())
+
+    def test_list_defaults_dates_and_member_when_not_provided(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="testuser-defaults",
+            email="test-defaults@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
+
+        # Create a member linked to this user
+        member = Member.objects.create(user=user)
+
+        schemas = []
+        list_mock = mocker.patch("apps.members.views.list_reservations", return_value=schemas)
+
+        url = reverse("reservations")
+        resp = api_client.get(url)
+
+        assert resp.status_code == 200
+        assert resp.data == []
+        list_mock.assert_called_once()
+
+        # Ensure start_date, end_date and member_id were provided to the service
+        called_args, _ = list_mock.call_args
+        assert called_args
+        query = called_args[0]
+        assert "start_date" in query
+        assert "end_date" in query
+        assert "member_id" in query
+        assert str(query["member_id"]) == str(member.id)
 
     def test_list_returns_400_when_invalid_query(self, api_client):
         user = User.objects.create_user(
