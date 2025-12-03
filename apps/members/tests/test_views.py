@@ -388,11 +388,12 @@ class TestReservationsList:
             email="test@example.com",
             password="testpass123",
         )
+        # Create member for the user (required by the view)
+        member = Member.objects.create(user=user)
         api_client.force_authenticate(user=user)
         # Arrange
         start_date = datetime.date(2025, 1, 1)
         end_date = datetime.date(2025, 1, 31)
-        member_id = uuid.uuid4()
         instructor_id = uuid.uuid4()
         room_id = uuid.uuid4()
 
@@ -403,7 +404,7 @@ class TestReservationsList:
                 created=now,
                 modified=now,
                 schedule_id=uuid.uuid4(),
-                member_id=member_id,
+                member_id=member.id,
                 status="RESERVED",
                 spot=1,
                 notes="",
@@ -413,7 +414,7 @@ class TestReservationsList:
                 created=now,
                 modified=now,
                 schedule_id=uuid.uuid4(),
-                member_id=member_id,
+                member_id=member.id,
                 status="RESERVED",
                 spot=2,
                 notes="",
@@ -428,7 +429,6 @@ class TestReservationsList:
             data={
                 "start_date": start_date.isoformat(),
                 "end_date": end_date.isoformat(),
-                "member_id": str(member_id),
                 "schedule__instructor_id": str(instructor_id),
                 "schedule__room_id": str(room_id),
             },
@@ -439,7 +439,7 @@ class TestReservationsList:
         list_mock.assert_called_once()
         assert isinstance(resp.data, list)
         assert len(resp.data) == 2
-        assert str(resp.data[0]["member_id"]) == str(member_id)
+        assert str(resp.data[0]["member_id"]) == str(member.id)
         assert {"id", "schedule_id", "member_id", "status", "spot"}.issubset(resp.data[0].keys())
 
     def test_list_defaults_dates_and_member_when_not_provided(self, mocker, api_client):
@@ -478,14 +478,15 @@ class TestReservationsList:
             email="test@example.com",
             password="testpass123",
         )
+        Member.objects.create(user=user)
         api_client.force_authenticate(user=user)
-        # Missing required end_date
+        # Test invalid date range: start_date > end_date
         url = reverse("reservations")
         resp = api_client.get(
             url,
             data={
-                "start_date": datetime.date(2025, 1, 1).isoformat(),
-                # "end_date" is missing
+                "start_date": datetime.date(2025, 1, 31).isoformat(),
+                "end_date": datetime.date(2025, 1, 1).isoformat(),  # end_date before start_date
             },
         )
 
