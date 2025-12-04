@@ -13,6 +13,7 @@ from apps.schedules.services import (
 )
 
 from django.utils.dateparse import parse_datetime
+from uuid import UUID
 
 
 class ScheduleViewSet(viewsets.ViewSet):
@@ -48,6 +49,15 @@ class ScheduleViewSet(viewsets.ViewSet):
         return Response(data)
 
     def retrieve(self, request, pk=None):
+        # Validate that pk is a valid UUID
+        try:
+            UUID(str(pk))
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": f'"{pk}" is not a valid UUID.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             schedule_schema = get_schedule_schema_by_id(pk)
         except Schedule.DoesNotExist:
@@ -68,6 +78,15 @@ class ScheduleViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["get"], url_path="reservations")
     def reservations(self, request, pk=None):
         """List reservations for a specific schedule."""
+        # Validate that pk is a valid UUID
+        try:
+            UUID(str(pk))
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": f'"{pk}" is not a valid UUID.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             schedule_schema = get_schedule_schema_by_id(pk)
         except Schedule.DoesNotExist:

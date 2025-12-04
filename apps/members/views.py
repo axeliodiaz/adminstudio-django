@@ -1,3 +1,5 @@
+from datetime import date
+
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -73,7 +75,26 @@ class ReservationView(ViewSet):
         return Response(reservation.model_dump(), status=status.HTTP_201_CREATED)
 
     def list(self, request, *args, **kwargs):
-        query_serializer = ReservationListQuerySerializer(data=request.query_params)
+        query_params = request.query_params
+        has_start_date = "start_date" in query_params
+        has_end_date = "end_date" in query_params
+        data = query_params.copy()
+
+        member = Member.objects.filter(user=request.user).first()
+        if not member:
+            return Response([], status=status.HTTP_200_OK)
+
+        data["member_id"] = str(member.id)
+
+        if not has_start_date:
+            today = date.today()
+            data["start_date"] = today.isoformat()
+
+        if not has_end_date:
+            # Use a far future date to effectively get all future reservations
+            data["end_date"] = date(2100, 1, 1).isoformat()
+
+        query_serializer = ReservationListQuerySerializer(data=data)
         query_serializer.is_valid(raise_exception=True)
         data = query_serializer.validated_data
         schemas = list_reservations(data)

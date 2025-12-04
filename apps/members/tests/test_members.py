@@ -6,9 +6,21 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from apps.members import constants
-from apps.members.members import list_reservations_by_date_range, change_reservation_spot
+from apps.members.members import (
+    list_reservations_by_date_range,
+    change_reservation_spot,
+    create_reservation,
+    cancel_reservation,
+    get_member_by_id,
+    get_member_by_user_id,
+    get_reservation_by_id,
+)
 from apps.members.models import Member, Reservation
-from apps.members.exceptions import InvalidSpotException, ReservationInvalidStateException
+from apps.members.exceptions import (
+    InvalidSpotException,
+    ReservationInvalidStateException,
+    RoomFullException,
+)
 from apps.studios.models import Studio, Room
 from apps.instructors.models import Instructor
 from apps.schedules.models import Schedule
@@ -109,6 +121,33 @@ class TestMembersDomain:
             start_date=start_date, end_date=end_date, room_id=str(room_a.id)
         )
         assert {str(x.id) for x in qs_room} == {str(r1.id)}
+
+    def test_list_reservations_by_date_range_filters_by_schedule_id(self, base_graph):
+        member, instructor, room = base_graph
+
+        base = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        s1 = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base,
+            duration_minutes=60,
+            room=room,
+        )
+        s2 = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base + datetime.timedelta(days=1),
+            duration_minutes=60,
+            room=room,
+        )
+
+        r1 = Reservation.objects.create(member=member, schedule=s1)
+        r2 = Reservation.objects.create(member=member, schedule=s2)
+
+        # Filter by schedule_id directly (no date range needed)
+        qs = list_reservations_by_date_range(schedule_id=str(s1.id))
+
+        ids = {str(x.id) for x in qs}
+        assert ids == {str(r1.id)}
+        assert str(r2.id) not in ids
 
     def test_list_reservations_by_date_range_excludes_cancelled_reservations(self, base_graph):
         member, instructor, room = base_graph
@@ -294,3 +333,182 @@ class TestMembersDomain:
         # Try to change member1's spot to 5, which is already taken by member2
         with pytest.raises(InvalidSpotException):
             change_reservation_spot(str(schedule.id), str(user1.id), 5)
+
+    def test_create_reservation_success_creates_reservation(self, base_graph):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+
+        validated_data = {
+            "user_id": member.user.id,
+            "schedule_id": schedule.id,
+            "spot": 1,
+            "notes": "Test notes",
+        }
+
+        reservation = create_reservation(validated_data)
+
+        assert reservation.member == member
+        assert reservation.schedule == schedule
+        assert reservation.spot == 1
+        assert reservation.notes == "Test notes"
+        assert reservation.status == constants.RESERVATION_STATUS_RESERVED
+
+    def test_create_reservation_creates_member_if_not_exists(self, mocker, base_graph):
+        _, instructor, room = base_graph
+        # Mock create_verification_code to avoid Celery connection issues
+        mocker.patch("apps.members.members.create_verification_code")
+        User = get_user_model()
+        user = User.objects.create_user(
+            username=f"newuser_{uuid.uuid4()}",
+            email=f"newuser_{uuid.uuid4()}@ex.com",
+            password="pass",
+        )
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+
+        validated_data = {
+            "user_id": user.id,
+            "schedule_id": schedule.id,
+            "spot": 1,
+        }
+
+        reservation = create_reservation(validated_data)
+
+        # Member should be created
+        member = Member.objects.get(user=user)
+        assert reservation.member == member
+
+    def test_create_reservation_invalid_spot_less_than_one_raises_exception(self, base_graph):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+
+        validated_data = {
+            "user_id": member.user.id,
+            "schedule_id": schedule.id,
+            "spot": 0,
+        }
+
+        with pytest.raises(InvalidSpotException):
+            create_reservation(validated_data)
+
+    def test_create_reservation_invalid_spot_greater_than_capacity_raises_exception(
+        self, base_graph
+    ):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+
+        validated_data = {
+            "user_id": member.user.id,
+            "schedule_id": schedule.id,
+            "spot": room.capacity + 1,
+        }
+
+        with pytest.raises(InvalidSpotException):
+            create_reservation(validated_data)
+
+    def test_cancel_reservation_success_cancels_reservation(self, base_graph):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=1,
+        )
+
+        cancelled_reservation = cancel_reservation(str(reservation.id))
+
+        assert cancelled_reservation.status == constants.RESERVATION_STATUS_CANCELLED
+        reservation.refresh_from_db()
+        assert reservation.status == constants.RESERVATION_STATUS_CANCELLED
+
+    def test_cancel_reservation_not_found_raises_exception(self):
+        with pytest.raises(Reservation.DoesNotExist):
+            cancel_reservation(str(uuid.uuid4()))
+
+    def test_cancel_reservation_invalid_state_raises_exception(self, base_graph):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_CANCELLED,
+            spot=1,
+        )
+
+        with pytest.raises(ReservationInvalidStateException):
+            cancel_reservation(str(reservation.id))
+
+    def test_get_member_by_id_success(self, base_graph):
+        member, _, _ = base_graph
+        found_member = get_member_by_id(str(member.id))
+        assert found_member == member
+
+    def test_get_member_by_id_not_found_raises_exception(self):
+        with pytest.raises(Member.DoesNotExist):
+            get_member_by_id(str(uuid.uuid4()))
+
+    def test_get_member_by_user_id_success(self, base_graph):
+        member, _, _ = base_graph
+        found_member = get_member_by_user_id(str(member.user.id))
+        assert found_member == member
+
+    def test_get_member_by_user_id_not_found_raises_exception(self):
+        User = get_user_model()
+        user = User.objects.create_user(
+            username=f"nouser_{uuid.uuid4()}",
+            email=f"nouser_{uuid.uuid4()}@ex.com",
+            password="pass",
+        )
+        with pytest.raises(Member.DoesNotExist):
+            get_member_by_user_id(str(user.id))
+
+    def test_get_reservation_by_id_success(self, base_graph):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            spot=1,
+        )
+
+        found_reservation = get_reservation_by_id(str(reservation.id))
+        assert found_reservation == reservation
+
+    def test_get_reservation_by_id_not_found_raises_exception(self):
+        with pytest.raises(Reservation.DoesNotExist):
+            get_reservation_by_id(str(uuid.uuid4()))
