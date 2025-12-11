@@ -1,8 +1,8 @@
-"""Tests for studios models, focusing on Studio.rooms_list property."""
+"""Tests for studios models, focusing on Studio.rooms_list property and Address model."""
 
 import pytest
 
-from apps.studios.models import Room, Studio
+from apps.studios.models import Address, Room, Studio
 
 
 class TestStudioRoomsList:
@@ -35,3 +35,35 @@ class TestStudioRoomsList:
     def test_rooms_list_empty_for_studio_without_rooms(self, empty_studio):
         assert empty_studio.rooms.count() == 0
         assert empty_studio.rooms_list == []
+
+
+class TestAddressModel:
+    @pytest.mark.django_db
+    def test_address_str_returns_address_string(self, address):
+        assert str(address) == address.address
+        assert str(address) == "123 Test St"
+
+    @pytest.mark.django_db
+    def test_address_can_have_null_coordinates(self, address):
+        assert address.latitude is None
+        assert address.longitude is None
+
+    @pytest.mark.django_db
+    def test_address_can_have_coordinates(self):
+        address = Address.objects.create(
+            address="Test Address",
+            latitude=-33.4489,
+            longitude=-70.6693,
+        )
+        assert address.latitude == -33.4489
+        assert address.longitude == -70.6693
+
+    @pytest.mark.django_db
+    def test_studio_address_relationship(self, studio, address):
+        assert studio.address == address
+        assert address.studios.first() == studio
+
+    @pytest.mark.django_db
+    def test_studio_can_have_null_address(self):
+        studio = Studio.objects.create(name="Studio Without Address", is_active=True)
+        assert studio.address is None

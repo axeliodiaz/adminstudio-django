@@ -19,7 +19,8 @@ class TestGetStudio:
         assert isinstance(result, StudioSchema)
         assert result.id == studio.id
         assert result.name == studio.name
-        assert result.address == studio.address
+        assert result.address == studio.address.address
+        assert result.address_id == studio.address.id
         # Should include rooms via rooms_list alias
         assert isinstance(result.rooms, list)
         assert len(result.rooms) == 1
@@ -54,7 +55,10 @@ class TestListFunctions:
     @pytest.mark.django_db
     def test_get_list_studios_returns_schemas_and_includes_rooms(self, studio, room):
         # Arrange: create another studio without rooms
-        Studio.objects.create(name="Empty Studio", address="Nowhere", is_active=False)
+        from apps.studios.models import Address
+
+        empty_addr = Address.objects.create(address="Nowhere")
+        Studio.objects.create(name="Empty Studio", address=empty_addr, is_active=False)
         # Act
         result = get_list_studios()
         # Assert

@@ -41,7 +41,7 @@ def base_graph():
     from django.contrib.auth import get_user_model
     from apps.members.models import Member
     from apps.instructors.models import Instructor
-    from apps.studios.models import Studio, Room
+    from apps.studios.models import Address, Studio, Room
     import uuid as _uuid
 
     User = get_user_model()
@@ -54,7 +54,8 @@ def base_graph():
     member = Member.objects.create(user=user_member)
 
     # Studio/Room
-    studio = Studio.objects.create(name="S1", address="Addr", is_active=True)
+    address = Address.objects.create(address="Addr")
+    studio = Studio.objects.create(name="S1", address=address, is_active=True)
     room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
 
     # Instructor side

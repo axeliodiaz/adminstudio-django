@@ -233,7 +233,7 @@ class TestChangePasswordView:
         response = api_client.post(url, data=payload, format="json")
 
         assert response.status_code == 200
-        assert response.data["detail"] == "Password changed successfully."
+        assert response.data["detail"] == "Contraseña actualizada."
 
         user.refresh_from_db()
         assert user.check_password("newpass456")
