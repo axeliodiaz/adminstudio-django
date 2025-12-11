@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 
-from apps.studios.models import Room, Studio
+from apps.studios.models import Address, Room, Studio
 
 
 def get_studio_from_id(id) -> Studio:
@@ -21,3 +21,13 @@ def studios_queryset():
 def rooms_queryset():
     """Return a queryset of all rooms."""
     return Room.objects.all()
+
+
+def get_address_from_id(id) -> Address:
+    """Return an Address by id or 404."""
+    return get_object_or_404(Address, pk=id)
+
+
+def addresses_queryset():
+    """Return a queryset of all addresses."""
+    return Address.objects.all()
