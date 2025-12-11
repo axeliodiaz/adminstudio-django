@@ -33,8 +33,7 @@ class StudioSchema(BaseModel):
     created: datetime
     modified: datetime
     name: str
-    address: Optional[str] = None  # Address string from related Address object
-    address_id: Optional[uuid.UUID] = None
+    address: Optional[AddressSchema] = None  # Full Address object
     is_active: bool
     opening_time: Optional[time] = None
     closing_time: Optional[time] = None
@@ -52,16 +51,14 @@ class StudioSchema(BaseModel):
             # Handle ForeignKey fields
             if isinstance(field, models.ForeignKey):
                 if value:
-                    # Store the related object's address string and id
+                    # Store the related object as a nested schema
                     if field.name == "address":
-                        data["address"] = value.address
-                        data["address_id"] = value.id
+                        data["address"] = AddressSchema.model_validate(value)
                     else:
                         data[f"{field.name}_id"] = value.id
                 else:
                     if field.name == "address":
                         data["address"] = None
-                        data["address_id"] = None
                     else:
                         data[f"{field.name}_id"] = None
             else:
