@@ -3,11 +3,23 @@
 from rest_framework import serializers
 
 
+class AddressSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    address = serializers.CharField(max_length=255)
+    latitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, required=False, allow_null=True
+    )
+    longitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, required=False, allow_null=True
+    )
+    created = serializers.DateTimeField(read_only=True)
+    modified = serializers.DateTimeField(read_only=True)
+
+
 class StudioSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField(max_length=100)
-    address = serializers.CharField(max_length=255, required=False, allow_null=True)
-    address_id = serializers.UUIDField(read_only=True, required=False, allow_null=True)
+    address = AddressSerializer(required=False, allow_null=True)
     is_active = serializers.BooleanField(required=False, default=False)
     opening_time = serializers.TimeField(required=False, allow_null=True)
     closing_time = serializers.TimeField(required=False, allow_null=True)
@@ -17,19 +29,16 @@ class StudioSerializer(serializers.Serializer):
     def to_representation(self, instance):
         """Override to handle address ForeignKey."""
         ret = super().to_representation(instance)
-        # Handle address ForeignKey - check if it's an Address instance or already a string
+        # Handle address ForeignKey - include full Address object
         if instance.address:
             if hasattr(instance.address, "address"):
-                # It's an Address instance
-                ret["address"] = instance.address.address
-                ret["address_id"] = str(instance.address.id)
+                # It's an Address instance - serialize it
+                ret["address"] = AddressSerializer(instance.address).data
             else:
                 # It's already a string (backward compatibility)
-                ret["address"] = str(instance.address)
-                ret["address_id"] = None
+                ret["address"] = None
         else:
             ret["address"] = None
-            ret["address_id"] = None
         return ret
 
 

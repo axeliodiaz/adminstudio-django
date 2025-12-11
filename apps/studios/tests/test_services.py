@@ -6,7 +6,7 @@ import pytest
 from django.http import Http404
 
 from apps.studios.models import Room, Studio
-from apps.studios.schemas import RoomSchema, StudioSchema
+from apps.studios.schemas import AddressSchema, RoomSchema, StudioSchema
 from apps.studios.services import get_list_rooms, get_list_studios, get_room, get_studio
 
 
@@ -19,8 +19,12 @@ class TestGetStudio:
         assert isinstance(result, StudioSchema)
         assert result.id == studio.id
         assert result.name == studio.name
-        assert result.address == studio.address.address
-        assert result.address_id == studio.address.id
+        # Address should be an AddressSchema object
+        assert isinstance(result.address, AddressSchema)
+        assert result.address.id == studio.address.id
+        assert result.address.address == studio.address.address
+        assert result.address.latitude == studio.address.latitude
+        assert result.address.longitude == studio.address.longitude
         # Should include rooms via rooms_list alias
         assert isinstance(result.rooms, list)
         assert len(result.rooms) == 1

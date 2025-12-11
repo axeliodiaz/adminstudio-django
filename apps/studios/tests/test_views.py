@@ -24,6 +24,11 @@ class TestStudioViewSet:
         assert set(["id", "name", "address", "is_active", "created", "modified"]).issubset(
             sample.keys()
         )
+        # Address should be an object (or null)
+        assert sample["address"] is None or isinstance(sample["address"], dict)
+        if sample["address"]:
+            assert "id" in sample["address"]
+            assert "address" in sample["address"]
         assert "rooms" not in sample
 
     @pytest.mark.django_db
@@ -33,6 +38,13 @@ class TestStudioViewSet:
         data = resp.json()
         assert data["id"] == str(studio.id)
         assert data["name"] == studio.name
+        # Address should be an object with full Address details
+        assert "address" in data
+        if data["address"]:
+            assert isinstance(data["address"], dict)
+            assert "id" in data["address"]
+            assert "address" in data["address"]
+            assert data["address"]["address"] == studio.address.address
         assert "rooms" not in data  # StudioSerializer does not expose rooms
 
     @pytest.mark.django_db
