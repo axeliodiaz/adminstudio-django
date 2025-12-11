@@ -90,4 +90,4 @@ class ChangePasswordView(APIView):
             change_user_password(request.user, old_password, new_password)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"detail": "Password changed successfully."}, status=status.HTTP_200_OK)
+        return Response({"detail": "Contraseña actualizada."}, status=status.HTTP_200_OK)
