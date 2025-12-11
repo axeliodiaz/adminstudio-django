@@ -7,7 +7,14 @@ from django.http import Http404
 
 from apps.studios.models import Room, Studio
 from apps.studios.schemas import AddressSchema, RoomSchema, StudioSchema
-from apps.studios.services import get_list_rooms, get_list_studios, get_room, get_studio
+from apps.studios.services import (
+    get_address,
+    get_list_addresses,
+    get_list_rooms,
+    get_list_studios,
+    get_room,
+    get_studio,
+)
 
 
 class TestGetStudio:
@@ -91,4 +98,53 @@ class TestListFunctions:
         ids = {str(item.id) for item in result}
         assert str(room.id) in ids
         assert str(extra_room.id) in ids
+        assert len(result) == 2
+
+
+class TestGetAddress:
+    @pytest.mark.django_db
+    def test_get_address_returns_schema(self, address):
+        # Act
+        result = get_address(address.id)
+        # Assert
+        assert isinstance(result, AddressSchema)
+        assert result.id == address.id
+        assert result.address == address.address
+        assert result.latitude == address.latitude
+        assert result.longitude == address.longitude
+
+    @pytest.mark.django_db
+    def test_get_address_with_coordinates(self):
+        # Arrange
+        from apps.studios.models import Address
+
+        address = Address.objects.create(
+            address="Test Address",
+            latitude=-33.4489,
+            longitude=-70.6693,
+        )
+        # Act
+        result = get_address(address.id)
+        # Assert
+        assert isinstance(result, AddressSchema)
+        assert result.latitude == -33.4489
+        assert result.longitude == -70.6693
+
+    @pytest.mark.django_db
+    def test_get_address_raises_404(self):
+        with pytest.raises(Http404):
+            get_address(uuid.uuid4())
+
+
+class TestListAddresses:
+    @pytest.mark.django_db
+    def test_get_list_addresses_returns_all_address_schemas(self, address, empty_address):
+        # Act
+        result = get_list_addresses()
+        # Assert
+        assert isinstance(result, list)
+        assert all(isinstance(item, AddressSchema) for item in result)
+        ids = {str(item.id) for item in result}
+        assert str(address.id) in ids
+        assert str(empty_address.id) in ids
         assert len(result) == 2
