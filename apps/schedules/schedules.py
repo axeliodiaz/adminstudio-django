@@ -46,6 +46,8 @@ def create_schedule(
     duration_minutes: int,
     room_id: UUID,
     status: str,
+    title: str = "",
+    description: str | None = None,
 ) -> Schedule:
     """Create and return a Schedule model instance.
 
@@ -65,6 +67,8 @@ def create_schedule(
     _ = get_room_by_id(room_id)
 
     schedule = Schedule.objects.create(
+        title=title or "",
+        description=description,
         instructor_id=instructor_id,
         start_time=start_time,
         duration_minutes=duration_minutes,
@@ -73,3 +77,38 @@ def create_schedule(
     )
 
     return schedule
+
+
+def update_schedule(schedule: Schedule, *, data: dict) -> Schedule:
+    """Apply staff-editable fields onto an existing schedule."""
+    if "status" in data and data["status"] not in constants.SCHEDULE_STATUSES:
+        raise ValueError("Invalid schedule status.")
+    if "duration_minutes" in data and data["duration_minutes"] is not None:
+        if int(data["duration_minutes"]) <= 0:
+            raise ValueError("duration_minutes must be a positive integer.")
+
+    dirty: list[str] = []
+
+    if "instructor_id" in data and data["instructor_id"] is not None:
+        get_instructor_by_id(data["instructor_id"])
+        schedule.instructor_id = data["instructor_id"]
+        dirty.append("instructor_id")
+
+    if "room_id" in data and data["room_id"] is not None:
+        get_room_by_id(data["room_id"])
+        schedule.room_id = data["room_id"]
+        dirty.append("room_id")
+
+    for field in ("title", "description", "start_time", "duration_minutes", "status"):
+        if field in data:
+            setattr(schedule, field, data[field])
+            dirty.append(field)
+
+    if dirty:
+        schedule.save(update_fields=[*dirty, "modified"])
+    return schedule
+
+
+def delete_schedule(schedule: Schedule) -> None:
+    """Soft-delete a schedule."""
+    schedule.delete()
