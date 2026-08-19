@@ -4,15 +4,27 @@ from decimal import Decimal
 from typing import Any
 
 from django.http import Http404
+from pydantic import ValidationError as PydanticValidationError
 from rest_framework import status, viewsets
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from apps.plans import services
 from apps.plans.models import Plan
+from apps.plans.schemas import AdminPlanWriteSchema
 from apps.plans.serializers import PlanPurchaseSerializer
 from apps.wallets.models import PlanPurchase
 from apps.wallets.schemas import PlanPurchaseSchema
+
+
+def _pydantic_error_response(exc: PydanticValidationError) -> Response:
+    first = exc.errors()[0] if exc.errors() else {}
+    loc = ".".join(str(part) for part in first.get("loc", [])) or "payload"
+    return Response(
+        {"detail": f"{loc}: {first.get('msg', 'Datos inválidos.')}"},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 class PlanViewSet(viewsets.ViewSet):
@@ -103,3 +115,67 @@ class PlanViewSet(viewsets.ViewSet):
             purchase_schema.model_dump(by_alias=True),
             status=status.HTTP_201_CREATED,
         )
+
+
+class AdminPlanListView(APIView):
+    """List or create plans for the PulseFit admin. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        plans = services.list_admin_plans(
+            search=request.query_params.get("search"),
+            plan_type=request.query_params.get("type"),
+            status=request.query_params.get("status"),
+        )
+        return Response(plans, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            payload = AdminPlanWriteSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        data = payload.model_dump(exclude_unset=True)
+        try:
+            plan = services.create_admin_plan(data=data)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(plan, status=status.HTTP_201_CREATED)
+
+
+class AdminPlanDetailView(APIView):
+    """Retrieve or update a plan for the PulseFit admin. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, plan_id, *args, **kwargs):
+        plan = services.get_admin_plan(plan_id=plan_id)
+        return Response(plan, status=status.HTTP_200_OK)
+
+    def patch(self, request, plan_id, *args, **kwargs):
+        try:
+            payload = AdminPlanWriteSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        data = payload.model_dump(exclude_unset=True)
+        try:
+            plan = services.update_admin_plan(plan_id=plan_id, data=data)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(plan, status=status.HTTP_200_OK)
+
+
+class AdminBenefitListView(APIView):
+    """List benefits for the PulseFit admin plan editor. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        only_active = request.query_params.get("status") == "active"
+        benefits = services.list_admin_benefits(
+            search=request.query_params.get("search"),
+            only_active=only_active,
+        )
+        return Response(benefits, status=status.HTTP_200_OK)

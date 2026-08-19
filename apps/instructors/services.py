@@ -5,16 +5,41 @@ Core business logic lives in apps.instructors.instructors.
 """
 
 from typing import Tuple
+from uuid import UUID
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 
 from apps.instructors.instructors import get_instructor_from_id
 from apps.instructors.instructors import (
     get_or_create_instructor_user as _get_or_create_instructor_user,
 )
 from apps.instructors.instructors import instructors_queryset
-from apps.instructors.schemas import InstructorSchema, InstructorPublicSchema
+from apps.instructors.models import Instructor
+from apps.instructors.schemas import (
+    AdminInstructorSchema,
+    InstructorPublicSchema,
+)
 from apps.users.schemas import UserSchema
+
+User = get_user_model()
+
+USER_ADMIN_FIELDS = {"first_name", "last_name", "email", "phone_number", "is_active"}
+INSTRUCTOR_ADMIN_FIELDS = {
+    "description",
+    "tagline",
+    "website_url",
+    "instagram_username",
+    "tiktok_username",
+    "is_verified",
+    "instructor_since",
+    "location",
+    "last_spotify_playlist",
+    "last_apple_music_playlist",
+    "last_youtube_music_playlist",
+}
 
 
 def get_or_create_instructor_user(validated_data: dict) -> Tuple[dict, bool]:
@@ -87,3 +112,145 @@ def update_instructor(pk, validated_data: dict, *, partial: bool = False) -> dic
 
     # Return the public instructor schema payload (no email/phone)
     return InstructorPublicSchema.model_validate(instructor).model_dump()
+
+
+def _admin_instructor_dict(instructor: Instructor) -> dict:
+    return AdminInstructorSchema.from_instructor(instructor).model_dump(mode="json")
+
+
+def list_admin_instructors(
+    *,
+    search: str | None = None,
+    status: str | None = None,
+) -> list[dict]:
+    """Return instructors for the staff admin list."""
+    queryset = Instructor.objects.select_related("user").order_by(
+        "user__first_name", "user__last_name", "user__email"
+    )
+
+    if status == "verified":
+        queryset = queryset.filter(is_verified=True)
+    elif status == "unverified":
+        queryset = queryset.filter(is_verified=False)
+
+    term = (search or "").strip()
+    if term:
+        queryset = queryset.filter(
+            Q(user__first_name__icontains=term)
+            | Q(user__last_name__icontains=term)
+            | Q(user__email__icontains=term)
+            | Q(user__username__icontains=term)
+            | Q(location__icontains=term)
+            | Q(instagram_username__icontains=term)
+            | Q(tagline__icontains=term)
+        )
+
+    return [_admin_instructor_dict(instructor) for instructor in queryset]
+
+
+def get_admin_instructor(*, instructor_id: str | UUID) -> dict:
+    """Return one instructor for the staff admin."""
+    instructor = get_object_or_404(
+        Instructor.objects.select_related("user"),
+        id=instructor_id,
+    )
+    return _admin_instructor_dict(instructor)
+
+
+def _apply_admin_instructor_fields(instructor: Instructor, data: dict) -> Instructor:
+    user = instructor.user
+    user_dirty: list[str] = []
+    instructor_dirty: list[str] = []
+    sync_username = bool(user.username) and user.username == (user.email or "")
+
+    if "email" in data:
+        email = (data["email"] or "").strip()
+        if not email:
+            raise ValueError("El correo electrónico es obligatorio.")
+        taken = (
+            User.objects.filter(is_removed=False)
+            .filter(Q(email__iexact=email) | Q(username__iexact=email))
+            .exclude(id=user.id)
+            .exists()
+        )
+        if taken:
+            raise ValueError("Ya existe un usuario con ese correo.")
+
+    for field, value in data.items():
+        if field in USER_ADMIN_FIELDS:
+            if field == "email":
+                value = (value or "").strip()
+                if sync_username:
+                    user.username = value
+                    user_dirty.append("username")
+            elif field in {"first_name", "last_name", "phone_number"} and value is None:
+                value = ""
+            setattr(user, field, value)
+            user_dirty.append(field)
+        elif field in INSTRUCTOR_ADMIN_FIELDS:
+            if (
+                field
+                in {
+                    "description",
+                    "tagline",
+                    "website_url",
+                    "instagram_username",
+                    "tiktok_username",
+                    "location",
+                    "last_spotify_playlist",
+                    "last_apple_music_playlist",
+                    "last_youtube_music_playlist",
+                }
+                and value is None
+            ):
+                value = ""
+            setattr(instructor, field, value)
+            instructor_dirty.append(field)
+
+    if user_dirty:
+        user.save(update_fields=list(dict.fromkeys(user_dirty)))
+    if instructor_dirty:
+        instructor.save(update_fields=list(dict.fromkeys(instructor_dirty)))
+
+    return instructor
+
+
+def update_admin_instructor(*, instructor_id: str | UUID, data: dict) -> dict:
+    """Update staff-editable instructor and related user fields."""
+    instructor = get_object_or_404(
+        Instructor.objects.select_related("user"),
+        id=instructor_id,
+    )
+    instructor = _apply_admin_instructor_fields(instructor, data)
+    instructor.refresh_from_db()
+    return _admin_instructor_dict(instructor)
+
+
+def create_admin_instructor(*, data: dict) -> tuple[dict, bool]:
+    """Create (or attach profile data to) an instructor from the staff admin."""
+    email = (data.get("email") or "").strip()
+    if not email:
+        raise ValueError("El correo electrónico es obligatorio.")
+
+    existing_instructor = (
+        Instructor.objects.select_related("user").filter(user__email__iexact=email).first()
+    )
+    if existing_instructor:
+        raise ValueError("Ya existe un instructor con ese correo.")
+
+    user_payload = {
+        "email": email,
+        "first_name": data.get("first_name") or "",
+        "last_name": data.get("last_name") or "",
+        "phone_number": data.get("phone_number") or "",
+    }
+    instructor, created = _get_or_create_instructor_user(user_payload)
+
+    profile_data = {
+        k: v for k, v in data.items() if k in INSTRUCTOR_ADMIN_FIELDS or k == "is_active"
+    }
+    if profile_data:
+        instructor = _apply_admin_instructor_fields(instructor, profile_data)
+        instructor.refresh_from_db()
+
+    return _admin_instructor_dict(instructor), created
