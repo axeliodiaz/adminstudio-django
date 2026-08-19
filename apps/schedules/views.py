@@ -1,19 +1,50 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.members.services import list_reservations
 from apps.schedules.models import Schedule
-from apps.schedules.serializers import ScheduleCreateSerializer, ScheduleSerializer
+from apps.schedules.serializers import ScheduleCreateSerializer
 from apps.schedules.services import (
+    create_admin_schedule,
     create_schedule,
+    delete_admin_schedule,
+    get_admin_schedule,
     get_schedule_schema_by_id,
     get_schedule_schema_list,
+    list_admin_schedules,
+    update_admin_schedule,
 )
 
 from django.utils.dateparse import parse_datetime
 from uuid import UUID
+
+from pydantic import ValidationError as PydanticValidationError
+from rest_framework.views import APIView
+
+from apps.schedules.schemas import AdminScheduleWriteSchema
+
+
+def _pydantic_error_response(exc: PydanticValidationError) -> Response:
+    first = exc.errors()[0] if exc.errors() else {}
+    loc = ".".join(str(part) for part in first.get("loc", [])) or "payload"
+    return Response(
+        {"detail": f"{loc}: {first.get('msg', 'Datos inválidos.')}"},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+def _parse_datetime_param(value: str | None, field_name: str):
+    if not value:
+        return None
+    parsed = parse_datetime(value)
+    if parsed is None:
+        return Response(
+            {"detail": (f"Invalid {field_name} format. Use ISO 8601, e.g. 2025-10-03T13:57:00Z.")},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return parsed
 
 
 class ScheduleViewSet(viewsets.ViewSet):
@@ -22,16 +53,10 @@ class ScheduleViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
     def _get_start_time_params(self, start_time: str | None = None):
-        if start_time:
-            start_time = parse_datetime(start_time)
-            if start_time is None:
-                return Response(
-                    {
-                        "detail": "Invalid start_time format. Use ISO 8601, e.g. 2025-10-03T13:57:00Z."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        return start_time
+        parsed = _parse_datetime_param(start_time, "start_time")
+        if isinstance(parsed, Response):
+            return parsed
+        return parsed
 
     def list(self, request):
         start_time_str = request.query_params.get("start_time")
@@ -96,3 +121,70 @@ class ScheduleViewSet(viewsets.ViewSet):
         reservation_schemas = list_reservations({"schedule_id": str(schedule_schema.id)})
         data = [schema.model_dump() for schema in reservation_schemas]
         return Response(data, status=status.HTTP_200_OK)
+
+
+class AdminScheduleListView(APIView):
+    """List or create class schedules for the PulseFit admin. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        start_time = _parse_datetime_param(request.query_params.get("start_time"), "start_time")
+        if isinstance(start_time, Response):
+            return start_time
+        end_time = _parse_datetime_param(request.query_params.get("end_time"), "end_time")
+        if isinstance(end_time, Response):
+            return end_time
+
+        schedules = list_admin_schedules(
+            search=request.query_params.get("search"),
+            status=request.query_params.get("status"),
+            instructor_id=request.query_params.get("instructor_id"),
+            room_id=request.query_params.get("room_id"),
+            start_time=start_time,
+            end_time=end_time,
+        )
+        return Response(schedules, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            payload = AdminScheduleWriteSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        try:
+            schedule = create_admin_schedule(data=payload.model_dump(exclude_unset=True))
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(schedule, status=status.HTTP_201_CREATED)
+
+
+class AdminScheduleDetailView(APIView):
+    """Retrieve, update, or delete a class schedule. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, schedule_id, *args, **kwargs):
+        return Response(get_admin_schedule(schedule_id=schedule_id), status=status.HTTP_200_OK)
+
+    def patch(self, request, schedule_id, *args, **kwargs):
+        try:
+            payload = AdminScheduleWriteSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        try:
+            schedule = update_admin_schedule(
+                schedule_id=schedule_id,
+                data=payload.model_dump(exclude_unset=True),
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(schedule, status=status.HTTP_200_OK)
+
+    def delete(self, request, schedule_id, *args, **kwargs):
+        try:
+            delete_admin_schedule(schedule_id=schedule_id)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_204_NO_CONTENT)
