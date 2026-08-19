@@ -13,7 +13,12 @@ from apps.members.exceptions import (
     RoomFullException,
     ReservationInvalidStateException,
 )
-from apps.members.schemas import AdminMemberCreateSchema, AdminMemberUpdateSchema
+from apps.members.schemas import (
+    AdminMemberCreateSchema,
+    AdminMemberUpdateSchema,
+    AdminReservationChangeSpotSchema,
+    AdminReservationWriteSchema,
+)
 from apps.members.serializers import (
     MemberSerializer,
     ReservationSerializer,
@@ -32,6 +37,11 @@ from apps.members.services import (
     list_admin_members,
     list_reservations,
     update_admin_member,
+    list_admin_reservations,
+    get_admin_reservation,
+    create_admin_reservation,
+    cancel_admin_reservation,
+    change_admin_reservation_spot,
 )
 from apps.members.models import Member, Reservation
 
@@ -200,3 +210,98 @@ class AdminMemberDetailView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(member, status=status.HTTP_200_OK)
+
+
+class AdminReservationListView(APIView):
+    """List or create reservations for the PulseFit admin. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            reservations = list_admin_reservations(
+                start_date=request.query_params.get("start_date"),
+                end_date=request.query_params.get("end_date"),
+                member_id=request.query_params.get("member_id"),
+                schedule_id=request.query_params.get("schedule_id"),
+                instructor_id=request.query_params.get("instructor_id"),
+                room_id=request.query_params.get("room_id"),
+                status=request.query_params.get("status"),
+                search=request.query_params.get("search"),
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(reservations, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            payload = AdminReservationWriteSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        try:
+            reservation = create_admin_reservation(data=payload.model_dump(exclude_unset=True))
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except RoomFullException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InvalidSpotException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(reservation, status=status.HTTP_201_CREATED)
+
+
+class AdminReservationDetailView(APIView):
+    """Retrieve a reservation for the PulseFit admin. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, reservation_id, *args, **kwargs):
+        try:
+            reservation = get_admin_reservation(reservation_id=reservation_id)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        return Response(reservation, status=status.HTTP_200_OK)
+
+
+class AdminReservationCancelView(APIView):
+    """Cancel a reservation from the staff admin."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, reservation_id, *args, **kwargs):
+        try:
+            reservation = cancel_admin_reservation(reservation_id=reservation_id)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        except ReservationInvalidStateException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "message": constants.RESERVATION_CANCELLED_SUCCESS_MESSAGE,
+                **reservation,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class AdminReservationChangeSpotView(APIView):
+    """Change the spot of a reservation from the staff admin."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def patch(self, request, reservation_id, *args, **kwargs):
+        try:
+            payload = AdminReservationChangeSpotSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        try:
+            reservation = change_admin_reservation_spot(
+                reservation_id=reservation_id,
+                new_spot=payload.new_spot,
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        except (ReservationInvalidStateException, InvalidSpotException) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(reservation, status=status.HTTP_200_OK)

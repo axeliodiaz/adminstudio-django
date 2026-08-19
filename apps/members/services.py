@@ -1,3 +1,4 @@
+from datetime import date
 from uuid import UUID
 
 from django.contrib.auth import get_user_model
@@ -5,9 +6,10 @@ from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 
 from apps.members import members
-from apps.members.models import Member
+from apps.members.models import Member, Reservation
 from apps.members.schemas import (
     AdminMemberSchema,
+    AdminReservationSchema,
     MemberSchema,
     ReservationSchema,
 )
@@ -197,3 +199,161 @@ def list_reservations(validated_query: dict) -> list[ReservationSchema]:
 
     qs = members.list_reservations_by_date_range(**query_params)
     return [ReservationSchema.model_validate(obj) for obj in qs]
+
+
+def _member_display_name(user) -> str:
+    if not user:
+        return ""
+    name = " ".join(part for part in [user.first_name, user.last_name] if part).strip()
+    return name or user.username or user.email or ""
+
+
+def _instructor_display_name(schedule) -> str:
+    instructor = getattr(schedule, "instructor", None)
+    user = getattr(instructor, "user", None) if instructor else None
+    return _member_display_name(user)
+
+
+def _serialize_admin_reservation(reservation: Reservation) -> dict:
+    member = reservation.member
+    user = getattr(member, "user", None)
+    schedule = reservation.schedule
+    room = getattr(schedule, "room", None)
+    studio = getattr(room, "studio", None) if room else None
+
+    payload = {
+        "id": reservation.id,
+        "created": reservation.created,
+        "modified": reservation.modified,
+        "member_id": reservation.member_id,
+        "member_name": _member_display_name(user),
+        "member_email": getattr(user, "email", "") or "",
+        "user_id": getattr(user, "id", None),
+        "schedule_id": reservation.schedule_id,
+        "schedule_title": schedule.title or "",
+        "schedule_start_time": schedule.start_time,
+        "duration_minutes": schedule.duration_minutes,
+        "instructor_id": schedule.instructor_id,
+        "instructor_name": _instructor_display_name(schedule),
+        "room_id": schedule.room_id,
+        "room_name": room.name if room else "",
+        "studio_id": studio.id if studio else None,
+        "studio_name": studio.name if studio else None,
+        "room_capacity": room.capacity if room else None,
+        "status": reservation.status,
+        "spot": reservation.spot,
+        "notes": reservation.notes or "",
+    }
+    return AdminReservationSchema.model_validate(payload).model_dump(mode="json")
+
+
+def _parse_date(value: str | None, field_name: str) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise ValueError(f"{field_name} must be YYYY-MM-DD.") from exc
+
+
+def list_admin_reservations(
+    *,
+    start_date: str | date | None = None,
+    end_date: str | date | None = None,
+    member_id: str | UUID | None = None,
+    schedule_id: str | UUID | None = None,
+    instructor_id: str | UUID | None = None,
+    room_id: str | UUID | None = None,
+    status: str | None = None,
+    search: str | None = None,
+) -> list[dict]:
+    """Return enriched reservations for the staff admin list."""
+    parsed_start = (
+        start_date if isinstance(start_date, date) else _parse_date(start_date, "start_date")
+    )
+    parsed_end = end_date if isinstance(end_date, date) else _parse_date(end_date, "end_date")
+
+    if not schedule_id and (parsed_start is None or parsed_end is None):
+        today = date.today()
+        parsed_start = today.fromordinal(today.toordinal() - today.weekday())
+        parsed_end = parsed_start.fromordinal(parsed_start.toordinal() + 6)
+
+    qs = members.list_admin_reservations(
+        start_date=parsed_start,
+        end_date=parsed_end,
+        member_id=member_id,
+        schedule_id=schedule_id,
+        instructor_id=instructor_id,
+        room_id=room_id,
+        status=status,
+        search=search,
+    )
+    return [_serialize_admin_reservation(obj) for obj in qs]
+
+
+def get_admin_reservation(reservation_id: str | UUID) -> dict:
+    """Return one enriched reservation for the staff admin."""
+    try:
+        reservation = (
+            Reservation.objects.select_related(
+                "member__user",
+                "schedule__instructor__user",
+                "schedule__room__studio",
+            )
+            .filter(is_removed=False)
+            .get(id=reservation_id)
+        )
+    except Reservation.DoesNotExist as exc:
+        raise ValueError("Reservation not found.") from exc
+    return _serialize_admin_reservation(reservation)
+
+
+def create_admin_reservation(data: dict) -> dict:
+    """Create a reservation for a given member/user from the staff admin."""
+    user_id = data.get("user_id")
+    member_id = data.get("member_id")
+
+    if not user_id and not member_id:
+        raise ValueError("user_id or member_id is required.")
+    if user_id and member_id:
+        raise ValueError("Provide either user_id or member_id, not both.")
+
+    if member_id:
+        try:
+            member = Member.objects.select_related("user").get(id=member_id, is_removed=False)
+        except Member.DoesNotExist as exc:
+            raise ValueError("Member not found.") from exc
+        user_id = member.user_id
+
+    try:
+        User.objects.get(id=user_id)
+    except User.DoesNotExist as exc:
+        raise ValueError("User not found.") from exc
+
+    reservation = members.create_reservation(
+        {
+            "user_id": user_id,
+            "schedule_id": data["schedule_id"],
+            "spot": data["spot"],
+            "notes": data.get("notes") or "Admin reservation",
+        }
+    )
+    return get_admin_reservation(reservation.id)
+
+
+def cancel_admin_reservation(reservation_id: str | UUID) -> dict:
+    """Cancel a reservation from the staff admin."""
+    try:
+        members.cancel_reservation(str(reservation_id))
+    except Reservation.DoesNotExist as exc:
+        raise ValueError("Reservation not found.") from exc
+    return get_admin_reservation(reservation_id)
+
+
+def change_admin_reservation_spot(reservation_id: str | UUID, new_spot: int) -> dict:
+    """Change the spot of a reservation from the staff admin."""
+    try:
+        members.change_reservation_spot_by_id(str(reservation_id), new_spot)
+    except Reservation.DoesNotExist as exc:
+        raise ValueError("Reservation not found.") from exc
+    return get_admin_reservation(reservation_id)
