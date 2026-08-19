@@ -13,6 +13,13 @@ class UserSchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CurrentUserSchema(UserSchema):
+    """Authenticated user payload for login and GET /api/auth/me/."""
+
+    is_staff: bool = False
+    is_superuser: bool = False
+
+
 class UserPublicSchema(BaseModel):
     first_name: str | None = None
     last_name: str | None = None

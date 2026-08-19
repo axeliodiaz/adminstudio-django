@@ -57,6 +57,8 @@ class TestLoginView:
         assert response.data["user"]["first_name"] == "Test"
         assert response.data["user"]["last_name"] == "User"
         assert response.data["user"]["username"] == "testuser"
+        assert response.data["user"]["is_staff"] is False
+        assert response.data["user"]["is_superuser"] is False
 
         # Verify token was created
         token = ExpiringToken.objects.get(user=user)
@@ -207,6 +209,51 @@ class TestLoginView:
         expected_lifespan = getattr(settings, "EXPIRING_TOKEN_LIFESPAN", timedelta(hours=24))
         expected_expiry = timezone.now() + expected_lifespan
         assert abs((token.expires - expected_expiry).total_seconds()) < 60
+
+
+@pytest.mark.django_db
+class TestCurrentUserView:
+    def test_me_requires_authentication(self, api_client):
+        url = reverse("users:me")
+        response = api_client.get(url)
+
+        assert response.status_code == 401
+        assert "detail" in response.data
+
+    def test_me_returns_current_user(self, api_client, user):
+        url = reverse("users:me")
+        token = ExpiringToken.objects.create(user=user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.get(url)
+
+        assert response.status_code == 200
+        assert response.data["email"] == "test@example.com"
+        assert response.data["first_name"] == "Test"
+        assert response.data["last_name"] == "User"
+        assert response.data["username"] == "testuser"
+        assert response.data["phone_number"] == "+1234567890"
+        assert response.data["is_staff"] is False
+        assert response.data["is_superuser"] is False
+
+    def test_me_returns_staff_flags(self, api_client):
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+            is_superuser=True,
+        )
+        url = reverse("users:me")
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.get(url)
+
+        assert response.status_code == 200
+        assert response.data["email"] == "admin@example.com"
+        assert response.data["is_staff"] is True
+        assert response.data["is_superuser"] is True
 
 
 @pytest.mark.django_db

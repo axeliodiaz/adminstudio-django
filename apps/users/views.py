@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from drf_expiring_token.models import ExpiringToken
 
 from apps.users.serializers import LoginSerializer, ChangePasswordSerializer
-from apps.users.schemas import UserSchema
+from apps.users.schemas import CurrentUserSchema
 from apps.users.services import change_user_password
 
 
@@ -58,8 +58,7 @@ class LoginView(APIView):
         ExpiringToken.objects.filter(user=user).delete()
         token = ExpiringToken.objects.create(user=user)
 
-        # Serializar datos del usuario
-        user_data = UserSchema.model_validate(user).model_dump()
+        user_data = CurrentUserSchema.model_validate(user).model_dump()
 
         return Response(
             {
@@ -68,6 +67,16 @@ class LoginView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class CurrentUserView(APIView):
+    """Return the authenticated user, including staff flags."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user_data = CurrentUserSchema.model_validate(request.user).model_dump()
+        return Response(user_data, status=status.HTTP_200_OK)
 
 
 class ChangePasswordView(APIView):
