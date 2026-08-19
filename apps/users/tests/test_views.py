@@ -257,6 +257,245 @@ class TestCurrentUserView:
 
 
 @pytest.mark.django_db
+class TestAdminUserListView:
+    def test_users_requires_authentication(self, api_client):
+        url = reverse("users:users")
+        response = api_client.get(url)
+
+        assert response.status_code == 401
+
+    def test_users_requires_staff(self, api_client, user):
+        url = reverse("users:users")
+        token = ExpiringToken.objects.create(user=user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.get(url)
+
+        assert response.status_code == 403
+
+    def test_users_returns_list_for_staff(self, api_client, user):
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            first_name="Admin",
+            last_name="User",
+            is_staff=True,
+        )
+        url = reverse("users:users")
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.get(url)
+
+        assert response.status_code == 200
+        emails = {row["email"] for row in response.data}
+        assert "test@example.com" in emails
+        assert "admin@example.com" in emails
+        assert "is_staff" in response.data[0]
+        assert "last_login" in response.data[0]
+
+    def test_users_filters_by_role_and_search(self, api_client, user):
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            first_name="Admin",
+            last_name="User",
+            is_staff=True,
+        )
+        url = reverse("users:users")
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        staff_response = api_client.get(url, {"role": "staff"})
+        assert staff_response.status_code == 200
+        assert all(row["is_staff"] is True for row in staff_response.data)
+        assert len(staff_response.data) == 1
+
+        search_response = api_client.get(url, {"search": "testuser"})
+        assert search_response.status_code == 200
+        assert [row["email"] for row in search_response.data] == ["test@example.com"]
+
+
+@pytest.mark.django_db
+class TestAdminUserDetailView:
+    def test_user_detail_requires_staff(self, api_client, user):
+        url = reverse("users:user-detail", kwargs={"user_id": user.id})
+        token = ExpiringToken.objects.create(user=user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.get(url)
+
+        assert response.status_code == 403
+
+    def test_user_detail_returns_user_for_staff(self, api_client, user):
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        url = reverse("users:user-detail", kwargs={"user_id": user.id})
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.get(url)
+
+        assert response.status_code == 200
+        assert response.data["email"] == "test@example.com"
+        assert response.data["id"] == str(user.id)
+
+    def test_user_detail_updates_fields(self, api_client, user):
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        url = reverse("users:user-detail", kwargs={"user_id": user.id})
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.patch(
+            url,
+            data={
+                "first_name": "Ana",
+                "last_name": "Pérez",
+                "phone_number": "+56911111111",
+                "gender": "female",
+                "is_staff": True,
+                "is_active": True,
+            },
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.data["first_name"] == "Ana"
+        assert response.data["last_name"] == "Pérez"
+        assert response.data["phone_number"] == "+56911111111"
+        assert response.data["gender"] == "female"
+        assert response.data["is_staff"] is True
+        user.refresh_from_db()
+        assert user.first_name == "Ana"
+        assert user.is_staff is True
+
+    def test_user_cannot_remove_own_staff(self, api_client):
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        url = reverse("users:user-detail", kwargs={"user_id": staff_user.id})
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.patch(url, data={"is_staff": False}, format="json")
+
+        assert response.status_code == 400
+        staff_user.refresh_from_db()
+        assert staff_user.is_staff is True
+
+    def test_staff_cannot_edit_superuser(self, api_client):
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        superuser = User.objects.create_user(
+            username="root",
+            email="root@example.com",
+            password="testpass123",
+            is_staff=True,
+            is_superuser=True,
+        )
+        url = reverse("users:user-detail", kwargs={"user_id": superuser.id})
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        get_response = api_client.get(url)
+        patch_response = api_client.patch(url, data={"first_name": "Root"}, format="json")
+
+        assert get_response.status_code == 403
+        assert patch_response.status_code == 403
+
+
+@pytest.mark.django_db
+class TestAdminUserPasswordRecoveryView:
+    def test_password_recovery_requires_staff(self, api_client, user):
+        url = reverse("users:user-password-recovery", kwargs={"user_id": user.id})
+        token = ExpiringToken.objects.create(user=user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.post(url, format="json")
+
+        assert response.status_code == 403
+
+    def test_staff_can_send_password_recovery(self, api_client, user, mocker):
+        send_email_mock = mocker.patch("apps.users.services.send_password_recovery_email")
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        url = reverse("users:user-password-recovery", kwargs={"user_id": user.id})
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.post(url, format="json")
+
+        assert response.status_code == 200
+        assert "Se envió un código de recuperación" in response.data["detail"]
+        send_email_mock.assert_called_once()
+
+    def test_staff_cannot_send_password_recovery_for_superuser(self, api_client, mocker):
+        mocker.patch("apps.users.services.send_password_recovery_email")
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        superuser = User.objects.create_user(
+            username="root",
+            email="root@example.com",
+            password="testpass123",
+            is_staff=True,
+            is_superuser=True,
+        )
+        url = reverse("users:user-password-recovery", kwargs={"user_id": superuser.id})
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.post(url, format="json")
+
+        assert response.status_code == 403
+
+    def test_staff_cannot_send_password_recovery_for_inactive_user(
+        self, api_client, inactive_user, mocker
+    ):
+        send_email_mock = mocker.patch("apps.users.services.send_password_recovery_email")
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        url = reverse("users:user-password-recovery", kwargs={"user_id": inactive_user.id})
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.post(url, format="json")
+
+        assert response.status_code == 400
+        assert "cuenta inactiva" in response.data["detail"]
+        send_email_mock.assert_not_called()
+
+
+@pytest.mark.django_db
 class TestChangePasswordView:
     def test_change_password_requires_authentication(self, api_client):
         url = reverse("users:change-password")
@@ -297,3 +536,183 @@ class TestChangePasswordView:
 
         assert response.status_code == 400
         assert response.data["detail"] == "Contraseña actual incorrecta."
+
+
+@pytest.mark.django_db
+class TestPasswordRecoveryRequestView:
+    def test_password_recovery_request_success(self, api_client, user, mocker):
+        send_email_mock = mocker.patch("apps.users.services.send_password_recovery_email")
+        url = reverse("users:password-recovery-request")
+        payload = {"email": "test@example.com"}
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 200
+        assert "Si el correo electrónico existe" in response.data["detail"]
+        send_email_mock.assert_called_once()
+
+    def test_password_recovery_request_does_not_expose_nonexistent_email(self, api_client, mocker):
+        send_email_mock = mocker.patch("apps.users.services.send_password_recovery_email")
+        url = reverse("users:password-recovery-request")
+        payload = {"email": "nonexistent@example.com"}
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 200
+        assert "Si el correo electrónico existe" in response.data["detail"]
+        send_email_mock.assert_not_called()
+
+    def test_password_recovery_request_requires_email(self, api_client):
+        url = reverse("users:password-recovery-request")
+        payload = {}
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 400
+        assert "email" in str(response.data).lower()
+
+    def test_password_recovery_request_validates_email_format(self, api_client):
+        url = reverse("users:password-recovery-request")
+        payload = {"email": "invalid-email"}
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 400
+
+    def test_password_recovery_request_does_not_require_authentication(
+        self, api_client, user, mocker
+    ):
+        mocker.patch("apps.users.services.send_password_recovery_email")
+        url = reverse("users:password-recovery-request")
+        payload = {"email": "test@example.com"}
+
+        # Make request without any authentication headers
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 200
+
+
+@pytest.mark.django_db
+class TestPasswordRecoveryConfirmView:
+    def test_password_recovery_confirm_success(self, api_client, user):
+        from apps.users.models import PasswordResetCode
+        from django.utils import timezone
+        from datetime import timedelta
+
+        reset_code = PasswordResetCode.objects.create(
+            user=user,
+            code="ABC123",
+            expires_at=timezone.now() + timedelta(minutes=5),
+        )
+        url = reverse("users:password-recovery-confirm")
+        payload = {"code": "ABC123", "new_password": "newpass456"}
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 200
+        assert "Contraseña actualizada exitosamente" in response.data["detail"]
+        user.refresh_from_db()
+        assert user.check_password("newpass456")
+        # Code should be invalidated
+        assert PasswordResetCode.objects.filter(code="ABC123", is_removed=False).count() == 0
+
+    def test_password_recovery_confirm_fails_with_invalid_code(self, api_client, user):
+        url = reverse("users:password-recovery-confirm")
+        payload = {"code": "XXXXXX", "new_password": "newpass456"}
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 400
+        assert "Código inválido o expirado" in response.data["detail"]
+
+    def test_password_recovery_confirm_fails_with_expired_code(self, api_client, user):
+        from apps.users.models import PasswordResetCode
+        from django.utils import timezone
+        from datetime import timedelta
+
+        reset_code = PasswordResetCode.objects.create(
+            user=user,
+            code="ABC123",
+            expires_at=timezone.now() - timedelta(minutes=1),  # Expired
+        )
+        url = reverse("users:password-recovery-confirm")
+        payload = {"code": "ABC123", "new_password": "newpass456"}
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 400
+        assert "Código inválido o expirado" in response.data["detail"]
+
+    def test_password_recovery_confirm_requires_code(self, api_client):
+        url = reverse("users:password-recovery-confirm")
+        payload = {"new_password": "newpass456"}
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 400
+        assert "code" in str(response.data).lower()
+
+    def test_password_recovery_confirm_requires_new_password(self, api_client):
+        url = reverse("users:password-recovery-confirm")
+        payload = {"code": "ABC123"}
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 400
+        assert (
+            "new_password" in str(response.data).lower() or "password" in str(response.data).lower()
+        )
+
+    def test_password_recovery_confirm_validates_password_strength(self, api_client, user):
+        from apps.users.models import PasswordResetCode
+        from django.utils import timezone
+        from datetime import timedelta
+
+        reset_code = PasswordResetCode.objects.create(
+            user=user,
+            code="ABC123",
+            expires_at=timezone.now() + timedelta(minutes=5),
+        )
+        url = reverse("users:password-recovery-confirm")
+        payload = {"code": "ABC123", "new_password": "123"}  # Too short
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 400
+
+    def test_password_recovery_confirm_does_not_require_authentication(self, api_client, user):
+        from apps.users.models import PasswordResetCode
+        from django.utils import timezone
+        from datetime import timedelta
+
+        reset_code = PasswordResetCode.objects.create(
+            user=user,
+            code="ABC123",
+            expires_at=timezone.now() + timedelta(minutes=5),
+        )
+        url = reverse("users:password-recovery-confirm")
+        payload = {"code": "ABC123", "new_password": "newpass456"}
+
+        # Make request without any authentication headers
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 200
+
+    def test_password_recovery_confirm_normalizes_code_to_uppercase(self, api_client, user):
+        from apps.users.models import PasswordResetCode
+        from django.utils import timezone
+        from datetime import timedelta
+
+        reset_code = PasswordResetCode.objects.create(
+            user=user,
+            code="ABC123",
+            expires_at=timezone.now() + timedelta(minutes=5),
+        )
+        url = reverse("users:password-recovery-confirm")
+        payload = {"code": "abc123", "new_password": "newpass456"}  # Lowercase
+
+        response = api_client.post(url, data=payload, format="json")
+
+        assert response.status_code == 200
+        user.refresh_from_db()
+        assert user.check_password("newpass456")

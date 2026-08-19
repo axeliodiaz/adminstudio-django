@@ -1,7 +1,10 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from model_utils import Choices
 from model_utils.models import SoftDeletableModel, TimeStampedModel, UUIDModel
+
+from apps.users import constants
 
 
 class User(AbstractUser, SoftDeletableModel, UUIDModel, TimeStampedModel):
@@ -58,3 +61,11 @@ class User(AbstractUser, SoftDeletableModel, UUIDModel, TimeStampedModel):
         blank=True,
         help_text="Cycling shoe size (e.g. 44.0).",
     )
+
+
+class PasswordResetCode(SoftDeletableModel, UUIDModel, TimeStampedModel):
+    code = models.CharField(max_length=constants.PASSWORD_RESET_CODE_SIZE, unique=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="password_reset_codes"
+    )
+    expires_at = models.DateTimeField()

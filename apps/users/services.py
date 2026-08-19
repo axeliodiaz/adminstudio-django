@@ -1,12 +1,26 @@
+import random
 import secrets
+import string
+from datetime import timedelta
 from uuid import UUID
 from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
-from apps.users.schemas import UserSchema, UserProfileSchema, UserProfileResponseSchema
+from apps.users import constants
+from apps.users.models import PasswordResetCode
+from apps.users.schemas import (
+    UserSchema,
+    UserProfileSchema,
+    UserProfileResponseSchema,
+    AdminUserSchema,
+)
 
 User = get_user_model()
 
@@ -129,3 +143,215 @@ def change_user_password(user: User, old_password: str, new_password: str) -> No
 
     user.set_password(new_password)
     user.save(update_fields=["password"])
+
+
+def generate_password_reset_code() -> str:
+    """
+    Generate a random alphanumeric code for password reset.
+
+    Returns:
+        A string of 6 uppercase letters and digits.
+    """
+    chars = string.ascii_uppercase + string.digits
+    return "".join(random.choice(chars) for _ in range(constants.PASSWORD_RESET_CODE_SIZE))
+
+
+def send_password_recovery_email(user: User, reset_code_uuid: str | UUID, reset_code: str) -> None:
+    """
+    Send password recovery email with the reset code to the user.
+
+    Args:
+        user: The user requesting password recovery.
+        reset_code_uuid: The UUID of the password reset code.
+        reset_code: The 6-character reset code.
+    """
+    # Import here to avoid circular import
+    from apps.notifications.services import create_notification
+
+    subject = "Recuperación de contraseña"
+    message = (
+        f"Tu código de recuperación es: {reset_code} y expira en "
+        f"{settings.VERIFICATION_CODE_EXPIRATION_MINUTES} minutos. "
+        f"UUID: {reset_code_uuid}"
+    )
+    create_notification(
+        subject=subject,
+        message=message,
+        recipient_list=[user],
+    )
+
+
+def issue_password_reset_code(user: User) -> PasswordResetCode:
+    """Create a reset code for the user and send the recovery email."""
+    reset_code = generate_password_reset_code()
+    expiration_date = timezone.now() + timedelta(
+        minutes=settings.VERIFICATION_CODE_EXPIRATION_MINUTES
+    )
+    password_reset_code = PasswordResetCode.objects.create(
+        user=user, code=reset_code, expires_at=expiration_date
+    )
+    send_password_recovery_email(user, password_reset_code.id, password_reset_code.code)
+    return password_reset_code
+
+
+def request_password_recovery(email: str) -> None:
+    """
+    Request password recovery by generating and sending a reset code via email.
+
+    For security reasons, this function always succeeds even if the email
+    doesn't exist in the system, to prevent email enumeration attacks.
+
+    Args:
+        email: The email address of the user requesting password recovery.
+    """
+    try:
+        user = User.objects.get(email=email, is_active=True, is_removed=False)
+    except User.DoesNotExist:
+        # Return silently to prevent email enumeration
+        return
+
+    issue_password_reset_code(user)
+
+
+def request_admin_password_recovery(*, user_id: str | UUID, actor: User) -> None:
+    """Staff-triggered password recovery for a specific user."""
+    user = get_object_or_404(User, id=user_id, is_removed=False)
+    assert_can_manage_admin_user(actor, user)
+
+    if not (user.email or "").strip():
+        raise ValueError(constants.PASSWORD_RECOVERY_ADMIN_MISSING_EMAIL_MESSAGE)
+    if not user.is_active:
+        raise ValueError(constants.PASSWORD_RECOVERY_ADMIN_INACTIVE_MESSAGE)
+
+    issue_password_reset_code(user)
+
+
+def confirm_password_reset(code: str, new_password: str) -> None:
+    """
+    Confirm password reset by validating the code and updating the user's password.
+
+    Args:
+        code: The 6-character reset code.
+        new_password: The new password to set.
+
+    Raises:
+        PasswordResetCode.DoesNotExist: If the code is invalid or already used.
+        ValueError: If the code has expired or the password is invalid.
+    """
+    now = timezone.now()
+
+    try:
+        reset_code = PasswordResetCode.objects.get(code=code, is_removed=False, expires_at__gt=now)
+    except PasswordResetCode.DoesNotExist:
+        raise ValueError(constants.PASSWORD_RECOVERY_INVALID_CODE_MESSAGE)
+
+    # Check if code has expired
+    if reset_code.expires_at <= now:
+        reset_code.delete()  # Soft delete expired code
+        raise ValueError(constants.PASSWORD_RECOVERY_CODE_EXPIRED_MESSAGE)
+
+    # Validate new password
+    try:
+        validate_password(new_password, reset_code.user)
+    except ValidationError as e:
+        raise ValueError("; ".join(e.messages))
+
+    # Update password
+    reset_code.user.set_password(new_password)
+    reset_code.user.save(update_fields=["password"])
+
+    # Invalidate the code (soft delete)
+    reset_code.delete()
+
+
+def list_admin_users(*, search: str | None = None, role: str | None = None) -> list[dict]:
+    """Return non-deleted users for the staff admin list."""
+    queryset = User.objects.filter(is_removed=False).order_by("first_name", "last_name", "email")
+
+    if role == "staff":
+        queryset = queryset.filter(is_staff=True)
+    elif role == "members":
+        queryset = queryset.filter(is_staff=False)
+
+    term = (search or "").strip()
+    if term:
+        queryset = queryset.filter(
+            Q(first_name__icontains=term)
+            | Q(last_name__icontains=term)
+            | Q(email__icontains=term)
+            | Q(username__icontains=term)
+            | Q(phone_number__icontains=term)
+        )
+
+    return [AdminUserSchema.model_validate(user).model_dump(mode="json") for user in queryset]
+
+
+def assert_can_manage_admin_user(actor: User, user: User) -> None:
+    if user.is_superuser and not actor.is_superuser:
+        raise PermissionError("Solo un superuser puede editar a un superuser.")
+
+
+def get_admin_user(*, user_id: str | UUID, actor: User) -> dict:
+    """Return one non-deleted user for the staff admin."""
+    user = get_object_or_404(User, id=user_id, is_removed=False)
+    assert_can_manage_admin_user(actor, user)
+    return AdminUserSchema.model_validate(user).model_dump(mode="json")
+
+
+def update_admin_user(*, user_id: str | UUID, data: dict, actor: User) -> dict:
+    """Update staff-editable user fields. Superuser flag is never changed here."""
+    user = get_object_or_404(User, id=user_id, is_removed=False)
+    assert_can_manage_admin_user(actor, user)
+    allowed_fields = {
+        "first_name",
+        "last_name",
+        "email",
+        "phone_number",
+        "gender",
+        "is_staff",
+        "is_active",
+    }
+    gender_values = {"", "female", "male", "other"}
+
+    if "gender" in data and data["gender"] is not None and data["gender"] not in gender_values:
+        raise ValueError("Género inválido.")
+
+    if "email" in data:
+        email = (data["email"] or "").strip()
+        if not email:
+            raise ValueError("El correo electrónico es obligatorio.")
+        taken = (
+            User.objects.filter(is_removed=False)
+            .filter(Q(email__iexact=email) | Q(username__iexact=email))
+            .exclude(id=user.id)
+            .exists()
+        )
+        if taken:
+            raise ValueError("Ya existe un usuario con ese correo.")
+
+    if actor.id == user.id:
+        if data.get("is_staff") is False:
+            raise ValueError("No puedes quitarte el acceso staff a ti mismo.")
+        if data.get("is_active") is False:
+            raise ValueError("No puedes desactivar tu propia cuenta.")
+
+    dirty_fields: list[str] = []
+    sync_username = bool(user.username) and user.username == (user.email or "")
+
+    for field, value in data.items():
+        if field not in allowed_fields:
+            continue
+        if field == "email":
+            value = (value or "").strip()
+            if sync_username:
+                user.username = value
+                dirty_fields.append("username")
+        elif field in {"first_name", "last_name", "phone_number", "gender"} and value is None:
+            value = ""
+        setattr(user, field, value)
+        dirty_fields.append(field)
+
+    if dirty_fields:
+        user.save(update_fields=list(dict.fromkeys(dirty_fields)))
+
+    return AdminUserSchema.model_validate(user).model_dump(mode="json")

@@ -1,4 +1,5 @@
-from datetime import date
+from datetime import date, datetime
+from uuid import UUID
 
 from pydantic import BaseModel, EmailStr
 
@@ -16,8 +17,39 @@ class UserSchema(BaseModel):
 class CurrentUserSchema(UserSchema):
     """Authenticated user payload for login and GET /api/auth/me/."""
 
+    id: UUID | None = None
     is_staff: bool = False
     is_superuser: bool = False
+
+
+class AdminUserSchema(BaseModel):
+    """User row for the staff admin list and detail."""
+
+    id: UUID
+    username: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+    phone_number: str | None = None
+    gender: str | None = None
+    is_staff: bool = False
+    is_superuser: bool = False
+    is_active: bool = True
+    last_login: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminUserUpdateSchema(BaseModel):
+    """Partial payload for staff user edits. is_superuser is not writable."""
+
+    first_name: str | None = None
+    last_name: str | None = None
+    email: EmailStr | None = None
+    phone_number: str | None = None
+    gender: str | None = None
+    is_staff: bool | None = None
+    is_active: bool | None = None
 
 
 class UserPublicSchema(BaseModel):

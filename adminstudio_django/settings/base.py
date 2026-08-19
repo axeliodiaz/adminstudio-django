@@ -4,6 +4,21 @@ from pathlib import Path
 # Base directories
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+# Load .env file if it exists (for local development)
+# This allows using .env file without requiring python-dotenv
+_env_file = BASE_DIR / ".env"
+if _env_file.exists():
+    with open(_env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                # Only set if not already in environment (env vars take precedence)
+                if key and key not in os.environ:
+                    os.environ[key] = value
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
@@ -126,15 +141,28 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DEFAULT_PASSWORD_LENGTH = 13
 
+# Email configuration
+# For Mailtrap (recommended for development/testing):
+#   EMAIL_HOST=sandbox.smtp.mailtrap.io
+#   EMAIL_HOST_USER=your_mailtrap_username (from Mailtrap inbox settings)
+#   EMAIL_HOST_PASSWORD=your_mailtrap_password (from Mailtrap inbox settings)
+#   EMAIL_PORT=2525
+#   EMAIL_USE_TLS=True
+# Get credentials from: https://mailtrap.io/ -> Your Inbox -> Integration -> SMTP
 EMAIL_HOST = os.getenv("EMAIL_HOST", "sandbox.smtp.mailtrap.io")
 EMAIL_API_KEY = os.getenv("EMAIL_API_KEY")
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "apikey")  # 'apikey' for Sendgrid
+EMAIL_HOST_USER = os.getenv(
+    "EMAIL_HOST_USER", "apikey"
+)  # 'apikey' for Sendgrid, Mailtrap username for Mailtrap
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-EMAIL_PORT = os.getenv("EMAIL_PORT", 2525)
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False").lower() in {"1", "true", "yes", "on"}
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 2525))
+# For Mailtrap: set EMAIL_USE_TLS=True (default port 2525 uses STARTTLS)
+# For SendGrid: EMAIL_USE_TLS can be False or True depending on port
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() in {"1", "true", "yes", "on"}
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+MAILTRAP_API_KEY = os.getenv("MAILTRAP_API_KEY")
 
 VERIFICATION_CODE_EXPIRATION_MINUTES = 5
 

@@ -111,6 +111,56 @@ class TestGetApiKeyForProvider:
         assert email._get_api_key_for_provider("unknown") is None
 
 
+class TestGetMailingClient:
+    def test_returns_sendgrid_when_api_key_present(self, settings):
+        settings.SENDGRID_API_KEY = "SG.TEST"
+        settings.RESEND_API_KEY = "RS.TEST"
+        settings.MAILTRAP_API_KEY = "MT.TEST"
+        email = Email(
+            notification_id="nid",
+            subject="subj",
+            message="msg",
+            recipient_list=["a@b.com"],
+        )
+        assert email.get_mailing_client() == constants.MAIL_CLIENT_SENDGRID
+
+    def test_returns_resend_when_only_resend_key_present(self, settings):
+        settings.SENDGRID_API_KEY = None
+        settings.RESEND_API_KEY = "RS.TEST"
+        settings.MAILTRAP_API_KEY = "MT.TEST"
+        email = Email(
+            notification_id="nid",
+            subject="subj",
+            message="msg",
+            recipient_list=["a@b.com"],
+        )
+        assert email.get_mailing_client() == constants.MAIL_CLIENT_RESEND
+
+    def test_returns_mailtrap_when_configured(self, settings):
+        settings.SENDGRID_API_KEY = None
+        settings.RESEND_API_KEY = None
+        settings.MAILTRAP_API_KEY = "MT.TEST"
+        email = Email(
+            notification_id="nid",
+            subject="subj",
+            message="msg",
+            recipient_list=["a@b.com"],
+        )
+        assert email.get_mailing_client() == constants.MAIL_CLIENT_MAILTRAP
+
+    def test_returns_default_when_no_providers_configured(self, settings):
+        settings.SENDGRID_API_KEY = None
+        settings.RESEND_API_KEY = None
+        settings.MAILTRAP_API_KEY = None
+        email = Email(
+            notification_id="nid",
+            subject="subj",
+            message="msg",
+            recipient_list=["a@b.com"],
+        )
+        assert email.get_mailing_client() == constants.MAIL_CLIENT_DEFAULT
+
+
 class TestEmailSendMail:
     def test_posts_payload_success(self, mocker, settings):
         # Arrange settings and client
@@ -202,3 +252,110 @@ class TestEmailSendMail:
 
         # Assert: post called and error handled (no exception raised)
         assert post_mock.called
+
+    def test_sends_via_api_for_mailtrap(self, mocker, settings):
+        # Arrange
+        settings.DEFAULT_FROM_EMAIL = "from@example.com"
+        settings.MAILTRAP_API_KEY = "MT.TEST"
+        email = Email(
+            notification_id="123",
+            subject="Hello",
+            message="World",
+            recipient_list=["to@example.com"],
+        )
+        mocker.patch.object(
+            Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_MAILTRAP
+        )
+
+        # Mock requests.post to succeed
+        resp = mocker.Mock()
+        resp.status_code = 200
+        resp.raise_for_status.return_value = None
+        post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
+
+        # Act
+        email.send_mail()
+
+        # Assert: HTTP POST was made to Mailtrap API
+        post_mock.assert_called_once()
+        args, kwargs = post_mock.call_args
+        assert args[0] == constants.MAILTRAP_API_URL
+        assert kwargs["headers"]["Authorization"] == "Bearer MT.TEST"
+        assert kwargs["json"]["from"]["email"] == "from@example.com"
+        assert kwargs["json"]["to"][0]["email"] == "to@example.com"
+        assert kwargs["json"]["subject"] == "Hello"
+        assert kwargs["json"]["text"] == "World"
+
+    def test_sends_html_content_via_api_for_mailtrap(self, mocker, settings):
+        # Arrange
+        settings.DEFAULT_FROM_EMAIL = "from@example.com"
+        settings.MAILTRAP_API_KEY = "MT.TEST"
+        email = Email(
+            notification_id="123",
+            subject="Hello",
+            message="World",
+            recipient_list=["to@example.com"],
+            html_content="<html><body>Hello</body></html>",
+        )
+        mocker.patch.object(
+            Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_MAILTRAP
+        )
+
+        # Mock requests.post
+        resp = mocker.Mock()
+        resp.status_code = 200
+        resp.raise_for_status.return_value = None
+        post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
+
+        # Act
+        email.send_mail()
+
+        # Assert: HTML content was included in payload
+        post_mock.assert_called_once()
+        args, kwargs = post_mock.call_args
+        assert kwargs["json"]["html"] == "<html><body>Hello</body></html>"
+        assert kwargs["json"]["text"] == "World"
+
+    def test_api_error_handled_for_mailtrap(self, mocker, settings):
+        # Arrange
+        settings.DEFAULT_FROM_EMAIL = "from@example.com"
+        settings.MAILTRAP_API_KEY = "MT.TEST"
+        email = Email(
+            notification_id="123",
+            subject="Hello",
+            message="World",
+            recipient_list=["to@example.com"],
+        )
+        mocker.patch.object(
+            Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_MAILTRAP
+        )
+
+        # Mock requests.post to raise an exception
+        post_mock = mocker.patch(
+            "apps.notifications.mailing.requests.post",
+            side_effect=Exception("API Error"),
+        )
+
+        # Act & Assert: exception should be raised (not swallowed)
+        with pytest.raises(Exception, match="API Error"):
+            email.send_mail()
+        post_mock.assert_called_once()
+
+    def test_raises_error_when_from_email_missing_for_mailtrap(self, mocker, settings):
+        # Arrange
+        settings.DEFAULT_FROM_EMAIL = None
+        settings.MAILTRAP_API_KEY = "MT.TEST"
+        email = Email(
+            notification_id="123",
+            subject="Hello",
+            message="World",
+            recipient_list=["to@example.com"],
+            from_email=None,
+        )
+        mocker.patch.object(
+            Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_MAILTRAP
+        )
+
+        # Act & Assert: ValueError should be raised
+        with pytest.raises(ValueError, match="from_email is required"):
+            email.send_mail()
