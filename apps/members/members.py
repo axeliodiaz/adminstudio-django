@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 
 from apps.members import constants
 from apps.members.exceptions import (
@@ -11,6 +11,13 @@ from apps.members.models import Member, Reservation
 from apps.schedules.schedules import get_schedule_by_id
 from apps.users.services import get_or_create_user
 from apps.verifications.services import create_verification_code
+
+ADMIN_RESERVATION_STATUSES = {
+    constants.RESERVATION_STATUS_RESERVED,
+    constants.RESERVATION_STATUS_CANCELLED,
+    constants.RESERVATION_STATUS_ATTENDED,
+    constants.RESERVATION_STATUS_MISSED,
+}
 
 
 def get_member_by_id(member_id: str) -> Member:
@@ -218,4 +225,67 @@ def list_reservations_by_date_range(
     # Exclude cancelled reservations
     return Reservation.objects.filter(**filters).exclude(
         status=constants.RESERVATION_STATUS_CANCELLED
+    )
+
+
+def list_admin_reservations(
+    *,
+    start_date=None,
+    end_date=None,
+    member_id=None,
+    schedule_id=None,
+    instructor_id=None,
+    room_id=None,
+    status=None,
+    search=None,
+) -> QuerySet[Reservation]:
+    """
+    Return reservations for the staff admin, including cancelled rows.
+
+    Unlike the member-facing list, cancelled reservations are kept unless
+    a specific status filter is applied.
+    """
+    filters = {"is_removed": False}
+
+    if schedule_id is not None:
+        filters["schedule_id"] = schedule_id
+    elif start_date is not None and end_date is not None:
+        filters["schedule__start_time__date__range"] = (start_date, end_date)
+
+    if member_id is not None:
+        filters["member_id"] = member_id
+    if instructor_id is not None:
+        filters["schedule__instructor_id"] = instructor_id
+    if room_id is not None:
+        filters["schedule__room_id"] = room_id
+    if status in ADMIN_RESERVATION_STATUSES:
+        filters["status"] = status
+
+    queryset = Reservation.objects.filter(**filters).select_related(
+        "member__user",
+        "schedule__instructor__user",
+        "schedule__room__studio",
+    )
+
+    if search:
+        term = search.strip()
+        if term:
+            queryset = queryset.filter(
+                Q(member__user__email__icontains=term)
+                | Q(member__user__username__icontains=term)
+                | Q(member__user__first_name__icontains=term)
+                | Q(member__user__last_name__icontains=term)
+                | Q(schedule__title__icontains=term)
+            )
+
+    return queryset.order_by("schedule__start_time", "spot", "created")
+
+
+def change_reservation_spot_by_id(reservation_id: str, new_spot: int) -> Reservation:
+    """Change spot for a reservation identified by its id."""
+    reservation = get_reservation_by_id(reservation_id)
+    return change_reservation_spot(
+        str(reservation.schedule_id),
+        str(reservation.member.user_id),
+        new_spot,
     )

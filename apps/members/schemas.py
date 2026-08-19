@@ -95,3 +95,47 @@ class ReservationSchema(BaseModel):
     spot: int | None = None
 
     model_config = {"from_attributes": True}
+
+
+class AdminReservationSchema(BaseModel):
+    """Enriched reservation row for the PulseFit staff admin."""
+
+    id: uuid.UUID
+    created: datetime
+    modified: datetime
+    member_id: uuid.UUID
+    member_name: str = ""
+    member_email: str = ""
+    user_id: uuid.UUID | None = None
+    schedule_id: uuid.UUID
+    schedule_title: str = ""
+    schedule_start_time: datetime
+    duration_minutes: int
+    instructor_id: uuid.UUID | None = None
+    instructor_name: str = ""
+    room_id: uuid.UUID | None = None
+    room_name: str = ""
+    studio_id: uuid.UUID | None = None
+    studio_name: str | None = None
+    room_capacity: int | None = None
+    status: str
+    spot: int | None = None
+    notes: str = ""
+
+    model_config = {"from_attributes": True}
+
+
+class AdminReservationWriteSchema(BaseModel):
+    """Create a reservation for a member from the staff admin."""
+
+    schedule_id: uuid.UUID
+    spot: int
+    notes: str | None = None
+    user_id: uuid.UUID | None = None
+    member_id: uuid.UUID | None = None
+
+
+class AdminReservationChangeSpotSchema(BaseModel):
+    """Change the bike spot of an existing reservation."""
+
+    new_spot: int
