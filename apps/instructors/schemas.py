@@ -166,24 +166,3 @@ class AdminInstructorUpdateSchema(BaseModel):
     last_apple_music_playlist: str | None = None
     last_youtube_music_playlist: str | None = None
     is_active: bool | None = None
-
-
-class AdminInstructorCreateSchema(BaseModel):
-    """Payload to create an instructor from the staff admin."""
-
-    email: EmailStr
-    first_name: str | None = None
-    last_name: str | None = None
-    phone_number: str | None = None
-    description: str | None = None
-    tagline: str | None = None
-    website_url: str | None = None
-    instagram_username: str | None = None
-    tiktok_username: str | None = None
-    is_verified: bool = False
-    instructor_since: Optional[date] = None
-    location: str | None = None
-    last_spotify_playlist: str | None = None
-    last_apple_music_playlist: str | None = None
-    last_youtube_music_playlist: str | None = None
-    is_active: bool = True

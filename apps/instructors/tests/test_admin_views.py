@@ -76,35 +76,16 @@ class TestAdminInstructorListView:
         assert search_response.status_code == 200
         assert [row["email"] for row in search_response.data] == ["verified@example.com"]
 
-    def test_create_instructor(self, staff_client):
-        client, _ = staff_client
-        payload = {
-            "email": "new.instructor@example.com",
-            "first_name": "Luna",
-            "last_name": "Rider",
-            "tagline": "Indoor cycling",
-            "is_verified": True,
-            "location": "Santiago",
-        }
-
-        response = client.post(reverse("admin-instructors"), data=payload, format="json")
-
-        assert response.status_code == 201
-        assert response.data["email"] == "new.instructor@example.com"
-        assert response.data["tagline"] == "Indoor cycling"
-        assert response.data["is_verified"] is True
-        assert Instructor.objects.filter(user__email="new.instructor@example.com").exists()
-
-    def test_create_rejects_duplicate_email(self, staff_client, instructor):
+    def test_create_is_not_allowed(self, staff_client):
         client, _ = staff_client
         response = client.post(
             reverse("admin-instructors"),
-            data={"email": instructor.user.email, "first_name": "Dup"},
+            data={"email": "new.instructor@example.com", "first_name": "Luna"},
             format="json",
         )
 
-        assert response.status_code == 400
-        assert "Ya existe un instructor" in response.data["detail"]
+        assert response.status_code == 405
+        assert not Instructor.objects.filter(user__email="new.instructor@example.com").exists()
 
 
 @pytest.mark.django_db
@@ -162,3 +143,46 @@ class TestAdminInstructorDetailView:
         assert instructor.user.first_name == "Camila"
         assert instructor.tagline == "Ride hard"
         assert instructor.is_verified is True
+
+    def test_delete_is_not_allowed(self, staff_client, instructor):
+        client, _ = staff_client
+        response = client.delete(
+            reverse("admin-instructor-detail", kwargs={"instructor_id": instructor.id})
+        )
+
+        assert response.status_code == 405
+        assert Instructor.objects.filter(id=instructor.id).exists()
+
+
+@pytest.mark.django_db
+class TestInstructorDjangoAdmin:
+    def test_add_and_delete_are_superuser_only(self):
+        from django.contrib.admin.sites import AdminSite
+        from django.test import RequestFactory
+
+        from apps.instructors.admin import InstructorAdmin
+
+        model_admin = InstructorAdmin(Instructor, AdminSite())
+        factory = RequestFactory()
+
+        staff = User.objects.create_user(
+            username="studio-manager",
+            email="manager@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        superuser = User.objects.create_superuser(
+            username="root",
+            email="root@example.com",
+            password="testpass123",
+        )
+
+        staff_request = factory.get("/admin/instructors/instructor/")
+        staff_request.user = staff
+        super_request = factory.get("/admin/instructors/instructor/")
+        super_request.user = superuser
+
+        assert model_admin.has_add_permission(staff_request) is False
+        assert model_admin.has_delete_permission(staff_request) is False
+        assert model_admin.has_add_permission(super_request) is True
+        assert model_admin.has_delete_permission(super_request) is True

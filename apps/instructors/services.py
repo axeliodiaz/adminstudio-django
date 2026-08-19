@@ -224,33 +224,3 @@ def update_admin_instructor(*, instructor_id: str | UUID, data: dict) -> dict:
     instructor = _apply_admin_instructor_fields(instructor, data)
     instructor.refresh_from_db()
     return _admin_instructor_dict(instructor)
-
-
-def create_admin_instructor(*, data: dict) -> tuple[dict, bool]:
-    """Create (or attach profile data to) an instructor from the staff admin."""
-    email = (data.get("email") or "").strip()
-    if not email:
-        raise ValueError("El correo electrónico es obligatorio.")
-
-    existing_instructor = (
-        Instructor.objects.select_related("user").filter(user__email__iexact=email).first()
-    )
-    if existing_instructor:
-        raise ValueError("Ya existe un instructor con ese correo.")
-
-    user_payload = {
-        "email": email,
-        "first_name": data.get("first_name") or "",
-        "last_name": data.get("last_name") or "",
-        "phone_number": data.get("phone_number") or "",
-    }
-    instructor, created = _get_or_create_instructor_user(user_payload)
-
-    profile_data = {
-        k: v for k, v in data.items() if k in INSTRUCTOR_ADMIN_FIELDS or k == "is_active"
-    }
-    if profile_data:
-        instructor = _apply_admin_instructor_fields(instructor, profile_data)
-        instructor.refresh_from_db()
-
-    return _admin_instructor_dict(instructor), created
