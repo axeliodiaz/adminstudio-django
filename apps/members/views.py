@@ -1,8 +1,10 @@
 from datetime import date
 
+from pydantic import ValidationError as PydanticValidationError
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
 from apps.members import constants
@@ -11,6 +13,7 @@ from apps.members.exceptions import (
     RoomFullException,
     ReservationInvalidStateException,
 )
+from apps.members.schemas import AdminMemberCreateSchema, AdminMemberUpdateSchema
 from apps.members.serializers import (
     MemberSerializer,
     ReservationSerializer,
@@ -19,14 +22,27 @@ from apps.members.serializers import (
     ReservationCancelSerializer,
 )
 from apps.members.services import (
+    create_admin_member,
+    get_admin_member,
     get_or_create_member_user,
     get_member_from_user_id,
     create_reservation,
     cancel_reservation,
     change_reservation_spot,
+    list_admin_members,
     list_reservations,
+    update_admin_member,
 )
 from apps.members.models import Member, Reservation
+
+
+def _pydantic_error_response(exc: PydanticValidationError) -> Response:
+    first = exc.errors()[0] if exc.errors() else {}
+    loc = ".".join(str(part) for part in first.get("loc", [])) or "payload"
+    return Response(
+        {"detail": f"{loc}: {first.get('msg', 'Datos inválidos.')}"},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
 
 
 class MemberView(ViewSet):
@@ -91,7 +107,6 @@ class ReservationView(ViewSet):
             data["start_date"] = today.isoformat()
 
         if not has_end_date:
-            # Use a far future date to effectively get all future reservations
             data["end_date"] = date(2100, 1, 1).isoformat()
 
         query_serializer = ReservationListQuerySerializer(data=data)
@@ -132,3 +147,56 @@ class ReservationView(ViewSet):
         except (ReservationInvalidStateException, InvalidSpotException) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation.model_dump(), status=status.HTTP_200_OK)
+
+
+class AdminMemberListView(APIView):
+    """List or create members for the PulseFit admin. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        members_list = list_admin_members(
+            search=request.query_params.get("search"),
+            status=request.query_params.get("status"),
+        )
+        return Response(members_list, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            payload = AdminMemberCreateSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        try:
+            member, created = create_admin_member(data=payload.model_dump())
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            member,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+
+class AdminMemberDetailView(APIView):
+    """Retrieve or update a member for the PulseFit admin. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    http_method_names = ["get", "patch", "head", "options"]
+
+    def get(self, request, member_id, *args, **kwargs):
+        return Response(get_admin_member(member_id=member_id), status=status.HTTP_200_OK)
+
+    def patch(self, request, member_id, *args, **kwargs):
+        try:
+            payload = AdminMemberUpdateSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        try:
+            member = update_admin_member(
+                member_id=member_id,
+                data=payload.model_dump(exclude_unset=True),
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(member, status=status.HTTP_200_OK)
