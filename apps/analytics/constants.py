@@ -24,10 +24,13 @@ EXCLUDED_SCHEDULE_STATUSES = (
 
 CLASS_FORMATS = ("RIDE", "POWER", "YOGA", "SCULPT", "REFORMER")
 
-# Fixed FX used to present the same 7d revenue in CLP / USD / MXN.
+# Fixed FX used to present the same period revenue in CLP / USD / MXN.
 # Source of truth is always CLP (PlanPurchase.price_paid).
 CLP_PER_USD = 950.0
 CLP_PER_MXN = 52.5
+
+DASHBOARD_ALLOWED_DAYS = (7, 14, 30, 60, 90)
+DASHBOARD_DEFAULT_DAYS = 30
 
 DEMO_USERNAME_PREFIX = "demo.dash."
 DEMO_EMAIL_DOMAIN = "pulsefit.demo"
