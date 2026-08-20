@@ -11,6 +11,8 @@ from apps.analytics.constants import (
     CLASS_FORMATS,
     CLP_PER_MXN,
     CLP_PER_USD,
+    DASHBOARD_ALLOWED_DAYS,
+    DASHBOARD_DEFAULT_DAYS,
     DEMO_PLAN_PREFIX,
     EXCLUDED_SCHEDULE_STATUSES,
     OCCUPIED_RESERVATION_STATUSES,
@@ -21,16 +23,16 @@ from apps.schedules.models import Schedule
 from apps.wallets.models import PlanPurchase, Wallet
 
 
-def get_admin_dashboard(*, now=None) -> dict:
+def get_admin_dashboard(*, now=None, days=DASHBOARD_DEFAULT_DAYS) -> dict:
     now = now or timezone.now()
     today = timezone.localtime(now).date()
+    days = days if days in DASHBOARD_ALLOWED_DAYS else DASHBOARD_DEFAULT_DAYS
     week_start = today - timedelta(days=6)
     prev_week_start = today - timedelta(days=13)
     prev_week_end = today - timedelta(days=7)
-    last_30 = today - timedelta(days=29)
-    revenue_start = today - timedelta(days=6)
-    prev_revenue_start = today - timedelta(days=13)
-    prev_revenue_end = today - timedelta(days=7)
+    period_start = today - timedelta(days=days - 1)
+    prev_period_start = period_start - timedelta(days=days)
+    prev_period_end = period_start - timedelta(days=1)
 
     occupied_filter = Q(
         reservations__is_removed=False,
@@ -46,12 +48,12 @@ def get_admin_dashboard(*, now=None) -> dict:
 
     week_schedules = _in_local_date_range(schedules, week_start, today)
     prev_week_schedules = _in_local_date_range(schedules, prev_week_start, prev_week_end)
-    month_schedules = list(_in_local_date_range(schedules, last_30, today))
+    period_schedules = list(_in_local_date_range(schedules, period_start, today))
 
     week_occ = _mean_occupancy(week_schedules)
     prev_week_occ = _mean_occupancy(prev_week_schedules)
 
-    reservations_by_day = _reservation_counts_by_day(last_30, today)
+    reservations_by_day = _reservation_counts_by_day(period_start, today)
     reservations_today = reservations_by_day.get(today, 0)
     reservations_yesterday = reservations_by_day.get(today - timedelta(days=1), 0)
 
@@ -60,9 +62,9 @@ def get_admin_dashboard(*, now=None) -> dict:
     members_week_ago = _active_members_qs(today, created_on_or_before=prev_week_end).count()
     members_delta_pct = _pct_change(active_members, members_week_ago)
 
-    revenue_7d = _revenue_between(revenue_start, today)
-    revenue_prev = _revenue_between(prev_revenue_start, prev_revenue_end)
-    wallet_stats = _wallet_commerce(today, revenue_start, last_30)
+    revenue_period = _revenue_between(period_start, today)
+    revenue_prev = _revenue_between(prev_period_start, prev_period_end)
+    wallet_stats = _wallet_commerce(today, period_start)
 
     return {
         "kpis": {
@@ -81,29 +83,34 @@ def get_admin_dashboard(*, now=None) -> dict:
                 "delta_pct": members_delta_pct,
             },
             "revenue_7d": {
-                "amount_clp": revenue_7d,
-                "amount_usd": _convert_clp(revenue_7d, CLP_PER_USD),
-                "amount_mxn": _convert_clp(revenue_7d, CLP_PER_MXN),
-                "delta_pct": _pct_change(revenue_7d, revenue_prev),
+                "amount_clp": revenue_period,
+                "amount_usd": _convert_clp(revenue_period, CLP_PER_USD),
+                "amount_mxn": _convert_clp(revenue_period, CLP_PER_MXN),
+                "delta_pct": _pct_change(revenue_period, revenue_prev),
                 "fx": {
                     "base": "CLP",
                     "clp_per_usd": CLP_PER_USD,
                     "clp_per_mxn": CLP_PER_MXN,
                 },
             },
-            "purchases_7d": wallet_stats["purchases_7d"],
+            "purchases_7d": wallet_stats["purchases_period"],
             "unlimited_wallets": wallet_stats["unlimited_wallets"],
             "class_credits_outstanding": wallet_stats["class_credits_outstanding"],
             "guest_passes_outstanding": wallet_stats["guest_passes_outstanding"],
         },
-        "reservations_30d": _reservations_30d_series(reservations_by_day, last_30, today),
-        "occupancy_by_instructor": _occupancy_by_instructor(month_schedules),
+        "range": {
+            "days": days,
+            "start": period_start.isoformat(),
+            "end": today.isoformat(),
+        },
+        "reservations_30d": _reservations_series(reservations_by_day, period_start, today),
+        "occupancy_by_instructor": _occupancy_by_instructor(period_schedules),
         "plan_mix": _plan_mix(today, active_qs),
-        "demand_by_format": _demand_by_format(month_schedules),
-        "classes_vs_noshows": _classes_vs_noshows(week_start, today),
-        "schedule_vs_occupancy": _schedule_vs_occupancy(month_schedules),
+        "demand_by_format": _demand_by_format(period_schedules),
+        "classes_vs_noshows": _classes_vs_noshows(period_start, today),
+        "schedule_vs_occupancy": _schedule_vs_occupancy(period_schedules),
         "revenue_by_plan": wallet_stats["revenue_by_plan"],
-        "purchases_30d": wallet_stats["purchases_30d"],
+        "purchases_30d": wallet_stats["purchases_series"],
         "recent_purchases": wallet_stats["recent_purchases"],
     }
 
@@ -152,7 +159,7 @@ def _reservation_counts_by_day(start, end) -> dict:
     return {row["day"]: row["total"] for row in rows}
 
 
-def _reservations_30d_series(by_day, start, end) -> dict:
+def _reservations_series(by_day, start, end) -> dict:
     labels = []
     values = []
     cursor = start
@@ -377,30 +384,25 @@ def _clean_plan_name(name: str | None) -> str:
     return name
 
 
-def _wallet_commerce(today, revenue_start, last_30) -> dict:
+def _wallet_commerce(today, period_start) -> dict:
     wallets = Wallet.objects.all()
     unlimited = wallets.filter(is_unlimited_membership_active=True).count()
     class_credits = wallets.aggregate(total=Sum("class_credits"))["total"] or 0
     guest_passes = wallets.aggregate(total=Sum("guest_pass_credits"))["total"] or 0
 
-    purchases_7d_start = timezone.make_aware(datetime.combine(revenue_start, time.min))
-    purchases_7d_end = timezone.make_aware(datetime.combine(today, time.max))
-    purchases_7d = PlanPurchase.objects.filter(
-        created__gte=purchases_7d_start, created__lte=purchases_7d_end
-    ).count()
-
-    month_start = timezone.make_aware(datetime.combine(last_30, time.min))
-    month_end = purchases_7d_end
-    month_purchases = (
-        PlanPurchase.objects.filter(created__gte=month_start, created__lte=month_end)
+    period_start_dt = timezone.make_aware(datetime.combine(period_start, time.min))
+    period_end_dt = timezone.make_aware(datetime.combine(today, time.max))
+    period_purchases = (
+        PlanPurchase.objects.filter(created__gte=period_start_dt, created__lte=period_end_dt)
         .select_related("plan", "user")
         .order_by("-created")
     )
+    purchases_period = period_purchases.count()
 
     by_plan = defaultdict(lambda: {"count": 0, "revenue": 0.0})
     by_day_count = defaultdict(int)
     by_day_revenue = defaultdict(float)
-    for purchase in month_purchases:
+    for purchase in period_purchases:
         plan_name = _clean_plan_name(purchase.plan.name)
         price = float(purchase.price_paid or 0)
         by_plan[plan_name]["count"] += 1
@@ -425,7 +427,7 @@ def _wallet_commerce(today, revenue_start, last_30) -> dict:
     labels = []
     counts = []
     revenues = []
-    cursor = last_30
+    cursor = period_start
     while cursor <= today:
         labels.append(cursor.isoformat())
         counts.append(by_day_count.get(cursor, 0))
@@ -433,7 +435,7 @@ def _wallet_commerce(today, revenue_start, last_30) -> dict:
         cursor += timedelta(days=1)
 
     recent = []
-    for purchase in month_purchases[:8]:
+    for purchase in period_purchases[:8]:
         user = purchase.user
         name = f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip()
         recent.append(
@@ -447,11 +449,11 @@ def _wallet_commerce(today, revenue_start, last_30) -> dict:
         )
 
     return {
-        "purchases_7d": purchases_7d,
+        "purchases_period": purchases_period,
         "unlimited_wallets": unlimited,
         "class_credits_outstanding": int(class_credits),
         "guest_passes_outstanding": int(guest_passes),
         "revenue_by_plan": revenue_by_plan,
-        "purchases_30d": {"labels": labels, "counts": counts, "revenue_clp": revenues},
+        "purchases_series": {"labels": labels, "counts": counts, "revenue_clp": revenues},
         "recent_purchases": recent,
     }

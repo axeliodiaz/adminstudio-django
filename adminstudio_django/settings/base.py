@@ -99,6 +99,10 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        # Wait for the lock instead of 500-ing when parallel admin requests
+        # authenticate at the same time (token sliding expiry used to write
+        # on every request).
+        "OPTIONS": {"timeout": 20},
     }
 }
 
@@ -129,7 +133,7 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "drf_expiring_token.authentication.ExpiringTokenAuthentication",
+        "apps.users.authentication.ExpiringTokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [

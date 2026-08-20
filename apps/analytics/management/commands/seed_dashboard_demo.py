@@ -227,8 +227,8 @@ class Command(BaseCommand):
 
     def _schedules_and_reservations(self, rng, instructors, room, members, today):
         schedules = []
-        start_day = today - timedelta(days=34)
-        for offset in range(35):
+        start_day = today - timedelta(days=89)
+        for offset in range(90):
             day = start_day + timedelta(days=offset)
             hours = CLASS_HOURS if day.weekday() < 5 else [9, 10, 18, 19]
             for hour in hours:
@@ -283,7 +283,7 @@ class Command(BaseCommand):
         while spent < target and index < 80:
             member = members[index % len(members)]
             plan = rng.choice(paid_plans)
-            day = today - timedelta(days=rng.randint(0, 6))
+            day = today - timedelta(days=rng.randint(0, 89))
             purchase = PlanPurchase.objects.create(
                 user=member.user,
                 plan=plan,

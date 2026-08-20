@@ -58,6 +58,22 @@ class TestAdminDashboardView:
         assert set(body["kpis"]["revenue_7d"]).issuperset(
             {"amount_clp", "amount_usd", "amount_mxn", "fx"}
         )
+        assert body["range"]["days"] == 30
+        assert len(body["reservations_30d"]["labels"]) == 30
+
+    def test_days_query_param_shortens_series(self, staff_client):
+        response = staff_client.get(reverse("admin-dashboard"), {"days": 7})
+        assert response.status_code == 200
+        body = response.data
+        assert body["range"]["days"] == 7
+        assert len(body["reservations_30d"]["labels"]) == 7
+        assert len(body["purchases_30d"]["labels"]) == 7
+        assert len(body["classes_vs_noshows"]["labels"]) == 7
+
+    def test_invalid_days_falls_back_to_default(self, staff_client):
+        response = staff_client.get(reverse("admin-dashboard"), {"days": 11})
+        assert response.status_code == 200
+        assert response.data["range"]["days"] == 30
 
 
 @pytest.mark.django_db
