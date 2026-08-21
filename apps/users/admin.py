@@ -10,7 +10,29 @@ class UserAdmin(DjangoUserAdmin):
         (None, {"fields": ("email", "password")}),
         (
             "Personal info",
-            {"fields": ("first_name", "last_name", "phone_number", "gender")},
+            {
+                "fields": (
+                    "first_name",
+                    "last_name",
+                    "phone_number",
+                    "gender",
+                    "birthdate",
+                    "height_cm",
+                    "weight_kg",
+                    "address",
+                )
+            },
+        ),
+        (
+            "Cycling",
+            {
+                "fields": (
+                    "seat_height",
+                    "seat_distance",
+                    "handlebar_distance",
+                    "cycling_shoe_size",
+                )
+            },
         ),
         (
             "Permissions",

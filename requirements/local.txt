@@ -3,3 +3,5 @@
 pre-commit==4.3.0
 drf-yasg==1.21.11
 setuptools==80.9.0
+django-cors-headers==4.9.0
+mailtrap>=2.4.0

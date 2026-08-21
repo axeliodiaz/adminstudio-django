@@ -31,7 +31,6 @@ class TestGetInstructorById:
             assert uuid.UUID(str(data["user_id"])) == instructor.user.id
         else:
             assert isinstance(data["user"], dict)
-            assert data["user"].get("email") == instructor.user.email
         assert data["created"] is not None
         assert data["modified"] is not None
 
@@ -50,11 +49,9 @@ class TestGetOrCreateInstructorUser:
 
         # Assert: created and payload matches UserSchema fields
         assert created is True
-        assert set(data.keys()) == {"first_name", "last_name", "email", "phone_number"}
-        assert data["email"] == validated_registration_data["email"]
+        assert set(data.keys()) == {"first_name", "last_name"}
         assert data["first_name"] == validated_registration_data["first_name"]
         assert data["last_name"] == validated_registration_data["last_name"]
-        assert data["phone_number"] == validated_registration_data["phone_number"]
         # Ensure an Instructor was created and linked to the created user
         assert Instructor.objects.count() == 1
 
@@ -72,8 +69,7 @@ class TestGetOrCreateInstructorUser:
         assert created_second is False
         assert Instructor.objects.count() == 1
         # Data should still be the same schema dict for the user
-        assert set(data.keys()) == {"first_name", "last_name", "email", "phone_number"}
-        assert data["email"] == validated_registration_data["email"]
+        assert set(data.keys()) == {"first_name", "last_name"}
 
 
 @pytest.mark.django_db
@@ -99,10 +95,8 @@ class TestUpdateInstructor:
         instructor.user.save(update_fields=["first_name"])  # type: ignore[arg-type]
 
         payload = {
-            "email": "updated@example.com",
             "first_name": "NewFirst",
             "last_name": "NewLast",
-            "phone_number": "+1777777777",
             "birthdate": "2001-01-01",
             "address": "Addr",
         }
@@ -114,19 +108,18 @@ class TestUpdateInstructor:
 
         # DB changes
         instructor.user.refresh_from_db()
-        assert instructor.user.email == payload["email"]
+        # Sensitive fields should remain unchanged via update service
         assert instructor.user.first_name == payload["first_name"]
         assert instructor.user.last_name == payload["last_name"]
-        assert instructor.user.phone_number == payload["phone_number"]
 
     def test_partial_update_only_updates_provided_fields(self, instructor):
         # Set a field to verify it remains unchanged
         instructor.user.first_name = "Keep"
         instructor.user.save(update_fields=["first_name"])  # type: ignore[arg-type]
 
-        payload = {"phone_number": "+1666666666"}
+        payload = {"last_name": "Patched"}
         data = update_instructor(instructor.id, payload, partial=True)
         assert "id" in data
         instructor.user.refresh_from_db()
         assert instructor.user.first_name == "Keep"  # unchanged
-        assert instructor.user.phone_number == "+1666666666"
+        assert instructor.user.last_name == "Patched"

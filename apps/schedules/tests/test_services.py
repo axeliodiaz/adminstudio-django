@@ -30,8 +30,8 @@ class TestServicesGetScheduleSchemaList:
         assert ids == {schedules_sample[1].id, schedules_sample[2].id}
 
     @pytest.mark.django_db
-    def test_filters_by_instructor_username(self, schedules_sample):
-        schemas = get_schedule_schema_list(instructor_username="ali")
+    def test_filters_by_instructor_id(self, schedules_sample, instructor_alice):
+        schemas = get_schedule_schema_list(instructor_id=str(instructor_alice.id))
         ids = {s.id for s in schemas}
         assert ids == {schedules_sample[0].id, schedules_sample[1].id}
 
@@ -45,7 +45,9 @@ class TestServicesGetScheduleSchemaList:
     def test_combined_filters(self, schedules_sample):
         threshold = schedules_sample[0].start_time + timedelta(minutes=30)
         schemas = get_schedule_schema_list(
-            start_time=threshold, instructor_username="ali", room_name="small"
+            start_time=threshold,
+            instructor_id=str(schedules_sample[0].instructor_id),
+            room_name="small",
         )
         ids = [s.id for s in schemas]
         assert ids == [schedules_sample[1].id]

@@ -13,6 +13,8 @@ class Schedule(UUIDModel, SoftDeletableModel, TimeStampedModel):
         (constants.SCHEDULE_STATUS_COMPLETED, "Completed"),
         (constants.SCHEDULE_STATUS_CANCELED, "Canceled"),
     ]
+    title = models.CharField(max_length=255, default="")
+    description = models.TextField(blank=True, null=True)
     instructor = models.ForeignKey(
         Instructor,
         on_delete=models.CASCADE,
@@ -33,3 +35,6 @@ class Schedule(UUIDModel, SoftDeletableModel, TimeStampedModel):
 
     class Meta:
         ordering = ["start_time"]
+
+    def __str__(self):
+        return f"{self.title} - {self.start_time})"

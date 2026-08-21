@@ -4,11 +4,23 @@ from model_bakery import baker
 
 @pytest.fixture
 @pytest.mark.django_db
-def studio():
+def address():
+    """Create an Address instance for testing."""
+    return baker.make(
+        "studios.Address",
+        address="123 Test St",
+        latitude=None,
+        longitude=None,
+    )
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def studio(address):
     return baker.make(
         "studios.Studio",
         name="Test Studio",
-        address="123 Test St",
+        address=address,
         is_active=True,
     )
 
@@ -40,11 +52,23 @@ def extra_room(studio):
 
 @pytest.fixture
 @pytest.mark.django_db
-def empty_studio():
+def empty_address():
+    """Create an Address instance for empty studio."""
+    return baker.make(
+        "studios.Address",
+        address="Nowhere",
+        latitude=None,
+        longitude=None,
+    )
+
+
+@pytest.fixture
+@pytest.mark.django_db
+def empty_studio(empty_address):
     """A studio without any rooms."""
     return baker.make(
         "studios.Studio",
         name="Empty Studio",
-        address="Nowhere",
+        address=empty_address,
         is_active=False,
     )

@@ -32,6 +32,8 @@ class ScheduleCreateSerializer(serializers.Serializer):
 
 class ScheduleSerializer(ScheduleCreateSerializer):
     id = serializers.UUIDField(read_only=True)
+    title = serializers.CharField(max_length=100)
+    description = serializers.CharField(max_length=255, required=False)
     created = serializers.DateTimeField(read_only=True)
     modified = serializers.DateTimeField(read_only=True)
     instructor = serializers.UUIDField(source="instructor_id", read_only=True)

@@ -4,6 +4,21 @@ from pathlib import Path
 # Base directories
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+# Load .env file if it exists (for local development)
+# This allows using .env file without requiring python-dotenv
+_env_file = BASE_DIR / ".env"
+if _env_file.exists():
+    with open(_env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                # Only set if not already in environment (env vars take precedence)
+                if key and key not in os.environ:
+                    os.environ[key] = value
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
@@ -26,16 +41,24 @@ CORE_APPS = [
 ]
 THIRD_PARTY_APPS = [
     "rest_framework",
+    "drf_expiring_token",
+    "django_extensions",
 ]
 OWN_APPS = [
     "apps.healthcheck",
     "apps.users",
     "apps.members",
+    "apps.profiles",
     "apps.verifications",
     "apps.notifications",
     "apps.instructors",
     "apps.studios",
     "apps.schedules",
+    "apps.plans",
+    "apps.wallets",
+    "apps.faqs",
+    "apps.legal",
+    "apps.analytics",
 ]
 INSTALLED_APPS = CORE_APPS + THIRD_PARTY_APPS + OWN_APPS
 
@@ -76,6 +99,10 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        # Wait for the lock instead of 500-ing when parallel admin requests
+        # authenticate at the same time (token sliding expiry used to write
+        # on every request).
+        "OPTIONS": {"timeout": 20},
     }
 }
 
@@ -96,11 +123,22 @@ USE_TZ = True
 # Static files
 STATIC_URL = "/static/"
 
+# Media files (for user uploads like profile images)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 # DRF defaults – JSON only by default; local.py will extend to add browsable renderer
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
-    ]
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "apps.users.authentication.ExpiringTokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
 }
 
 # Default primary key field type
@@ -108,17 +146,36 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DEFAULT_PASSWORD_LENGTH = 13
 
+# Email configuration
+# For Mailtrap (recommended for development/testing):
+#   EMAIL_HOST=sandbox.smtp.mailtrap.io
+#   EMAIL_HOST_USER=your_mailtrap_username (from Mailtrap inbox settings)
+#   EMAIL_HOST_PASSWORD=your_mailtrap_password (from Mailtrap inbox settings)
+#   EMAIL_PORT=2525
+#   EMAIL_USE_TLS=True
+# Get credentials from: https://mailtrap.io/ -> Your Inbox -> Integration -> SMTP
 EMAIL_HOST = os.getenv("EMAIL_HOST", "sandbox.smtp.mailtrap.io")
 EMAIL_API_KEY = os.getenv("EMAIL_API_KEY")
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "apikey")  # 'apikey' for Sendgrid
+EMAIL_HOST_USER = os.getenv(
+    "EMAIL_HOST_USER", "apikey"
+)  # 'apikey' for Sendgrid, Mailtrap username for Mailtrap
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-EMAIL_PORT = os.getenv("EMAIL_PORT", 2525)
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False").lower() in {"1", "true", "yes", "on"}
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 2525))
+# For Mailtrap: set EMAIL_USE_TLS=True (default port 2525 uses STARTTLS)
+# For SendGrid: EMAIL_USE_TLS can be False or True depending on port
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() in {"1", "true", "yes", "on"}
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+MAILTRAP_API_KEY = os.getenv("MAILTRAP_API_KEY")
 
 VERIFICATION_CODE_EXPIRATION_MINUTES = 5
+
+# Token expiration settings for drf-expiring-token
+# Tokens will expire after this time period (default: 24 hours)
+from datetime import timedelta
+
+EXPIRING_TOKEN_LIFESPAN = timedelta(hours=int(os.environ.get("TOKEN_EXPIRATION_HOURS", "24")))
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
@@ -175,3 +232,13 @@ CELERY_RESULT_BACKEND = "rpc://"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+
+# Payment Service Provider (PSP) feature flag
+# Set to True to enable monetary transactions with PSP (e.g., Stripe, PayPal)
+# Set to False to disable PSP integration (for testing/development)
+ENABLE_PSP_PAYMENTS = os.environ.get("ENABLE_PSP_PAYMENTS", "False").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}

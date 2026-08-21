@@ -1,0 +1,476 @@
+[
+  {
+    "model": "faqs.section",
+    "pk": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "name": "Horarios",
+      "slug": "horarios",
+      "description": "Información sobre horarios de clases, disponibilidad y programación",
+      "order": 1
+    }
+  },
+  {
+    "model": "faqs.section",
+    "pk": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "name": "Perfil",
+      "slug": "perfil",
+      "description": "Preguntas sobre tu cuenta, perfil de usuario y configuración",
+      "order": 2
+    }
+  },
+  {
+    "model": "faqs.section",
+    "pk": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "name": "Instructores",
+      "slug": "instructores",
+      "description": "Información sobre nuestros instructores, sus clases y especialidades",
+      "order": 3
+    }
+  },
+  {
+    "model": "faqs.section",
+    "pk": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "name": "Membresías y Planes",
+      "slug": "membresias-planes",
+      "description": "Preguntas sobre planes de membresía, precios y beneficios",
+      "order": 4
+    }
+  },
+  {
+    "model": "faqs.section",
+    "pk": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "name": "Reservas",
+      "slug": "reservas",
+      "description": "Cómo hacer reservas, cancelaciones y gestionar tus clases",
+      "order": 5
+    }
+  },
+  {
+    "model": "faqs.section",
+    "pk": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "name": "Estudio e Instalaciones",
+      "slug": "estudio-instalaciones",
+      "description": "Información sobre nuestras instalaciones, equipamiento y servicios",
+      "order": 6
+    }
+  },
+  {
+    "model": "faqs.section",
+    "pk": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "name": "Pagos y Facturación",
+      "slug": "pagos-facturacion",
+      "description": "Información sobre métodos de pago, facturación y reembolsos",
+      "order": 7
+    }
+  },
+  {
+    "model": "faqs.section",
+    "pk": "b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "name": "Políticas y Términos",
+      "slug": "politicas-terminos",
+      "description": "Políticas de cancelación, términos de servicio y reglas del estudio",
+      "order": 8
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "question": "¿Cuáles son los horarios de apertura del estudio?",
+      "answer": "Nuestro estudio está abierto de **lunes a domingo** con los siguientes horarios:\n\n- **Lunes a Viernes**: 6:00 AM - 10:00 PM\n- **Sábados**: 7:00 AM - 8:00 PM\n- **Domingos**: 8:00 AM - 6:00 PM\n\nDurante días festivos, los horarios pueden variar. Te recomendamos revisar el calendario en la app o contactarnos directamente.",
+      "order": 1,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "question": "¿Con cuánta anticipación puedo reservar una clase?",
+      "answer": "Puedes reservar clases con hasta **7 días de anticipación**. Esto te permite planificar tu semana y asegurar tu lugar en las clases más populares.\n\n**Recomendaciones:**\n- Las clases de fin de semana se llenan rápido, reserva con anticipación\n- Puedes configurar recordatorios en la app\n- Las cancelaciones están disponibles hasta 2 horas antes de la clase",
+      "order": 2,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "3c4d5e6f-7a8b-4c9d-0e1f-2a3b4c5d6e7f",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "question": "¿Hay clases disponibles en diferentes horarios?",
+      "answer": "Sí, ofrecemos una amplia variedad de horarios para adaptarnos a tu rutina:\n\n**Horarios populares:**\n- **Mañanas temprano**: 6:00 AM - 9:00 AM (ideal para antes del trabajo)\n- **Medio día**: 12:00 PM - 2:00 PM (perfecto para la hora del almuerzo)\n- **Tarde**: 5:00 PM - 8:00 PM (después del trabajo)\n- **Noche**: 8:00 PM - 10:00 PM (para los noctámbulos)\n\nCada clase tiene diferentes niveles de intensidad, desde principiantes hasta avanzados.",
+      "order": 3,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "4d5e6f7a-8b9c-4d0e-1f2a-3b4c5d6e7f8a",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "question": "¿Qué pasa si llego tarde a una clase?",
+      "answer": "Entendemos que a veces el tráfico o imprevistos pueden retrasarte. Sin embargo, por seguridad y respeto a otros miembros:\n\n- **Llegada tardía**: Si llegas más de 10 minutos tarde, tu lugar puede ser dado a alguien en lista de espera\n- **Política de cortesía**: Te pedimos llegar 5 minutos antes para el check-in\n- **Excepciones**: En casos de emergencia, contacta al estudio y haremos nuestro mejor esfuerzo por acomodarte\n\n**Tip**: Activa las notificaciones en la app para recibir recordatorios 30 minutos antes de tu clase.",
+      "order": 4,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "5e6f7a8b-9c0d-4e1f-2a3b-4c5d6e7f8a9b",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "question": "¿Cómo actualizo mi información de perfil?",
+      "answer": "Puedes actualizar tu perfil en cualquier momento desde la app o el sitio web:\n\n**Desde la app:**\n1. Ve a **Mi Perfil** (ícono de usuario)\n2. Toca **Editar Perfil**\n3. Actualiza la información que necesites\n4. Guarda los cambios\n\n**Información que puedes actualizar:**\n- Nombre completo\n- Foto de perfil\n- Número de teléfono\n- Dirección\n- Preferencias de notificaciones\n- Objetivos de fitness\n\n**Nota**: Algunos cambios como el email requieren verificación adicional por seguridad.",
+      "order": 1,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "6f7a8b9c-0d1e-4f2a-3b4c-5d6e7f8a9b0c",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "question": "¿Puedo cambiar mi contraseña?",
+      "answer": "Sí, puedes cambiar tu contraseña en cualquier momento:\n\n**Proceso:**\n1. Ve a **Configuración** > **Seguridad**\n2. Selecciona **Cambiar Contraseña**\n3. Ingresa tu contraseña actual\n4. Crea una nueva contraseña (mínimo 8 caracteres)\n5. Confirma la nueva contraseña\n\n**Requisitos de contraseña:**\n- Mínimo 8 caracteres\n- Al menos una letra mayúscula\n- Al menos un número\n- Al menos un carácter especial\n\n**Si olvidaste tu contraseña:**\nUsa la opción **¿Olvidaste tu contraseña?** en la pantalla de login para recibir un enlace de recuperación por email.",
+      "order": 2,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "7a8b9c0d-1e2f-4a3b-4c5d-6e7f8a9b0c1d",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "question": "¿Cómo configuro mis preferencias de notificaciones?",
+      "answer": "Puedes personalizar completamente tus notificaciones:\n\n**Tipos de notificaciones disponibles:**\n- Recordatorios de clases (30 min antes)\n- Confirmaciones de reserva\n- Cancelaciones y cambios de horario\n- Promociones y ofertas especiales\n- Logros y milestones\n- Noticias del estudio\n\n**Cómo configurarlas:**\n1. Ve a **Configuración** > **Notificaciones**\n2. Activa/desactiva cada tipo de notificación\n3. Elige si quieres recibirlas por email, push o ambas\n4. Configura horarios de \"no molestar\" si lo deseas\n\n**Recomendación**: Mantén activos los recordatorios de clases para no perderte ninguna sesión.",
+      "order": 3,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "8b9c0d1e-2f3a-4b4c-5d6e-7f8a9b0c1d2e",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "question": "¿Puedo ver mi historial de clases?",
+      "answer": "¡Absolutamente! Tu historial completo está disponible en tu perfil:\n\n**Información disponible:**\n- Todas las clases que has tomado\n- Estadísticas de asistencia\n- Calorías quemadas (si usas dispositivos conectados)\n- Instructores favoritos\n- Tipos de clases más frecuentadas\n- Logros y badges obtenidos\n\n**Cómo acceder:**\n1. Ve a **Mi Perfil**\n2. Selecciona **Historial** o **Estadísticas**\n3. Filtra por fecha, instructor o tipo de clase\n\n**Exportar datos**: Puedes exportar tu historial completo en formato CSV desde la sección de configuración.",
+      "order": 4,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "9c0d1e2f-3a4b-4c5d-6e7f-8a9b0c1d2e3f",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "question": "¿Cómo elijo el instructor adecuado para mí?",
+      "answer": "Cada instructor tiene su propio estilo y especialidad. Te ayudamos a encontrar el perfecto para ti:\n\n**Factores a considerar:**\n- **Nivel de experiencia**: Algunos se especializan en principiantes, otros en avanzados\n- **Estilo de música**: Cada instructor tiene su playlist única\n- **Energía**: Desde clases relajadas hasta alta intensidad\n- **Especialidades**: Algunos se enfocan en resistencia, otros en fuerza\n\n**Cómo explorar instructores:**\n1. Ve a la sección **Instructores** en la app\n2. Lee sus perfiles y biografías\n3. Revisa sus horarios de clases\n4. Prueba diferentes instructores hasta encontrar tu favorito\n\n**Tip**: Muchos miembros tienen 2-3 instructores favoritos que rotan según su estado de ánimo.",
+      "order": 1,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "0d1e2f3a-4b5c-4d6e-7f8a-9b0c1d2e3f4a",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "question": "¿Los instructores están certificados?",
+      "answer": "Sí, todos nuestros instructores están completamente certificados y capacitados:\n\n**Certificaciones requeridas:**\n- Certificación de ciclismo indoor reconocida internacionalmente\n- Certificación en primeros auxilios y RCP\n- Entrenamiento continuo en técnicas de instrucción\n- Evaluaciones periódicas de desempeño\n\n**Experiencia adicional:**\n- Mínimo 2 años de experiencia en instrucción\n- Conocimiento profundo de biomecánica y seguridad\n- Habilidades de motivación y liderazgo\n\n**Actualización constante:**\nNuestros instructores participan regularmente en:\n- Talleres de capacitación\n- Conferencias de fitness\n- Programas de certificación avanzada\n\nPuedes ver las certificaciones de cada instructor en su perfil dentro de la app.",
+      "order": 2,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "1e2f3a4b-5c6d-4e7f-8a9b-0c1d2e3f4a5b",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "question": "¿Puedo seguir a mis instructores favoritos en redes sociales?",
+      "answer": "¡Claro! Muchos de nuestros instructores están activos en redes sociales:\n\n**Redes disponibles:**\n- Instagram: Síguenos para ver detrás de escenas y tips de fitness\n- TikTok: Contenido divertido y motivacional\n- Spotify: Playlists de las clases\n\n**Cómo encontrarlos:**\n1. Ve al perfil del instructor en la app\n2. Encuentra sus enlaces de redes sociales\n3. Síguelos para contenido exclusivo\n\n**Contenido que encontrarás:**\n- Playlists de las clases\n- Tips de entrenamiento\n- Motivación diaria\n- Anuncios de clases especiales\n- Desafíos y retos\n\n**Respeto y límites**: Por favor, mantén las interacciones profesionales y respetuosas.",
+      "order": 3,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "2f3a4b5c-6d7e-4f8a-9b0c-1d2e3f4a5b6c",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+      "question": "¿Qué tipos de membresías ofrecen?",
+      "answer": "Ofrecemos una variedad de planes para adaptarnos a tus necesidades:\n\n**Planes disponibles:**\n\n1. **Starter 4**\n   - 4 clases al mes\n   - Ideal para principiantes\n   - Válido por 30 días\n\n2. **Starter 8**\n   - 8 clases al mes\n   - Perfecto para uso regular\n   - Válido por 30 días\n\n3. **Unlimited**\n   - Clases ilimitadas\n   - Acceso a todas las clases\n   - Válido por 30 días\n\n4. **Annual**\n   - Membresía anual\n   - Mejor valor a largo plazo\n   - Incluye beneficios exclusivos\n\n5. **Off-Peak**\n   - Clases en horarios no pico\n   - Precio reducido\n   - Ideal para horarios flexibles\n\n**Comparar planes**: Usa nuestra herramienta de comparación en la app para encontrar el plan perfecto.",
+      "order": 1,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "3a4b5c6d-7e8f-4a9b-0c1d-2e3f4a5b6c7d",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+      "question": "¿Puedo pausar mi membresía?",
+      "answer": "Sí, ofrecemos opciones de pausa para situaciones especiales:\n\n**Cuándo puedes pausar:**\n- Viajes prolongados (más de 2 semanas)\n- Lesiones o condiciones médicas\n- Cambios de vida significativos\n\n**Proceso:**\n1. Contacta a nuestro equipo de atención al cliente\n2. Proporciona la razón de la pausa\n3. Selecciona la duración (mínimo 2 semanas, máximo 3 meses)\n4. Tu membresía se pausará automáticamente\n\n**Políticas:**\n- Máximo 2 pausas por año\n- La pausa no extiende la fecha de vencimiento\n- Puedes reactivar en cualquier momento\n\n**Alternativa**: Si solo necesitas unos días, considera usar tus clases más adelante en lugar de pausar.",
+      "order": 2,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "4b5c6d7e-8f9a-4b0c-1d2e-3f4a5b6c7d8e",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a",
+      "question": "¿Hay descuentos para estudiantes o grupos?",
+      "answer": "Sí, ofrecemos varios programas de descuento:\n\n**Descuentos disponibles:**\n\n1. **Estudiantes**\n   - 15% de descuento con identificación estudiantil válida\n   - Aplica a todos los planes\n   - Renovación anual requerida\n\n2. **Grupos corporativos**\n   - Descuentos para empresas (mínimo 10 empleados)\n   - Planes personalizados\n   - Beneficios adicionales para el equipo\n\n3. **Membresías familiares**\n   - 10% de descuento para el segundo miembro\n   - 15% para el tercer miembro y siguientes\n\n4. **Membresías anuales**\n   - Mejor precio por mes\n   - Incluye beneficios exclusivos\n\n**Cómo aplicar:**\nContacta a nuestro equipo de ventas para más información sobre estos programas.",
+      "order": 3,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "5c6d7e8f-9a0b-4c1d-2e3f-4a5b6c7d8e9f",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+      "question": "¿Cómo reservo una clase?",
+      "answer": "Reservar una clase es muy fácil:\n\n**Desde la app (recomendado):**\n1. Abre la app y ve a **Clases**\n2. Navega por el calendario o lista de clases\n3. Selecciona la clase que deseas\n4. Toca **Reservar**\n5. Confirma tu reserva\n\n**Desde el sitio web:**\n1. Inicia sesión en tu cuenta\n2. Ve a la sección **Horarios**\n3. Selecciona la clase\n4. Haz clic en **Reservar**\n\n**Lo que necesitas saber:**\n- Las reservas se abren 7 días antes\n- Recibirás una confirmación inmediata\n- Puedes ver todas tus reservas en **Mis Clases**\n- Las clases populares se llenan rápido, reserva temprano\n\n**Tip**: Activa las notificaciones para saber cuándo se abren nuevas reservas.",
+      "order": 1,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "6d7e8f9a-0b1c-4d2e-3f4a-5b6c7d8e9f0a",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+      "question": "¿Puedo cancelar una reserva?",
+      "answer": "Sí, puedes cancelar tus reservas con ciertas condiciones:\n\n**Política de cancelación:**\n- **Más de 2 horas antes**: Cancelación gratuita, la clase se acredita de vuelta a tu cuenta\n- **Menos de 2 horas antes**: La clase se marca como \"no show\" y se pierde\n- **No show**: Si no cancelas y no asistes, pierdes la clase\n\n**Cómo cancelar:**\n1. Ve a **Mis Clases** en la app\n2. Encuentra la clase que quieres cancelar\n3. Toca **Cancelar Reserva**\n4. Confirma la cancelación\n\n**Lista de espera:**\n- Si una clase está llena, puedes unirte a la lista de espera\n- Si alguien cancela, recibirás una notificación automática\n- Tienes 15 minutos para confirmar tu lugar\n\n**Consejo**: Cancela con anticipación para darle oportunidad a otros miembros en la lista de espera.",
+      "order": 2,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "7e8f9a0b-1c2d-4e3f-4a5b-6c7d8e9f0a1b",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+      "question": "¿Qué es la lista de espera y cómo funciona?",
+      "answer": "La lista de espera te permite unirte a clases que ya están llenas:\n\n**Cómo funciona:**\n1. Si una clase está llena, verás la opción **Lista de Espera**\n2. Únete a la lista (no se cobra ninguna clase hasta que confirmes)\n3. Si alguien cancela, recibirás una notificación automática\n4. Tienes **15 minutos** para confirmar tu lugar\n5. Si no confirmas, el lugar pasa al siguiente en la lista\n\n**Ventajas:**\n- Oportunidad de conseguir un lugar en clases populares\n- Notificaciones automáticas\n- No se cobra hasta que confirmes\n- Puedes estar en múltiples listas de espera\n\n**Consejos:**\n- Mantén las notificaciones activadas\n- Responde rápidamente cuando recibas la notificación\n- Si no puedes asistir, cancela tu lugar en la lista de espera\n\n**Límites**: Puedes estar en hasta 3 listas de espera simultáneamente.",
+      "order": 3,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "8f9a0b1c-2d3e-4f5a-6b7c-8d9e0f1a2b3c",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+      "question": "¿Qué equipamiento necesito traer?",
+      "answer": "¡Buenas noticias! Proporcionamos todo el equipamiento necesario:\n\n**Incluido en tu membresía:**\n- **Bicicletas**: Bicicletas de última generación con tecnología de seguimiento\n- **Toallas**: Toallas limpias y frescas para cada clase\n- **Agua**: Estaciones de agua filtrada (trae tu botella reutilizable)\n- **Equipamiento de seguridad**: Todo lo necesario para una experiencia segura\n\n**Lo que SÍ debes traer:**\n- **Ropa deportiva cómoda**: Shorts o leggings, camiseta transpirable\n- **Zapatos deportivos**: Zapatos cerrados y con buen agarre\n- **Botella de agua**: Reutilizable (tenemos estaciones de relleno)\n- **Actitud positiva**: ¡Lo más importante!\n\n**Opcional pero recomendado:**\n- Monitor de frecuencia cardíaca (compatible con nuestras bicicletas)\n- Toalla personal si prefieres\n- Cambio de ropa para después de la clase\n\n**Alquiler disponible**: Si olvidaste algo, tenemos algunos artículos disponibles para alquiler.",
+      "order": 1,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "9a0b1c2d-3e4f-4a5b-6c7d-8e9f0a1b2c3d",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+      "question": "¿Tienen duchas y lockers?",
+      "answer": "Sí, nuestras instalaciones incluyen todo lo que necesitas:\n\n**Instalaciones disponibles:**\n\n**Duchas:**\n- Duchas privadas con agua caliente\n- Productos de baño de alta calidad (shampoo, jabón, acondicionador)\n- Secadores de pelo\n- Espejos y área de preparación\n\n**Lockers:**\n- Lockers seguros con cerraduras con código\n- Disponibles durante tu visita\n- Tamaño estándar para mochilas y bolsos\n- No necesitas traer tu propio candado\n\n**Áreas adicionales:**\n- Vestidores espaciosos\n- Área de descanso con asientos\n- Estación de carga para dispositivos\n- WiFi gratuito\n\n**Consejos:**\n- Llega 10-15 minutos antes si planeas usar las duchas\n- Los lockers se limpian diariamente\n- Trae tu propia toalla si prefieres (aunque proporcionamos)\n- Los productos de baño son hipoalergénicos",
+      "order": 2,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "0b1c2d3e-4f5a-4b6c-7d8e-9f0a1b2c3d4e",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+      "question": "¿Hay estacionamiento disponible?",
+      "answer": "Sí, ofrecemos opciones de estacionamiento para tu conveniencia:\n\n**Estacionamiento:**\n- **Estacionamiento gratuito**: Disponible en el edificio (limitado)\n- **Estacionamiento en la calle**: Zonas de estacionamiento público cercanas\n- **Valet parking**: Disponible en horarios pico (costo adicional)\n\n**Horarios de disponibilidad:**\n- **Lunes a Viernes**: Estacionamiento más limitado durante horas pico\n- **Fines de semana**: Generalmente más disponible\n- **Noches**: Más fácil encontrar lugar\n\n**Recomendaciones:**\n- Llega 10-15 minutos antes para encontrar estacionamiento\n- Considera transporte público o compartir viaje\n- Usa apps de estacionamiento para encontrar lugares cercanos\n\n**Transporte alternativo:**\n- Estamos cerca de varias líneas de transporte público\n- Estación de bicicletas compartidas a 2 cuadras\n- Área segura para estacionar bicicletas\n\n**Nota**: El estacionamiento puede estar limitado durante eventos especiales.",
+      "order": 3,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d",
+      "question": "¿Qué métodos de pago aceptan?",
+      "answer": "Aceptamos una variedad de métodos de pago para tu conveniencia:\n\n**Métodos aceptados:**\n\n**Tarjetas:**\n- Tarjetas de crédito (Visa, Mastercard, American Express)\n- Tarjetas de débito\n- Tarjetas prepago\n\n**Digital:**\n- Apple Pay\n- Google Pay\n- PayPal\n- Transferencias bancarias\n\n**Otros:**\n- Efectivo (solo en el estudio)\n- Cheques (solo para planes corporativos)\n\n**Seguridad:**\n- Todos los pagos están encriptados\n- No almacenamos información completa de tarjetas\n- Cumplimos con estándares PCI DSS\n\n**Facturación:**\n- Las membresías se renuevan automáticamente\n- Recibirás un recibo por email después de cada pago\n- Puedes ver tu historial de pagos en la app\n\n**Actualizar método de pago:**\nPuedes actualizar tu método de pago en cualquier momento desde la app en **Configuración** > **Pagos**.",
+      "order": 1,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "2d3e4f5a-6b7c-4d8e-9f0a-1b2c3d4e5f6a",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d",
+      "question": "¿Puedo obtener un recibo o factura?",
+      "answer": "Sí, puedes obtener recibos y facturas fácilmente:\n\n**Recibos automáticos:**\n- Recibirás un recibo por email después de cada pago\n- Los recibos se envían inmediatamente después de la transacción\n- Incluyen todos los detalles de la transacción\n\n**Facturas:**\n- Disponibles para planes corporativos\n- Facturas con datos fiscales completos\n- Se pueden generar desde la app o contactando a atención al cliente\n\n**Cómo acceder:**\n1. Ve a **Configuración** > **Facturación**\n2. Selecciona **Historial de Pagos**\n3. Toca cualquier transacción para ver detalles\n4. Descarga o envía por email el recibo\n\n**Exportar historial:**\n- Puedes exportar tu historial completo en formato PDF\n- Útil para declaraciones de impuestos o reembolsos corporativos\n\n**Solicitar factura:**\nSi necesitas una factura con datos fiscales específicos, contacta a nuestro equipo de facturación.",
+      "order": 2,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "3e4f5a6b-7c8d-4e9f-0a1b-2c3d4e5f6a7b",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d",
+      "question": "¿Ofrecen reembolsos?",
+      "answer": "Nuestra política de reembolsos está diseñada para ser justa y transparente:\n\n**Cuándo aplican reembolsos:**\n\n**Reembolsos completos:**\n- Dentro de los primeros 7 días de una nueva membresía (garantía de satisfacción)\n- Cancelación de membresía anual dentro de los primeros 30 días\n- Errores de facturación de nuestra parte\n\n**Reembolsos parciales:**\n- Pausas de membresía por razones médicas documentadas\n- Cierre del estudio por más de 7 días consecutivos\n\n**No aplican reembolsos para:**\n- Clases no utilizadas después del período de garantía\n- Cancelaciones de última hora\n- No shows\n\n**Proceso de reembolso:**\n1. Contacta a atención al cliente\n2. Proporciona la razón del reembolso\n3. Procesaremos tu solicitud en 5-7 días hábiles\n4. El reembolso aparecerá en tu método de pago original\n\n**Alternativas:**\nEn lugar de reembolso, podemos ofrecer:\n- Extensión de membresía\n- Créditos para clases futuras\n- Cambio a un plan diferente",
+      "order": 3,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "4f5a6b7c-8d9e-4f0a-1b2c-3d4e5f6a7b8c",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e",
+      "question": "¿Cuál es la política de cancelación de membresía?",
+      "answer": "Puedes cancelar tu membresía en cualquier momento:\n\n**Proceso de cancelación:**\n1. Ve a **Configuración** > **Membresía**\n2. Selecciona **Cancelar Membresía**\n3. Confirma tu decisión\n4. Completa la encuesta de cancelación (opcional pero apreciada)\n\n**Efectos de la cancelación:**\n- **Membresías mensuales**: Continúan hasta el final del período pagado\n- **Membresías anuales**: Pueden tener penalizaciones según los términos\n- **Clases restantes**: Se pueden usar hasta la fecha de vencimiento\n\n**Política de no renovación:**\n- Puedes desactivar la renovación automática en cualquier momento\n- Tu membresía seguirá activa hasta la fecha de vencimiento\n- No se realizarán cargos adicionales\n\n**Reactivación:**\n- Puedes reactivar en cualquier momento\n- Pueden aplicarse tarifas de reactivación según el plan\n- Los precios pueden haber cambiado\n\n**Consejo**: Considera pausar en lugar de cancelar si planeas regresar pronto.",
+      "order": 1,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "5a6b7c8d-9e0f-4a1b-2c3d-4e5f6a7b8c9d",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e",
+      "question": "¿Hay reglas de etiqueta en el estudio?",
+      "answer": "Sí, tenemos algunas reglas de etiqueta para asegurar una experiencia positiva para todos:\n\n**Reglas importantes:**\n\n**Antes de la clase:**\n- Llega 5-10 minutos antes para el check-in\n- Silencia tu teléfono\n- Respeta el espacio personal de otros\n\n**Durante la clase:**\n- Sigue las instrucciones del instructor\n- Mantén el volumen de conversación bajo\n- No uses teléfonos durante la clase\n- Respeta tu bicicleta asignada\n\n**Después de la clase:**\n- Limpia tu bicicleta con las toallas proporcionadas\n- Devuelve el equipamiento a su lugar\n- Respeta el tiempo de los demás en las duchas\n\n**General:**\n- Sé respetuoso con instructores y otros miembros\n- Mantén las áreas comunes limpias\n- Reporta cualquier problema al personal\n\n**Consecuencias:**\nEl incumplimiento repetido puede resultar en advertencias o cancelación de membresía.\n\n**Filosofía**: Creemos en crear un ambiente positivo, motivador y respetuoso para todos.",
+      "order": 2,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "6b7c8d9e-0f1a-4b2c-3d4e-5f6a7b8c9d0e",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e",
+      "question": "¿Qué pasa si tengo una lesión o condición médica?",
+      "answer": "Tu seguridad es nuestra prioridad. Si tienes una lesión o condición médica:\n\n**Antes de la clase:**\n- **Informa al instructor**: Háblale antes de la clase sobre tu condición\n- **Consulta con tu médico**: Asegúrate de tener autorización médica para hacer ejercicio\n- **Modifica según sea necesario**: Los instructores pueden sugerir modificaciones\n\n**Durante la clase:**\n- Escucha a tu cuerpo\n- No te sientas presionado a seguir el ritmo de otros\n- Toma descansos cuando los necesites\n- Hidrátate adecuadamente\n\n**Lesiones comunes y modificaciones:**\n- **Rodillas**: Ajusta la resistencia, evita posiciones de pie extremas\n- **Espalda**: Mantén la postura correcta, reduce la resistencia\n- **Hombros**: Evita movimientos de brazos excesivos\n\n**Política de pausa médica:**\n- Podemos pausar tu membresía por razones médicas\n- Requiere documentación médica\n- Sin costo durante la pausa\n\n**Importante**: Siempre consulta con un profesional de la salud antes de comenzar cualquier programa de ejercicio, especialmente si tienes condiciones médicas preexistentes.",
+      "order": 3,
+      "is_published": true
+    }
+  },
+  {
+    "model": "faqs.faqitem",
+    "pk": "7c8d9e0f-1a2b-4c3d-4e5f-6a7b8c9d0e1f",
+    "fields": {
+      "created": "2025-11-27T10:00:00.000Z",
+      "modified": "2025-11-27T10:00:00.000Z",
+      "is_removed": false,
+      "section": "b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e",
+      "question": "¿Puedo traer invitados?",
+      "answer": "Sí, ofrecemos opciones para traer invitados:\n\n**Opciones disponibles:**\n\n**Pase de invitado:**\n- Los miembros pueden comprar pases de invitado\n- Precio especial para invitados de miembros\n- Válido para una clase\n- El invitado debe registrarse antes de la clase\n\n**Clases de prueba:**\n- Primera clase gratis para nuevos miembros potenciales\n- Requiere registro previo\n- Disponible una vez por persona\n\n**Eventos especiales:**\n- Ocasionalmente ofrecemos días de puertas abiertas\n- Clases especiales donde los invitados son bienvenidos\n- Sigue nuestras redes sociales para fechas\n\n**Proceso para invitados:**\n1. El miembro compra un pase de invitado\n2. El invitado se registra en la app o sitio web\n3. El invitado reserva la clase usando el pase\n4. Ambos pueden disfrutar la clase juntos\n\n**Límites:**\n- Máximo 2 invitados por miembro por mes\n- Los invitados deben cumplir con las políticas del estudio\n- Los pases de invitado no son transferibles\n\n**Beneficio**: Trae amigos y familiares para que experimenten lo que te encanta de nuestras clases.",
+      "order": 4,
+      "is_published": true
+    }
+  }
+]

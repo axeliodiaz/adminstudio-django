@@ -18,19 +18,24 @@ Including another URLconf
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
+from django.conf.urls.static import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/auth/", include("apps.users.urls")),
     path("api/healthcheck/", include("apps.healthcheck.urls")),
     path("api/members/", include("apps.members.urls")),
+    path("api/profiles/", include("apps.profiles.urls")),
     path("api/instructors/", include("apps.instructors.urls")),
     path("api/studios/", include("apps.studios.urls")),
     path("api/schedules/", include("apps.schedules.urls")),
     path("api/verifications/", include("apps.verifications.urls")),
+    path("api/plans/", include("apps.plans.urls")),
+    path("api/wallets/", include("apps.wallets.urls")),
+    path("api/faqs/", include("apps.faqs.urls")),
+    path("api/legals/", include("apps.legal.urls")),
+    path("api/analytics/", include("apps.analytics.urls")),
 ]
-import os
-
-print(f"[DEBUG CHECK] DJANGO_DEBUG={os.environ.get('DJANGO_DEBUG')} -> DEBUG={settings.DEBUG}")
 
 if settings.DEBUG:
     from drf_yasg import openapi
@@ -68,3 +73,5 @@ if settings.DEBUG:
             name="schema-redoc",
         ),
     ]
+    # Serve media files in development
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,0 +1,1682 @@
+[
+  {
+    "model": "schedules.schedule",
+    "pk": "7a19a9f9-5129-41e9-b6d6-2a7de032ed63",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508797Z",
+      "modified": "2025-11-25T19:07:56.508804Z",
+      "is_removed": false,
+      "title": "Recuperación Activa",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T06:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "5152aa4b-77aa-4cb0-8723-b9b4180388aa",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508815Z",
+      "modified": "2025-11-25T19:07:56.508816Z",
+      "is_removed": false,
+      "title": "HIIT Intenso",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T07:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "79460fa4-5d79-4041-b642-4a8452ff1a71",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508822Z",
+      "modified": "2025-11-25T19:07:56.508823Z",
+      "is_removed": false,
+      "title": "Power Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T08:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "2fc2431a-eaab-4235-8661-d7c3b11c64e1",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508827Z",
+      "modified": "2025-11-25T19:07:56.508828Z",
+      "is_removed": false,
+      "title": "Endurance Challenge",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T09:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "a1b8c777-ea51-425f-aa40-4ab18a9e0081",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508832Z",
+      "modified": "2025-11-25T19:07:56.508833Z",
+      "is_removed": false,
+      "title": "Speed Workout",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T10:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "e37217a5-5cf7-4ebb-aa55-9b74a3ebbfa0",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508837Z",
+      "modified": "2025-11-25T19:07:56.508838Z",
+      "is_removed": false,
+      "title": "Climb Session",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T11:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "766e7d25-439c-4dc4-a82f-afa3b3e40d9c",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508842Z",
+      "modified": "2025-11-25T19:07:56.508843Z",
+      "is_removed": false,
+      "title": "Rhythm Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T12:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "e06e219b-0568-4f77-a9b0-b3e990063e0e",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508847Z",
+      "modified": "2025-11-25T19:07:56.508848Z",
+      "is_removed": false,
+      "title": "Strength Builder",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T13:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "15befe50-e6c9-4882-bb83-0799e0577916",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508852Z",
+      "modified": "2025-11-25T19:07:56.508853Z",
+      "is_removed": false,
+      "title": "Fondo al Ritmo del Beat",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T14:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "23971994-a327-4e6d-8b14-c067158de7f6",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508857Z",
+      "modified": "2025-11-25T19:07:56.508858Z",
+      "is_removed": false,
+      "title": "Intervalos de Potencia",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T15:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "7bdd1658-4394-4fe1-a0c3-66bb18376ef0",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508861Z",
+      "modified": "2025-11-25T19:07:56.508862Z",
+      "is_removed": false,
+      "title": "Sprint & Strength",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T16:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "f56cb42f-107b-4af9-91d9-e7593661cdaa",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508865Z",
+      "modified": "2025-11-25T19:07:56.508866Z",
+      "is_removed": false,
+      "title": "Resistencia Total",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T17:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "241f1e45-d02c-49ac-8f1a-981d4e58862c",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508870Z",
+      "modified": "2025-11-25T19:07:56.508870Z",
+      "is_removed": false,
+      "title": "Clase Temática: Ascenso Épico",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T18:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "36522ab7-a848-4bdc-a707-3afac5ffc53e",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508874Z",
+      "modified": "2025-11-25T19:07:56.508875Z",
+      "is_removed": false,
+      "title": "Montaña Rusa de Ritmo",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T19:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "3e010612-a4f8-40d7-ab59-c2c2e3731c15",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508878Z",
+      "modified": "2025-11-25T19:07:56.508879Z",
+      "is_removed": false,
+      "title": "Recuperación Activa",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-01T20:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "f28616ea-818b-46b3-b46f-317f1a79ae23",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508883Z",
+      "modified": "2025-11-25T19:07:56.508884Z",
+      "is_removed": false,
+      "title": "Power Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T06:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "dc794b36-9250-46fe-95d8-acd90dfdb789",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508887Z",
+      "modified": "2025-11-25T19:07:56.508888Z",
+      "is_removed": false,
+      "title": "Endurance Challenge",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T07:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "622d6e26-52f8-4917-85f7-ddf7505b315a",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508891Z",
+      "modified": "2025-11-25T19:07:56.508892Z",
+      "is_removed": false,
+      "title": "Speed Workout",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T08:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "07fa37ac-4f89-4fd8-be02-4289a4bcf100",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508896Z",
+      "modified": "2025-11-25T19:07:56.508897Z",
+      "is_removed": false,
+      "title": "Climb Session",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T09:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "fcaf0bcb-5abc-4d63-9966-ab94474cd697",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508900Z",
+      "modified": "2025-11-25T19:07:56.508901Z",
+      "is_removed": false,
+      "title": "Rhythm Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T10:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "9e31ec13-70bb-4819-9250-cfa2d81ee727",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508904Z",
+      "modified": "2025-11-25T19:07:56.508905Z",
+      "is_removed": false,
+      "title": "Strength Builder",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T11:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "9b300920-4f69-4625-9533-78c0cef3a374",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508908Z",
+      "modified": "2025-11-25T19:07:56.508909Z",
+      "is_removed": false,
+      "title": "Intervalos de Potencia",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T12:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "9f6410e6-fc6e-44cf-b3df-32907bb5cdf5",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508912Z",
+      "modified": "2025-11-25T19:07:56.508913Z",
+      "is_removed": false,
+      "title": "Sprint & Strength",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T13:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "5df7ecff-228e-480e-8c44-c06026e07fa3",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508916Z",
+      "modified": "2025-11-25T19:07:56.508917Z",
+      "is_removed": false,
+      "title": "Resistencia Total",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T14:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "c1ec2732-1ce5-428e-8398-8e877fbf5991",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508920Z",
+      "modified": "2025-11-25T19:07:56.508921Z",
+      "is_removed": false,
+      "title": "Clase Temática: Ascenso Épico",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T15:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "0530ea58-ddb4-4ab1-9870-c069a81c73bb",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508925Z",
+      "modified": "2025-11-25T19:07:56.508926Z",
+      "is_removed": false,
+      "title": "Montaña Rusa de Ritmo",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T16:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "d8559deb-87e0-47cc-9c90-0b262bab0c61",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508931Z",
+      "modified": "2025-11-25T19:07:56.508932Z",
+      "is_removed": false,
+      "title": "Recuperación Activa",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T17:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "c4b6eb8f-d79a-4044-b1d8-7bc0c963296c",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508936Z",
+      "modified": "2025-11-25T19:07:56.508936Z",
+      "is_removed": false,
+      "title": "HIIT Intenso",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T18:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "e1c1919c-02e8-4483-8989-b8fce9cc7cc9",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508940Z",
+      "modified": "2025-11-25T19:07:56.508941Z",
+      "is_removed": false,
+      "title": "Power Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T19:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "2d720e3a-849c-4cdd-b5d9-8e8731d5941d",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508944Z",
+      "modified": "2025-11-25T19:07:56.508945Z",
+      "is_removed": false,
+      "title": "Endurance Challenge",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-02T20:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "f1f26e0d-e793-44d4-8f0f-e6881ab04356",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508949Z",
+      "modified": "2025-11-25T19:07:56.508949Z",
+      "is_removed": false,
+      "title": "Speed Workout",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T06:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "fd9b40c6-5a98-41d4-b597-538ccdd9f921",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508953Z",
+      "modified": "2025-11-25T19:07:56.508954Z",
+      "is_removed": false,
+      "title": "Climb Session",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T07:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "334e7ed2-c3b4-40e9-bd6c-81799eefc42e",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508957Z",
+      "modified": "2025-11-25T19:07:56.508958Z",
+      "is_removed": false,
+      "title": "Rhythm Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T08:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "4a130c85-19b2-4144-b94d-95b48bc53574",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508962Z",
+      "modified": "2025-11-25T19:07:56.508962Z",
+      "is_removed": false,
+      "title": "Strength Builder",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T09:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "e9e7e626-ad95-4a41-a61d-117480955fc6",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508965Z",
+      "modified": "2025-11-25T19:07:56.508966Z",
+      "is_removed": false,
+      "title": "Fondo al Ritmo del Beat",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T10:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "18e1e0a3-dc68-4c16-bff9-648b984c7002",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508969Z",
+      "modified": "2025-11-25T19:07:56.508970Z",
+      "is_removed": false,
+      "title": "Intervalos de Potencia",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T11:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "7734cc83-6162-4cf2-8ac6-30b9370d5ed5",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508973Z",
+      "modified": "2025-11-25T19:07:56.508974Z",
+      "is_removed": false,
+      "title": "Clase Temática: Ascenso Épico",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T12:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "21ca5915-5fee-4c15-b110-b258aabb21c0",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508978Z",
+      "modified": "2025-11-25T19:07:56.508978Z",
+      "is_removed": false,
+      "title": "Montaña Rusa de Ritmo",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T13:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "d1e5af85-6861-4e99-ab63-4444c2bb4638",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508982Z",
+      "modified": "2025-11-25T19:07:56.508982Z",
+      "is_removed": false,
+      "title": "Recuperación Activa",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T14:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "29003203-0043-4ad7-b7df-c0a7fbf0706e",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508986Z",
+      "modified": "2025-11-25T19:07:56.508986Z",
+      "is_removed": false,
+      "title": "HIIT Intenso",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T15:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "715f9cd6-ff6d-4c32-ac56-e4a851f291d1",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508991Z",
+      "modified": "2025-11-25T19:07:56.508992Z",
+      "is_removed": false,
+      "title": "Power Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T16:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "687b00f3-bae3-490d-80b8-8e6ddfd126f0",
+    "fields": {
+      "created": "2025-11-25T19:07:56.508996Z",
+      "modified": "2025-11-25T19:07:56.508997Z",
+      "is_removed": false,
+      "title": "Endurance Challenge",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T17:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "e80880da-10d2-48e2-a19f-dedd1c11e4ff",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509000Z",
+      "modified": "2025-11-25T19:07:56.509001Z",
+      "is_removed": false,
+      "title": "Speed Workout",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T18:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "57f58afc-da23-41c7-83e6-475ef6f5920a",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509004Z",
+      "modified": "2025-11-25T19:07:56.509005Z",
+      "is_removed": false,
+      "title": "Climb Session",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T19:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "2a38f5f9-43c1-4224-8dfc-a737b5889b2f",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509008Z",
+      "modified": "2025-11-25T19:07:56.509009Z",
+      "is_removed": false,
+      "title": "Rhythm Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-03T20:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "a5e98486-6489-467f-99d8-960fd0da7a4d",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509013Z",
+      "modified": "2025-11-25T19:07:56.509013Z",
+      "is_removed": false,
+      "title": "Rhythm Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T06:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "04bc432b-2e5d-441f-85af-8e445d4c3a3d",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509017Z",
+      "modified": "2025-11-25T19:07:56.509018Z",
+      "is_removed": false,
+      "title": "Strength Builder",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T07:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "9f9a4ed7-3fe9-410a-a38b-c9ea74321538",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509021Z",
+      "modified": "2025-11-25T19:07:56.509022Z",
+      "is_removed": false,
+      "title": "Fondo al Ritmo del Beat",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T08:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "458d72de-4642-42c1-a325-0136f910770c",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509025Z",
+      "modified": "2025-11-25T19:07:56.509026Z",
+      "is_removed": false,
+      "title": "Intervalos de Potencia",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T09:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "29c7791e-1116-4c39-b900-ff67caf56d65",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509029Z",
+      "modified": "2025-11-25T19:07:56.509030Z",
+      "is_removed": false,
+      "title": "Sprint & Strength",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T10:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "e70d0805-898b-45f1-8009-4998ebab309d",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509033Z",
+      "modified": "2025-11-25T19:07:56.509034Z",
+      "is_removed": false,
+      "title": "Resistencia Total",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T11:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "73f04e11-bc94-4a43-9139-016e15007b80",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509037Z",
+      "modified": "2025-11-25T19:07:56.509038Z",
+      "is_removed": false,
+      "title": "HIIT Intenso",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T12:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "a9cb6930-05de-493c-ab1c-4be518210d71",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509042Z",
+      "modified": "2025-11-25T19:07:56.509042Z",
+      "is_removed": false,
+      "title": "Power Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T13:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "a448733c-b3eb-417d-b9a7-b93cebc6062c",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509046Z",
+      "modified": "2025-11-25T19:07:56.509047Z",
+      "is_removed": false,
+      "title": "Endurance Challenge",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T14:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "23972973-2373-443d-9dc0-2a11d4952c69",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509050Z",
+      "modified": "2025-11-25T19:07:56.509051Z",
+      "is_removed": false,
+      "title": "Speed Workout",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T15:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "880b2fa9-05d0-444d-8b39-8b1d66785482",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509054Z",
+      "modified": "2025-11-25T19:07:56.509055Z",
+      "is_removed": false,
+      "title": "Climb Session",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T16:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "f76d88ec-fc3b-4dca-a30f-9218941ff317",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509058Z",
+      "modified": "2025-11-25T19:07:56.509059Z",
+      "is_removed": false,
+      "title": "Rhythm Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T17:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "9ce892ea-4fac-4b9b-9852-55f9e9805094",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509063Z",
+      "modified": "2025-11-25T19:07:56.509064Z",
+      "is_removed": false,
+      "title": "Strength Builder",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T18:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "ef0e758f-5c31-47c8-be75-a748001548d6",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509067Z",
+      "modified": "2025-11-25T19:07:56.509068Z",
+      "is_removed": false,
+      "title": "Fondo al Ritmo del Beat",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T19:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "bd96d7c0-c436-4cfb-acbd-187ec0756826",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509072Z",
+      "modified": "2025-11-25T19:07:56.509073Z",
+      "is_removed": false,
+      "title": "Intervalos de Potencia",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-04T20:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "6af3e60c-ed38-496b-9ee4-79dfacef0abd",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509076Z",
+      "modified": "2025-11-25T19:07:56.509077Z",
+      "is_removed": false,
+      "title": "Fondo al Ritmo del Beat",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T06:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "1453cf1a-236f-4d89-bc43-444c43d40532",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509082Z",
+      "modified": "2025-11-25T19:07:56.509083Z",
+      "is_removed": false,
+      "title": "Intervalos de Potencia",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T07:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "2bd123f4-da7e-4f76-8d57-e0cf2c12cb2a",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509087Z",
+      "modified": "2025-11-25T19:07:56.509087Z",
+      "is_removed": false,
+      "title": "Sprint & Strength",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T08:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "48e83b21-a470-400b-9496-a18991b44b78",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509091Z",
+      "modified": "2025-11-25T19:07:56.509091Z",
+      "is_removed": false,
+      "title": "Resistencia Total",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T09:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "5fece7eb-197c-4b1b-9c11-647a686a0d91",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509095Z",
+      "modified": "2025-11-25T19:07:56.509095Z",
+      "is_removed": false,
+      "title": "Clase Temática: Ascenso Épico",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T10:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "d2289fcd-097e-49fd-8598-d514d17bf4a3",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509099Z",
+      "modified": "2025-11-25T19:07:56.509100Z",
+      "is_removed": false,
+      "title": "Montaña Rusa de Ritmo",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T11:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "62b862f5-b1fc-4d12-a6e3-dcf35cfa11c3",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509103Z",
+      "modified": "2025-11-25T19:07:56.509104Z",
+      "is_removed": false,
+      "title": "Speed Workout",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T12:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "ce26389a-d2f5-47e2-9a67-d37138189ffc",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509107Z",
+      "modified": "2025-11-25T19:07:56.509108Z",
+      "is_removed": false,
+      "title": "Climb Session",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T13:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "a0611d91-da44-4569-8110-3974188f37a3",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509111Z",
+      "modified": "2025-11-25T19:07:56.509112Z",
+      "is_removed": false,
+      "title": "Rhythm Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T14:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "8c78f8a4-d4f0-4c62-9045-7f36220140c8",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509115Z",
+      "modified": "2025-11-25T19:07:56.509116Z",
+      "is_removed": false,
+      "title": "Strength Builder",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T15:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "1d7d4948-c7a5-4f79-845a-cdc766d51bd3",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509119Z",
+      "modified": "2025-11-25T19:07:56.509120Z",
+      "is_removed": false,
+      "title": "Fondo al Ritmo del Beat",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T16:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "9d9735f3-95f3-4ac9-a285-5384d878fcd8",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509123Z",
+      "modified": "2025-11-25T19:07:56.509124Z",
+      "is_removed": false,
+      "title": "Intervalos de Potencia",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T17:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "0ae75a11-04f0-42b0-9d83-fcbb897453a6",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509127Z",
+      "modified": "2025-11-25T19:07:56.509128Z",
+      "is_removed": false,
+      "title": "Sprint & Strength",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T18:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "4992e4e2-cc8f-400e-a66b-1f81ea1e42a2",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509131Z",
+      "modified": "2025-11-25T19:07:56.509132Z",
+      "is_removed": false,
+      "title": "Resistencia Total",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T19:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "023d85b1-e511-4004-bb66-fcf1492bd5c8",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509135Z",
+      "modified": "2025-11-25T19:07:56.509136Z",
+      "is_removed": false,
+      "title": "Clase Temática: Ascenso Épico",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-05T20:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "66c3f8d6-4167-4c47-bbfb-4cba51cf1e1c",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509140Z",
+      "modified": "2025-11-25T19:07:56.509141Z",
+      "is_removed": false,
+      "title": "Sprint & Strength",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T06:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "c8ac4a5c-5002-4829-a2d2-0016858ec81d",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509144Z",
+      "modified": "2025-11-25T19:07:56.509145Z",
+      "is_removed": false,
+      "title": "Resistencia Total",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T07:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "c3403cee-3eb0-48bd-9eba-ddbdfef3ee69",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509149Z",
+      "modified": "2025-11-25T19:07:56.509149Z",
+      "is_removed": false,
+      "title": "Clase Temática: Ascenso Épico",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T08:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "2d1a71fb-094e-4464-a749-c19d16b386be",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509153Z",
+      "modified": "2025-11-25T19:07:56.509154Z",
+      "is_removed": false,
+      "title": "Montaña Rusa de Ritmo",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T09:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "fe0bf63a-ac28-43d3-b89c-6277ebda3063",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509157Z",
+      "modified": "2025-11-25T19:07:56.509158Z",
+      "is_removed": false,
+      "title": "Recuperación Activa",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T10:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "b0bbf995-25c2-4ec7-9adc-af8548a113af",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509161Z",
+      "modified": "2025-11-25T19:07:56.509162Z",
+      "is_removed": false,
+      "title": "HIIT Intenso",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T11:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "61686e01-3f2c-4ba5-8677-e69f4f18d470",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509165Z",
+      "modified": "2025-11-25T19:07:56.509166Z",
+      "is_removed": false,
+      "title": "Strength Builder",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T12:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "ce1afde4-e488-4de1-bba3-23cb21f3a78d",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509169Z",
+      "modified": "2025-11-25T19:07:56.509170Z",
+      "is_removed": false,
+      "title": "Fondo al Ritmo del Beat",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T13:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "59525c18-5221-4033-b1db-fbc866a31e61",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509173Z",
+      "modified": "2025-11-25T19:07:56.509173Z",
+      "is_removed": false,
+      "title": "Intervalos de Potencia",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T14:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "5c6c6e9a-d658-4008-a902-57e622bf69ca",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509177Z",
+      "modified": "2025-11-25T19:07:56.509178Z",
+      "is_removed": false,
+      "title": "Sprint & Strength",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T15:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "6d8b6f9c-84e5-4a16-9af6-ac70c2214c5e",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509181Z",
+      "modified": "2025-11-25T19:07:56.509182Z",
+      "is_removed": false,
+      "title": "Resistencia Total",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T16:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "780d7b6b-52de-47e6-9f36-b2a7a4d75244",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509185Z",
+      "modified": "2025-11-25T19:07:56.509186Z",
+      "is_removed": false,
+      "title": "Clase Temática: Ascenso Épico",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T17:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "4afdfac9-acd6-4a6c-9c24-fdb9800378e1",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509189Z",
+      "modified": "2025-11-25T19:07:56.509190Z",
+      "is_removed": false,
+      "title": "Montaña Rusa de Ritmo",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T18:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "a22535c6-99eb-47b6-8c09-0bd214d108cb",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509193Z",
+      "modified": "2025-11-25T19:07:56.509194Z",
+      "is_removed": false,
+      "title": "Recuperación Activa",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T19:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "de12ee2f-bd21-456e-9eac-c180778150d4",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509197Z",
+      "modified": "2025-11-25T19:07:56.509198Z",
+      "is_removed": false,
+      "title": "HIIT Intenso",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-06T20:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "01adf197-0376-4756-8933-a67b5a8b0f3e",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509201Z",
+      "modified": "2025-11-25T19:07:56.509202Z",
+      "is_removed": false,
+      "title": "Clase Temática: Ascenso Épico",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T06:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "6bc25e86-4147-476c-81b9-a65f18330d56",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509205Z",
+      "modified": "2025-11-25T19:07:56.509206Z",
+      "is_removed": false,
+      "title": "Montaña Rusa de Ritmo",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T07:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "8b646b16-c4d6-4fda-9946-f4a7519ecce0",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509209Z",
+      "modified": "2025-11-25T19:07:56.509210Z",
+      "is_removed": false,
+      "title": "Recuperación Activa",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T08:00:00Z",
+      "duration_minutes": 30,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "23bebfe4-3697-47ab-8c17-cdb344263e21",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509214Z",
+      "modified": "2025-11-25T19:07:56.509215Z",
+      "is_removed": false,
+      "title": "HIIT Intenso",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T09:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "b918a6cd-373b-419e-83c4-d9da2dcf0a77",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509218Z",
+      "modified": "2025-11-25T19:07:56.509219Z",
+      "is_removed": false,
+      "title": "Power Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T10:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "0b3b5f0d-083c-4984-be4b-dcf6f0261c67",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509222Z",
+      "modified": "2025-11-25T19:07:56.509223Z",
+      "is_removed": false,
+      "title": "Endurance Challenge",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T11:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "d8d7cab8-6930-4f7f-b586-c7ec0c837628",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509226Z",
+      "modified": "2025-11-25T19:07:56.509227Z",
+      "is_removed": false,
+      "title": "Sprint & Strength",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T12:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "8315f178-5db1-4ca4-8d71-7e5a17bb121e",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509230Z",
+      "modified": "2025-11-25T19:07:56.509231Z",
+      "is_removed": false,
+      "title": "Resistencia Total",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T13:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "d01608f6-43c9-4e1e-bc4e-fc35e6178280",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509236Z",
+      "modified": "2025-11-25T19:07:56.509237Z",
+      "is_removed": false,
+      "title": "Clase Temática: Ascenso Épico",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T14:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "29d3e49e-5e67-452e-9d5a-043f6620da92",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509240Z",
+      "modified": "2025-11-25T19:07:56.509241Z",
+      "is_removed": false,
+      "title": "Montaña Rusa de Ritmo",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T15:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "1b936e6e-77e2-475b-ba13-d3b91a19f51a",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509244Z",
+      "modified": "2025-11-25T19:07:56.509245Z",
+      "is_removed": false,
+      "title": "Recuperación Activa",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T16:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "e5682ca5-4e23-4d53-b81b-448196184260",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509248Z",
+      "modified": "2025-11-25T19:07:56.509249Z",
+      "is_removed": false,
+      "title": "HIIT Intenso",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T17:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "c351111a-35ac-4597-9329-3024dd80b5be",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509252Z",
+      "modified": "2025-11-25T19:07:56.509253Z",
+      "is_removed": false,
+      "title": "Power Ride",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T18:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "aa1969c4-e08b-448f-a1e6-6265ccc1ec96",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509257Z",
+      "modified": "2025-11-25T19:07:56.509258Z",
+      "is_removed": false,
+      "title": "Endurance Challenge",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T19:00:00Z",
+      "duration_minutes": 60,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  },
+  {
+    "model": "schedules.schedule",
+    "pk": "18d8515b-4e9e-43ce-88a6-e3b3ad59c93b",
+    "fields": {
+      "created": "2025-11-25T19:07:56.509263Z",
+      "modified": "2025-11-25T19:07:56.509264Z",
+      "is_removed": false,
+      "title": "Speed Workout",
+      "description": "",
+      "instructor": "35f1aeb5-1238-44f3-a3bc-0e4ad37ec0bf",
+      "start_time": "2025-12-07T20:00:00Z",
+      "duration_minutes": 45,
+      "room": "e81141d6-a0e7-4dcc-8600-26ad0646b438",
+      "status": "scheduled"
+    }
+  }
+]

@@ -1,4 +1,4 @@
-"""API tests for studios and rooms viewsets."""
+"""API tests for studios, rooms, and addresses viewsets."""
 
 import uuid
 
@@ -10,9 +10,8 @@ from rest_framework.test import APIClient
 
 class TestStudioViewSet:
     @pytest.mark.django_db
-    def test_list_studios(self, studio, empty_studio):
-        client = APIClient()
-        resp = client.get(reverse("studio-list"))
+    def test_list_studios(self, api_client, studio, empty_studio):
+        resp = api_client.get(reverse("studio-list"))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert isinstance(data, list)
@@ -25,30 +24,39 @@ class TestStudioViewSet:
         assert set(["id", "name", "address", "is_active", "created", "modified"]).issubset(
             sample.keys()
         )
+        # Address should be an object (or null)
+        assert sample["address"] is None or isinstance(sample["address"], dict)
+        if sample["address"]:
+            assert "id" in sample["address"]
+            assert "address" in sample["address"]
         assert "rooms" not in sample
 
     @pytest.mark.django_db
-    def test_retrieve_studio(self, studio):
-        client = APIClient()
-        resp = client.get(reverse("studio-detail", args=[studio.id]))
+    def test_retrieve_studio(self, api_client, studio):
+        resp = api_client.get(reverse("studio-detail", args=[studio.id]))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert data["id"] == str(studio.id)
         assert data["name"] == studio.name
+        # Address should be an object with full Address details
+        assert "address" in data
+        if data["address"]:
+            assert isinstance(data["address"], dict)
+            assert "id" in data["address"]
+            assert "address" in data["address"]
+            assert data["address"]["address"] == studio.address.address
         assert "rooms" not in data  # StudioSerializer does not expose rooms
 
     @pytest.mark.django_db
-    def test_retrieve_studio_404(self):
-        client = APIClient()
-        resp = client.get(reverse("studio-detail", args=[uuid.uuid4()]))
+    def test_retrieve_studio_404(self, api_client):
+        resp = api_client.get(reverse("studio-detail", args=[uuid.uuid4()]))
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestRoomViewSet:
     @pytest.mark.django_db
-    def test_list_rooms(self, room, extra_room):
-        client = APIClient()
-        resp = client.get(reverse("room-list"))
+    def test_list_rooms(self, api_client, room, extra_room):
+        resp = api_client.get(reverse("room-list"))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert isinstance(data, list)
@@ -61,9 +69,8 @@ class TestRoomViewSet:
         )
 
     @pytest.mark.django_db
-    def test_retrieve_room(self, room):
-        client = APIClient()
-        resp = client.get(reverse("room-detail", args=[room.id]))
+    def test_retrieve_room(self, api_client, room):
+        resp = api_client.get(reverse("room-detail", args=[room.id]))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert data["id"] == str(room.id)
@@ -71,7 +78,65 @@ class TestRoomViewSet:
         assert data["studio"] == str(room.studio_id)
 
     @pytest.mark.django_db
-    def test_retrieve_room_404(self):
-        client = APIClient()
-        resp = client.get(reverse("room-detail", args=[uuid.uuid4()]))
+    def test_retrieve_room_404(self, api_client):
+        resp = api_client.get(reverse("room-detail", args=[uuid.uuid4()]))
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+class TestAddressViewSet:
+    @pytest.mark.django_db
+    def test_list_addresses(self, api_client, address, empty_address):
+        resp = api_client.get(reverse("address-list"))
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.json()
+        assert isinstance(data, list)
+        # Should include both addresses
+        ids = {item["id"] for item in data}
+        assert str(address.id) in ids
+        assert str(empty_address.id) in ids
+        # Serializer fields check
+        sample = data[0]
+        assert set(["id", "address", "latitude", "longitude", "created", "modified"]).issubset(
+            sample.keys()
+        )
+
+    @pytest.mark.django_db
+    def test_retrieve_address(self, api_client, address):
+        resp = api_client.get(reverse("address-detail", args=[address.id]))
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.json()
+        assert data["id"] == str(address.id)
+        assert data["address"] == address.address
+        # DecimalField serializes as string, so convert to float for comparison
+        if address.latitude:
+            assert float(data["latitude"]) == float(address.latitude)
+        else:
+            assert data["latitude"] is None
+        if address.longitude:
+            assert float(data["longitude"]) == float(address.longitude)
+        else:
+            assert data["longitude"] is None
+
+    @pytest.mark.django_db
+    def test_retrieve_address_with_coordinates(self, api_client):
+        # Arrange
+        from apps.studios.models import Address
+
+        address = Address.objects.create(
+            address="Test Address with Coords",
+            latitude=-33.4489,
+            longitude=-70.6693,
+        )
+        # Act
+        resp = api_client.get(reverse("address-detail", args=[address.id]))
+        # Assert
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.json()
+        # DecimalField serializes as string, so convert to float for comparison
+        assert float(data["latitude"]) == -33.4489
+        assert float(data["longitude"]) == -70.6693
+
+    @pytest.mark.django_db
+    def test_retrieve_address_404(self, api_client):
+        resp = api_client.get(reverse("address-detail", args=[uuid.uuid4()]))
         assert resp.status_code == status.HTTP_404_NOT_FOUND
