@@ -12,6 +12,7 @@ from uuid import UUID
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 
+from apps.members.models import Reservation, WaitlistEntry
 from apps.members import constants as member_constants
 from apps.schedules import constants
 from apps.schedules.models import Schedule
@@ -51,9 +52,34 @@ def create_schedule(
     return ScheduleSchema.model_validate(schedule)
 
 
+def _schedule_occupancy(schedule: Schedule) -> dict:
+    room = getattr(schedule, "room", None)
+    capacity = room.capacity if room else None
+    booked = Reservation.objects.filter(
+        schedule_id=schedule.id,
+        status=member_constants.RESERVATION_STATUS_RESERVED,
+        is_removed=False,
+    ).count()
+    waitlist_count = WaitlistEntry.objects.filter(
+        schedule_id=schedule.id,
+        is_removed=False,
+        status__in=member_constants.WAITLIST_ACTIVE_STATUSES,
+    ).count()
+    return {
+        "capacity": capacity,
+        "booked_count": booked,
+        "waitlist_count": waitlist_count,
+        "is_full": bool(capacity is not None and booked >= capacity),
+    }
+
+
 def to_schedule_schema_list(items: Iterable) -> List[ScheduleSchema]:
     """Convert iterable of Schedule model instances to a list of ScheduleSchema."""
-    return [ScheduleSchema.model_validate(obj) for obj in items]
+    schemas = []
+    for obj in items:
+        schema = ScheduleSchema.model_validate(obj)
+        schemas.append(schema.model_copy(update=_schedule_occupancy(obj)))
+    return schemas
 
 
 def get_schedule_schema_list(
@@ -81,7 +107,8 @@ def get_schedule_schema_by_id(schedule_id: UUID) -> ScheduleSchema:
     Delegates to apps.schedules.schedules.get_schedule_by_id.
     """
     schedule = get_schedule_by_id_domain(schedule_id)
-    return ScheduleSchema.model_validate(schedule)
+    schema = ScheduleSchema.model_validate(schedule)
+    return schema.model_copy(update=_schedule_occupancy(schedule))
 
 
 def _instructor_display_name(schedule: Schedule) -> str:

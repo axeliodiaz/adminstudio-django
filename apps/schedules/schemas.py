@@ -15,6 +15,10 @@ class ScheduleSchema(BaseModel):
     duration_minutes: int
     room_id: uuid.UUID
     status: str
+    capacity: int | None = None
+    booked_count: int = 0
+    waitlist_count: int = 0
+    is_full: bool = False
 
     model_config = {"from_attributes": True}
 

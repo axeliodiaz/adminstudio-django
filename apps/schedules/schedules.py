@@ -27,7 +27,7 @@ def get_schedules_list(
     and/or by room name when provided.
     This helper replaces direct usages of Schedule.objects.all().order_by("start_time").
     """
-    qs = Schedule.objects.all()
+    qs = Schedule.objects.select_related("room")
     if start_time is not None:
         qs = qs.filter(start_time__gte=start_time)
     if instructor_id:

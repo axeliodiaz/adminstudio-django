@@ -68,6 +68,8 @@ class TestProfileView:
         assert response.status_code == 200
         assert "personal_info" in response.data
         assert "cycling" in response.data
+        assert "preferences" in response.data
+        assert response.data["preferences"]["waitlist_auto_confirm"] is False
 
         # Check personal_info structure
         personal_info = response.data["personal_info"]
@@ -114,6 +116,7 @@ class TestProfileView:
         assert response.status_code == 200
         assert "personal_info" in response.data
         assert "cycling" in response.data
+        assert response.data["preferences"]["waitlist_auto_confirm"] is False
 
         personal_info = response.data["personal_info"]
         assert personal_info["first_name"] is None or personal_info["first_name"] == ""

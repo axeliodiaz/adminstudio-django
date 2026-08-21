@@ -112,6 +112,7 @@ def update_user_profile(user: User, profile_data: dict[str, Any]) -> UserProfile
         "seat_distance",
         "handlebar_distance",
         "cycling_shoe_size",
+        "waitlist_auto_confirm",
     }
 
     dirty_fields: list[str] = []

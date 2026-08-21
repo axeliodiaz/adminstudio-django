@@ -35,6 +35,7 @@ class TestGetUserProfile:
         assert result.personal_info.height_cm == 175
         assert result.cycling.seat_height == 17
         assert result.cycling.cycling_shoe_size == 44.0
+        assert result.preferences.waitlist_auto_confirm is False
 
     def test_get_user_profile_handles_empty_fields(self):
         """Test that get_user_profile handles None/empty values."""
@@ -112,6 +113,19 @@ class TestUpdateUserProfile:
         user.refresh_from_db()
         assert user.seat_height == 20
         assert user.cycling_shoe_size == 45.0
+
+    def test_update_user_profile_updates_waitlist_auto_confirm(self):
+        user = User.objects.create_user(
+            username="testuser",
+            email="test@example.com",
+            password="testpass",
+        )
+
+        result = update_user_profile(user, {"waitlist_auto_confirm": True})
+
+        assert result.preferences.waitlist_auto_confirm is True
+        user.refresh_from_db()
+        assert user.waitlist_auto_confirm is True
 
     def test_update_user_profile_ignores_email_and_phone(self):
         """Test that update_user_profile ignores email and phone_number."""

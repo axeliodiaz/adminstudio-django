@@ -9,6 +9,7 @@ from apps.members.views import (
     AdminReservationListView,
     MemberView,
     ReservationView,
+    WaitlistView,
 )
 
 urlpatterns = [
@@ -58,5 +59,25 @@ urlpatterns = [
         "reservations/<uuid:schedule_id>/change-spot/",
         ReservationView.as_view({"patch": "change_spot"}),
         name="reservation-change-spot",
+    ),
+    path(
+        "reservations/<uuid:reservation_id>/",
+        ReservationView.as_view({"delete": "destroy"}),
+        name="reservation-detail",
+    ),
+    path(
+        "waitlist/",
+        WaitlistView.as_view({"get": "list", "post": "create"}),
+        name="waitlist",
+    ),
+    path(
+        "waitlist/<uuid:waitlist_id>/",
+        WaitlistView.as_view({"delete": "destroy"}),
+        name="waitlist-detail",
+    ),
+    path(
+        "waitlist/<uuid:waitlist_id>/confirm/",
+        WaitlistView.as_view({"post": "confirm"}),
+        name="waitlist-confirm",
     ),
 ]

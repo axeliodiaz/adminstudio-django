@@ -81,12 +81,28 @@ def create_reservation(validated_data: dict) -> Reservation:
             f"Spot must be less than or equal to the room capacity ({room_capacity})."
         )
 
-    members_in_schedule = get_scheduled_reservations_by_member_id_and_schedule_id(
+    existing_for_member = get_scheduled_reservations_by_member_id_and_schedule_id(
         member.id, schedule.id
     )
+    if existing_for_member.exists():
+        raise ReservationInvalidStateException("Ya tienes una reserva para esta clase.")
 
-    if members_in_schedule.count() > schedule.room.capacity:
+    reserved_count = Reservation.objects.filter(
+        schedule=schedule,
+        status=constants.RESERVATION_STATUS_RESERVED,
+        is_removed=False,
+    ).count()
+    if reserved_count >= room_capacity:
         raise RoomFullException("Room is full.")
+
+    taken_spot = Reservation.objects.filter(
+        schedule=schedule,
+        spot=spot,
+        status=constants.RESERVATION_STATUS_RESERVED,
+        is_removed=False,
+    ).exists()
+    if taken_spot:
+        raise InvalidSpotException(f"Spot {spot} is already taken.")
 
     reservation = Reservation.objects.create(
         member=member,
@@ -113,6 +129,9 @@ def cancel_reservation(reservation_id: str) -> Reservation:
         raise ReservationInvalidStateException("Only RESERVED reservations can be cancelled.")
     reservation.status = constants.RESERVATION_STATUS_CANCELLED
     reservation.save(update_fields=["status", "modified"])
+    from apps.members.waitlist import promote_waitlist_for_schedule
+
+    promote_waitlist_for_schedule(reservation.schedule_id, reservation.spot)
     return reservation
 
 

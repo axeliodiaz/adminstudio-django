@@ -139,3 +139,30 @@ class AdminReservationChangeSpotSchema(BaseModel):
     """Change the bike spot of an existing reservation."""
 
     new_spot: int
+
+
+class WaitlistScheduleSchema(BaseModel):
+    id: uuid.UUID
+    title: str = ""
+    start_time: datetime
+    duration_minutes: int
+    room_name: str = ""
+    studio_name: str = ""
+    capacity: int | None = None
+    booked: int = 0
+
+
+class WaitlistEntrySchema(BaseModel):
+    id: uuid.UUID
+    created: datetime
+    modified: datetime
+    member_id: uuid.UUID
+    schedule_id: uuid.UUID
+    status: str
+    position: int
+    offered_spot: int | None = None
+    offered_at: datetime | None = None
+    offer_expires_at: datetime | None = None
+    schedule: WaitlistScheduleSchema
+
+    model_config = {"from_attributes": True}

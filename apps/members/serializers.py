@@ -71,3 +71,7 @@ class ReservationChangeSpotSerializer(serializers.Serializer):
 
 class ReservationCancelSerializer(serializers.Serializer):
     reservation_id = serializers.UUIDField()
+
+
+class WaitlistJoinSerializer(serializers.Serializer):
+    schedule_id = serializers.UUIDField()

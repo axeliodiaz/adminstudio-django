@@ -61,6 +61,10 @@ class User(AbstractUser, SoftDeletableModel, UUIDModel, TimeStampedModel):
         blank=True,
         help_text="Cycling shoe size (e.g. 44.0).",
     )
+    waitlist_auto_confirm = models.BooleanField(
+        default=False,
+        help_text="Automatically reserve a spot when one opens from the waitlist.",
+    )
 
 
 class PasswordResetCode(SoftDeletableModel, UUIDModel, TimeStampedModel):

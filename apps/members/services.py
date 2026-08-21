@@ -6,12 +6,13 @@ from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 
 from apps.members import members
-from apps.members.models import Member, Reservation
+from apps.members.models import Member, Reservation, WaitlistEntry
 from apps.members.schemas import (
     AdminMemberSchema,
     AdminReservationSchema,
     MemberSchema,
     ReservationSchema,
+    WaitlistEntrySchema,
 )
 from apps.users.services import get_or_create_user as _get_or_create_user
 
@@ -357,3 +358,71 @@ def change_admin_reservation_spot(reservation_id: str | UUID, new_spot: int) -> 
     except Reservation.DoesNotExist as exc:
         raise ValueError("Reservation not found.") from exc
     return get_admin_reservation(reservation_id)
+
+
+def _serialize_waitlist_entry(entry) -> dict:
+    from apps.members.waitlist import reserved_count_for_schedule, waitlist_position
+
+    schedule = entry.schedule
+    room = getattr(schedule, "room", None)
+    studio = getattr(room, "studio", None) if room else None
+    payload = {
+        "id": entry.id,
+        "created": entry.created,
+        "modified": entry.modified,
+        "member_id": entry.member_id,
+        "schedule_id": entry.schedule_id,
+        "status": entry.status,
+        "position": waitlist_position(entry),
+        "offered_spot": entry.offered_spot,
+        "offered_at": entry.offered_at,
+        "offer_expires_at": entry.offer_expires_at,
+        "schedule": {
+            "id": schedule.id,
+            "title": schedule.title or "",
+            "start_time": schedule.start_time,
+            "duration_minutes": schedule.duration_minutes,
+            "room_name": room.name if room else "",
+            "studio_name": studio.name if studio else "",
+            "capacity": room.capacity if room else None,
+            "booked": reserved_count_for_schedule(schedule.id),
+        },
+    }
+    return WaitlistEntrySchema.model_validate(payload).model_dump(mode="json")
+
+
+def join_waitlist(*, user_id: str | UUID, schedule_id: str | UUID) -> dict:
+    from apps.members.waitlist import join_waitlist as domain_join
+
+    entry = domain_join(user_id=user_id, schedule_id=schedule_id)
+    entry = WaitlistEntry.objects.select_related("schedule__room__studio", "member").get(
+        id=entry.id
+    )
+    return _serialize_waitlist_entry(entry)
+
+
+def list_waitlist(*, user_id: str | UUID, schedule_id: str | UUID | None = None) -> list[dict]:
+    from apps.members.waitlist import list_waitlist_for_user
+
+    entries = list_waitlist_for_user(user_id=user_id, schedule_id=schedule_id)
+    return [_serialize_waitlist_entry(entry) for entry in entries]
+
+
+def leave_waitlist(*, user_id: str | UUID, waitlist_id: str | UUID) -> dict:
+    from apps.members.waitlist import leave_waitlist as domain_leave
+
+    entry = domain_leave(user_id=user_id, waitlist_id=waitlist_id)
+    entry = WaitlistEntry.objects.select_related("schedule__room__studio", "member").get(
+        id=entry.id
+    )
+    return _serialize_waitlist_entry(entry)
+
+
+def confirm_waitlist_offer(*, user_id: str | UUID, waitlist_id: str | UUID) -> dict:
+    from apps.members.waitlist import confirm_waitlist_offer as domain_confirm
+
+    entry = domain_confirm(user_id=user_id, waitlist_id=waitlist_id)
+    entry = WaitlistEntry.objects.select_related("schedule__room__studio", "member").get(
+        id=entry.id
+    )
+    return _serialize_waitlist_entry(entry)

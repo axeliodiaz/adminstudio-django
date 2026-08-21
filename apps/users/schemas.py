@@ -109,15 +109,25 @@ class CyclingSchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PreferencesSchema(BaseModel):
+    """Preferencias de notificaciones y lista de espera."""
+
+    waitlist_auto_confirm: bool = False
+
+    model_config = {"from_attributes": True}
+
+
 class UserProfileResponseSchema(BaseModel):
     """Schema estructurado por categorías para la respuesta del endpoint."""
 
     personal_info: PersonalInfoSchema
     cycling: CyclingSchema
+    preferences: PreferencesSchema
 
     @classmethod
     def from_user(cls, user):
         return cls(
             personal_info=PersonalInfoSchema.model_validate(user),
             cycling=CyclingSchema.model_validate(user),
+            preferences=PreferencesSchema.model_validate(user),
         )

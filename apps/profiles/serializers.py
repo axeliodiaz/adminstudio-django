@@ -21,3 +21,4 @@ class ProfileSerializer(serializers.Serializer):
     seat_distance = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     handlebar_distance = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     cycling_shoe_size = serializers.FloatField(required=False, allow_null=True, min_value=0)
+    waitlist_auto_confirm = serializers.BooleanField(required=False)

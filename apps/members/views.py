@@ -12,6 +12,7 @@ from apps.members.exceptions import (
     InvalidSpotException,
     RoomFullException,
     ReservationInvalidStateException,
+    WaitlistException,
 )
 from apps.members.schemas import (
     AdminMemberCreateSchema,
@@ -25,6 +26,7 @@ from apps.members.serializers import (
     ReservationListQuerySerializer,
     ReservationChangeSpotSerializer,
     ReservationCancelSerializer,
+    WaitlistJoinSerializer,
 )
 from apps.members.services import (
     create_admin_member,
@@ -42,8 +44,12 @@ from apps.members.services import (
     create_admin_reservation,
     cancel_admin_reservation,
     change_admin_reservation_spot,
+    join_waitlist,
+    list_waitlist,
+    leave_waitlist,
+    confirm_waitlist_offer,
 )
-from apps.members.models import Member, Reservation
+from apps.members.models import Member, Reservation, WaitlistEntry
 
 
 def _pydantic_error_response(exc: PydanticValidationError) -> Response:
@@ -157,6 +163,73 @@ class ReservationView(ViewSet):
         except (ReservationInvalidStateException, InvalidSpotException) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation.model_dump(), status=status.HTTP_200_OK)
+
+    def destroy(self, request, reservation_id=None, *args, **kwargs):
+        try:
+            reservation = cancel_reservation(str(reservation_id))
+        except Reservation.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        except ReservationInvalidStateException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "message": constants.RESERVATION_CANCELLED_SUCCESS_MESSAGE,
+                **reservation.model_dump(),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class WaitlistView(ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        schedule_id = request.query_params.get("schedule_id")
+        try:
+            payload = list_waitlist(user_id=request.user.id, schedule_id=schedule_id)
+        except Member.DoesNotExist:
+            return Response([], status=status.HTTP_200_OK)
+        return Response(payload, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        serializer = WaitlistJoinSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            entry = join_waitlist(
+                user_id=request.user.id,
+                schedule_id=serializer.validated_data["schedule_id"],
+            )
+        except Member.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        except WaitlistException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(entry, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, waitlist_id=None, *args, **kwargs):
+        try:
+            entry = leave_waitlist(user_id=request.user.id, waitlist_id=waitlist_id)
+        except (Member.DoesNotExist, WaitlistEntry.DoesNotExist):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        except WaitlistException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": constants.WAITLIST_LEFT_SUCCESS_MESSAGE, **entry},
+            status=status.HTTP_200_OK,
+        )
+
+    def confirm(self, request, waitlist_id=None, *args, **kwargs):
+        try:
+            entry = confirm_waitlist_offer(user_id=request.user.id, waitlist_id=waitlist_id)
+        except (Member.DoesNotExist, WaitlistEntry.DoesNotExist):
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        except WaitlistException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except (RoomFullException, InvalidSpotException, ReservationInvalidStateException) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"message": constants.WAITLIST_CONFIRMED_SUCCESS_MESSAGE, **entry},
+            status=status.HTTP_200_OK,
+        )
 
 
 class AdminMemberListView(APIView):
