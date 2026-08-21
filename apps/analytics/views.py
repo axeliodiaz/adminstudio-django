@@ -3,7 +3,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.analytics.constants import DASHBOARD_ALLOWED_DAYS, DASHBOARD_DEFAULT_DAYS
+from apps.analytics.member_stats import get_member_stats
 from apps.analytics.services import get_admin_dashboard
+
+
+class MemberStatsView(APIView):
+    """Activity stats for the authenticated member profile."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        return Response(get_member_stats(request.user))
 
 
 class AdminDashboardView(APIView):
