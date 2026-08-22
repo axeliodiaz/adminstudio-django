@@ -25,8 +25,9 @@ def test_demo_horizon_end_covers_october():
     assert demo_horizon_end(date(2026, 11, 1)) == date(2027, 10, 31)
 
 
-def test_demo_history_start_is_six_calendar_months():
-    assert demo_history_start(date(2026, 8, 22)) == date(2026, 3, 1)
+def test_demo_history_start_is_year_to_date():
+    assert demo_history_start(date(2026, 8, 22)) == date(2026, 1, 1)
+    assert demo_history_start(date(2026, 1, 3)) == date(2026, 1, 1)
 
 
 @pytest.mark.django_db
