@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta, timezone as dt_timezone
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -57,6 +58,50 @@ class TestMemberStatsView:
         assert response.data["favorite_instructor"] is None
         assert len(response.data["monthly_classes"]) == timezone.localdate().month
         assert len(response.data["weekly_streak"]) == 4
+
+
+@pytest.mark.django_db
+class TestAdminMemberStatsView:
+    def test_requires_authentication(self, api_client):
+        response = api_client.get(reverse("admin-member-stats", kwargs={"user_id": uuid4()}))
+        assert response.status_code == 401
+
+    def test_requires_staff(self, api_client):
+        member_user = User.objects.create_user(username="riderstats", password="pass1234")
+        other = User.objects.create_user(username="notstaff", password="pass1234")
+        token = ExpiringToken.objects.create(user=other)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        response = api_client.get(reverse("admin-member-stats", kwargs={"user_id": member_user.id}))
+        assert response.status_code == 403
+
+    def test_returns_target_user_stats_for_staff(self, api_client):
+        staff_user = User.objects.create_user(
+            username="staffstats",
+            password="pass1234",
+            is_staff=True,
+        )
+        member_user = User.objects.create_user(
+            username="targetrider",
+            password="pass1234",
+            first_name="María",
+        )
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        response = api_client.get(reverse("admin-member-stats", kwargs={"user_id": member_user.id}))
+        assert response.status_code == 200
+        assert response.data["classes_completed"] == 0
+        assert "monthly_classes" in response.data
+
+    def test_returns_404_for_unknown_user(self, api_client):
+        staff_user = User.objects.create_user(
+            username="staffmissing",
+            password="pass1234",
+            is_staff=True,
+        )
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        response = api_client.get(reverse("admin-member-stats", kwargs={"user_id": uuid4()}))
+        assert response.status_code == 404
 
 
 @pytest.mark.django_db
