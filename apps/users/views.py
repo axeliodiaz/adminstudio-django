@@ -15,6 +15,14 @@ from apps.users.serializers import (
 from pydantic import ValidationError as PydanticValidationError
 
 from apps.users.schemas import AdminUserUpdateSchema, CurrentUserSchema
+
+
+def serialize_current_user(user) -> dict:
+    payload = CurrentUserSchema.model_validate(user).model_dump(mode="json")
+    payload["is_coach"] = bool(getattr(user, "is_coach", False))
+    return payload
+
+
 from apps.users.services import (
     change_user_password,
     request_password_recovery,
@@ -74,7 +82,7 @@ class LoginView(APIView):
         ExpiringToken.objects.filter(user=user).delete()
         token = ExpiringToken.objects.create(user=user)
 
-        user_data = CurrentUserSchema.model_validate(user).model_dump(mode="json")
+        user_data = serialize_current_user(user)
 
         return Response(
             {
@@ -91,7 +99,7 @@ class CurrentUserView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        user_data = CurrentUserSchema.model_validate(request.user).model_dump(mode="json")
+        user_data = serialize_current_user(request.user)
         return Response(user_data, status=status.HTTP_200_OK)
 
 

@@ -27,6 +27,7 @@ from apps.coach.models import (
     PlaylistTemplate,
     PlaylistTrack,
 )
+from apps.instructors.axel_diaz_coach import ensure_axel_diaz_is_coach, find_axel_diaz_user
 from apps.instructors.models import Instructor
 from apps.members import constants as member_constants
 from apps.members.models import Member, Reservation
@@ -210,9 +211,7 @@ class Command(BaseCommand):
         return instructor
 
     def _axelio(self):
-        user = User.objects.filter(username="axelio").first()
-        if user is None:
-            user = User.objects.filter(email="diaz.axelio@gmail.com").first()
+        user = find_axel_diaz_user(User)
         created = False
         if user is None:
             user = User.objects.create_user(
@@ -223,7 +222,7 @@ class Command(BaseCommand):
                 password="coach1234",
             )
             created = True
-        instructor, _ = Instructor.objects.get_or_create(user=user)
+        instructor = ensure_axel_diaz_is_coach(User, Instructor)
         instructor.tagline = "Indoor cycling · PulseFit"
         instructor.specialties = ["Power Ride", "HIIT"]
         instructor.languages = ["Español", "English"]
