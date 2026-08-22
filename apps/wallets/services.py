@@ -62,6 +62,7 @@ class WalletService:
 
         plan = purchase.plan
         user = purchase.user
+        quantity = purchase.quantity or 1
         guest_passes_included = plan.guest_passes_included
 
         # 1. Get or create the user's Wallet
@@ -69,11 +70,11 @@ class WalletService:
 
         # 2. Add classes_included to class_credits
         if plan.classes_included is not None:
-            wallet.class_credits += plan.classes_included
+            wallet.class_credits += plan.classes_included * quantity
 
         # 3. Add guest passes according to the plan configuration
         if guest_passes_included is not None:
-            wallet.guest_pass_credits += guest_passes_included
+            wallet.guest_pass_credits += guest_passes_included * quantity
 
         # 4. Extend active_membership_end_date by duration_days
         if plan.duration_days is not None:
@@ -86,7 +87,9 @@ class WalletService:
                 # If it has no date, start from today
                 base_date = today
 
-            wallet.active_membership_end_date = base_date + timedelta(days=plan.duration_days)
+            wallet.active_membership_end_date = base_date + timedelta(
+                days=plan.duration_days * quantity
+            )
 
         # 5. Iterate over the Plan's benefits to update boolean flags
         active_benefits = plan.benefits.filter(is_active=True)

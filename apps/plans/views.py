@@ -10,12 +10,14 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.plans import services
+from apps.plans import checkout_services, promo_services, services
 from apps.plans.models import Plan
-from apps.plans.schemas import AdminPlanWriteSchema
-from apps.plans.serializers import PlanPurchaseSerializer
-from apps.wallets.models import PlanPurchase
-from apps.wallets.schemas import PlanPurchaseSchema
+from apps.plans.schemas import AdminPlanWriteSchema, AdminPromoCodeWriteSchema
+from apps.plans.serializers import (
+    CheckoutSerializer,
+    PlanPurchaseSerializer,
+    ValidatePromoSerializer,
+)
 
 
 def _pydantic_error_response(exc: PydanticValidationError) -> Response:
@@ -68,7 +70,10 @@ class PlanViewSet(viewsets.ViewSet):
 
         Request body:
             {
-                "plan_id": "uuid-of-plan"
+                "plan_id": "uuid-of-plan",
+                "quantity": 1,
+                "promo_code": "VERANO10",
+                "payment_method": "mercadopago"
             }
 
         Returns:
@@ -80,41 +85,27 @@ class PlanViewSet(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
 
         plan_id = serializer.validated_data["plan_id"]
+        quantity = serializer.validated_data.get("quantity") or 1
+        promo_code = serializer.validated_data.get("promo_code") or None
+        payment_method = serializer.validated_data.get("payment_method") or None
 
         try:
-            plan = Plan.objects.get(id=plan_id, is_active=True)
-        except Plan.DoesNotExist:
-            return Response(
-                {"detail": f"Active plan with id {plan_id} not found"},
-                status=status.HTTP_404_NOT_FOUND,
+            result = checkout_services.checkout_plans(
+                user=request.user,
+                items=[{"plan_id": plan_id, "quantity": quantity}],
+                promo_code=promo_code,
+                payment_method=payment_method,
             )
+        except ValueError as exc:
+            message = str(exc)
+            status_code = (
+                status.HTTP_404_NOT_FOUND
+                if "no se encontró" in message.lower() or "not found" in message.lower()
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"detail": message}, status=status_code)
 
-        # Create the purchase
-        purchase = PlanPurchase.objects.create(
-            user=request.user,
-            plan=plan,
-            price_paid=Decimal(str(plan.price)),
-            activated_since=None,
-        )
-
-        # Serialize the purchase
-        purchase_data = {
-            "id": purchase.id,
-            "created": purchase.created,
-            "modified": purchase.modified,
-            "price_paid": purchase.price_paid,
-            "activated_since": purchase.activated_since,
-            "start": purchase.start,
-            "end": purchase.end,
-            "plan_id": purchase.plan.id,
-            "plan_name": purchase.plan.name,
-        }
-        purchase_schema = PlanPurchaseSchema(**purchase_data)
-
-        return Response(
-            purchase_schema.model_dump(by_alias=True),
-            status=status.HTTP_201_CREATED,
-        )
+        return Response(result["purchases"][0], status=status.HTTP_201_CREATED)
 
 
 class AdminPlanListView(APIView):
@@ -179,3 +170,111 @@ class AdminBenefitListView(APIView):
             only_active=only_active,
         )
         return Response(benefits, status=status.HTTP_200_OK)
+
+
+class ValidatePromoCodeView(APIView):
+    """Validate a promotional code (active + date window) and preview the discount."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = ValidatePromoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        plan = None
+        plan_id = serializer.validated_data.get("plan_id")
+        if plan_id:
+            try:
+                plan = Plan.objects.get(id=plan_id, is_active=True)
+            except Plan.DoesNotExist:
+                return Response(
+                    {"detail": "El plan seleccionado no existe o no está activo."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+        subtotal = serializer.validated_data.get("subtotal")
+        quantity = serializer.validated_data.get("quantity") or 1
+        if subtotal is None and plan is not None:
+            subtotal = Decimal(str(plan.price)) * quantity
+
+        try:
+            _promo, payload = promo_services.validate_promo_for_checkout(
+                code=serializer.validated_data["code"],
+                plan=plan,
+                subtotal=subtotal,
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+class CheckoutView(APIView):
+    """Create purchases for every cart line, applying a promo code when valid."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = CheckoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            result = checkout_services.checkout_plans(
+                user=request.user,
+                items=serializer.validated_data["items"],
+                promo_code=serializer.validated_data.get("promo_code") or None,
+                payment_method=serializer.validated_data.get("payment_method") or None,
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(result, status=status.HTTP_201_CREATED)
+
+
+class AdminPromoCodeListView(APIView):
+    """List or create promo codes for the PulseFit admin. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        promos = promo_services.list_admin_promo_codes(
+            search=request.query_params.get("search"),
+            status=request.query_params.get("status"),
+        )
+        return Response(promos, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        try:
+            payload = AdminPromoCodeWriteSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        data = payload.model_dump(exclude_unset=True)
+        try:
+            promo = promo_services.create_admin_promo_code(data=data)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(promo, status=status.HTTP_201_CREATED)
+
+
+class AdminPromoCodeDetailView(APIView):
+    """Retrieve or update a promo code for the PulseFit admin. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, promo_id, *args, **kwargs):
+        promo = promo_services.get_admin_promo_code(promo_id=promo_id)
+        return Response(promo, status=status.HTTP_200_OK)
+
+    def patch(self, request, promo_id, *args, **kwargs):
+        try:
+            payload = AdminPromoCodeWriteSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        data = payload.model_dump(exclude_unset=True)
+        try:
+            promo = promo_services.update_admin_promo_code(promo_id=promo_id, data=data)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(promo, status=status.HTTP_200_OK)

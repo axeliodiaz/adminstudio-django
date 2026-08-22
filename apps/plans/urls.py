@@ -5,7 +5,11 @@ from apps.plans.views import (
     AdminBenefitListView,
     AdminPlanDetailView,
     AdminPlanListView,
+    AdminPromoCodeDetailView,
+    AdminPromoCodeListView,
+    CheckoutView,
     PlanViewSet,
+    ValidatePromoCodeView,
 )
 
 router = DefaultRouter()
@@ -16,6 +20,14 @@ urlpatterns = [
         "purchase/",
         PlanViewSet.as_view({"post": "purchase"}),
         name="plan-purchase",
+    ),
+    path("checkout/", CheckoutView.as_view(), name="plan-checkout"),
+    path("validate-promo/", ValidatePromoCodeView.as_view(), name="plan-validate-promo"),
+    path("admin/promo-codes/", AdminPromoCodeListView.as_view(), name="admin-promo-list"),
+    path(
+        "admin/promo-codes/<uuid:promo_id>/",
+        AdminPromoCodeDetailView.as_view(),
+        name="admin-promo-detail",
     ),
     path("admin/plans/", AdminPlanListView.as_view(), name="admin-plan-list"),
     path(

@@ -80,3 +80,50 @@ class AdminBenefitSchema(BaseModel):
     is_active: bool
 
     model_config = {"from_attributes": True}
+
+
+class PromoCodeSchema(BaseModel):
+    """Public validation result for a promotional code."""
+
+    id: uuid.UUID
+    code: str
+    description: str = ""
+    is_active: bool
+    valid_from: datetime
+    valid_until: datetime
+    discount_type: str
+    discount_value: float
+    discount_amount: float | None = None
+    subtotal: float | None = None
+    total: float | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminPromoCodeSchema(BaseModel):
+    """Promo code row for the staff admin."""
+
+    id: uuid.UUID
+    created: datetime
+    modified: datetime
+    code: str
+    description: str = ""
+    is_active: bool
+    valid_from: datetime
+    valid_until: datetime
+    discount_type: str
+    discount_value: float
+
+    model_config = {"from_attributes": True}
+
+
+class AdminPromoCodeWriteSchema(BaseModel):
+    """Payload for creating or updating a promo code from the staff admin."""
+
+    code: str | None = None
+    description: str | None = None
+    is_active: bool | None = None
+    valid_from: datetime | None = None
+    valid_until: datetime | None = None
+    discount_type: Literal["PERCENT", "FIXED"] | None = None
+    discount_value: float | None = None

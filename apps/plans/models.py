@@ -79,3 +79,37 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
 
     def __str__(self):
         return f"{self.name}"
+
+
+class PromoCode(UUIDModel, TimeStampedModel, SoftDeletableModel):
+    """Promotional discount code with an active flag and a validity window."""
+
+    DISCOUNT_TYPE_CHOICES = (
+        (constants.DISCOUNT_TYPE_PERCENT, "Percentage"),
+        (constants.DISCOUNT_TYPE_FIXED, "Fixed amount"),
+    )
+
+    code = models.CharField(max_length=40, unique=True)
+    description = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=False)
+    valid_from = models.DateTimeField()
+    valid_until = models.DateTimeField()
+    discount_type = models.CharField(
+        max_length=16,
+        choices=DISCOUNT_TYPE_CHOICES,
+        default=constants.DISCOUNT_TYPE_PERCENT,
+    )
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        verbose_name = "Promo code"
+        verbose_name_plural = "Promo codes"
+        ordering = ["-created"]
+
+    def save(self, *args, **kwargs):
+        if self.code:
+            self.code = self.code.strip().upper()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.code

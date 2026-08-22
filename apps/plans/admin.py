@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.plans.models import Plan, Benefit
+from apps.plans.models import Benefit, Plan, PromoCode
 
 
 class BenefitInline(admin.TabularInline):
@@ -34,5 +34,19 @@ class BenefitAdmin(admin.ModelAdmin):
     list_filter = ("name",)
 
 
+class PromoCodeAdmin(admin.ModelAdmin):
+    list_display = (
+        "code",
+        "is_active",
+        "discount_type",
+        "discount_value",
+        "valid_from",
+        "valid_until",
+    )
+    list_filter = ("is_active", "discount_type", "valid_from", "valid_until")
+    search_fields = ("code", "description")
+
+
 admin.site.register(Plan, PlanAdmin)
 admin.site.register(Benefit, BenefitAdmin)
+admin.site.register(PromoCode, PromoCodeAdmin)

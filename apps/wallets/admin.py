@@ -66,6 +66,9 @@ class PlanPurchaseAdmin(admin.ModelAdmin):
         "user",
         "plan",
         "price_paid",
+        "quantity",
+        "promo_code",
+        "payment_method",
         "activated_since",
         "created",
     )
@@ -85,7 +88,20 @@ class PlanPurchaseAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             "Purchase Details",
-            {"fields": ("user", "plan", "price_paid", "activated_since", "start", "end")},
+            {
+                "fields": (
+                    "user",
+                    "plan",
+                    "quantity",
+                    "price_paid",
+                    "discount_amount",
+                    "promo_code",
+                    "payment_method",
+                    "activated_since",
+                    "start",
+                    "end",
+                )
+            },
         ),
         ("Metadata", {"fields": ("id", "created", "modified"), "classes": ("collapse",)}),
     )

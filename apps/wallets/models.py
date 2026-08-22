@@ -72,6 +72,26 @@ class PlanPurchase(UUIDModel, TimeStampedModel, TimeFramedModel):
         verbose_name="Purchased Plan",
     )
     price_paid = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Price Paid")
+    quantity = models.PositiveIntegerField(default=1, verbose_name="Quantity")
+    discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Discount Amount",
+    )
+    promo_code = models.ForeignKey(
+        "plans.PromoCode",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="purchases",
+        verbose_name="Promo code",
+    )
+    payment_method = models.CharField(
+        max_length=32,
+        blank=True,
+        verbose_name="Payment method",
+    )
     activated_since = models.DateField(null=True, blank=True, verbose_name="Activated Since")
 
     class Meta:
