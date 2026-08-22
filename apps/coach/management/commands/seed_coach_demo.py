@@ -1,9 +1,9 @@
-"""Seed PulseFit coach demo data (Tomás + Axelio class calendar).
+"""Seed PulseFit coach demo data (Tomás class calendar).
 
 Idempotent. Demo rows are tagged with `demo.coach` in Schedule.description
 and `demo.coach.*` usernames. Showcase coach is `tomasride`.
 `--reset` only removes demo.coach.* users, tomasride, and schedules marked
-demo.coach (plus related reservations/playlists/ratings). Axelio is never deleted.
+demo.coach (plus related reservations/playlists/ratings).
 """
 
 from datetime import date, datetime, timedelta
@@ -27,7 +27,6 @@ from apps.coach.models import (
     PlaylistTemplate,
     PlaylistTrack,
 )
-from apps.instructors.axel_diaz_coach import ensure_axel_diaz_is_coach, find_axel_diaz_user
 from apps.instructors.models import Instructor
 from apps.members import constants as member_constants
 from apps.members.models import Member, Reservation
@@ -114,13 +113,13 @@ def _aware(day: date, hour: int, minute: int = 0) -> datetime:
 
 
 class Command(BaseCommand):
-    help = "Create PulseFit coach demo data (Tomás + Axelio) from Jan–Oct 2026."
+    help = "Create PulseFit coach demo data (Tomás) from Jan–Oct 2026."
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--reset",
             action="store_true",
-            help="Delete previous demo.coach rows (not Axelio) before seeding.",
+            help="Delete previous demo.coach rows before seeding.",
         )
 
     def handle(self, *args, **options):
@@ -131,29 +130,17 @@ class Command(BaseCommand):
 
         room = self._room()
         tomas = self._tomas()
-        axelio, axelio_created = self._axelio()
         riders = self._riders()
         self._templates(tomas)
-        self._templates(axelio, extra=False)
 
-        for instructor, hours in (
-            (tomas, ((7, "Power Ride"), (19, "HIIT Ride"))),
-            (axelio, ((8, "Power Ride"), (18, "HIIT Ride"))),
-        ):
-            new_schedules = self._ensure_schedules(instructor, room, hours)
-            if new_schedules:
-                self._fill(rng, room, riders, new_schedules)
+        new_schedules = self._ensure_schedules(tomas, room, ((7, "Power Ride"), (19, "HIIT Ride")))
+        if new_schedules:
+            self._fill(rng, room, riders, new_schedules)
 
         self._backfill_playlists(tomas)
         self._backfill_ratings(rng, tomas)
-        self._backfill_ratings(rng, axelio)
 
         self.stdout.write(self.style.SUCCESS(f"Login: {DEMO_SHOWCASE_USERNAME} / coach1234"))
-        self.stdout.write(self.style.SUCCESS("Coach axelio linked (is_coach=true)"))
-        if axelio_created:
-            self.stdout.write(
-                self.style.NOTICE("Created user axelio (password left as set on create).")
-            )
 
     def _wipe(self):
         demo_schedules = Schedule.objects.filter(description=DEMO_CLASS_DESCRIPTION)
@@ -209,27 +196,6 @@ class Command(BaseCommand):
         instructor.certifications = ["Schwinn Indoor Cycling", "First Aid / RCP"]
         instructor.save()
         return instructor
-
-    def _axelio(self):
-        user = find_axel_diaz_user(User)
-        created = False
-        if user is None:
-            user = User.objects.create_user(
-                username="axelio",
-                email="diaz.axelio@gmail.com",
-                first_name="Axel",
-                last_name="Diaz",
-                password="coach1234",
-            )
-            created = True
-        instructor = ensure_axel_diaz_is_coach(User, Instructor)
-        instructor.tagline = "Indoor cycling · PulseFit"
-        instructor.specialties = ["Power Ride", "HIIT"]
-        instructor.languages = ["Español", "English"]
-        if not instructor.instructor_since:
-            instructor.instructor_since = date(2022, 1, 15)
-        instructor.save()
-        return instructor, created
 
     def _riders(self):
         members = []

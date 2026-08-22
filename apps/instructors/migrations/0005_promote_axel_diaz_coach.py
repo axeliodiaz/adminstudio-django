@@ -1,12 +1,8 @@
 from django.db import migrations
 
-from apps.instructors.axel_diaz_coach import ensure_axel_diaz_is_coach
 
-
-def promote_axel_diaz(apps, schema_editor):
-    User = apps.get_model("users", "User")
-    Instructor = apps.get_model("instructors", "Instructor")
-    ensure_axel_diaz_is_coach(User, Instructor)
+def noop(apps, schema_editor):
+    """Coach access is an Instructor row in the DB, not a hardcoded user flag."""
 
 
 class Migration(migrations.Migration):
@@ -17,5 +13,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(promote_axel_diaz, migrations.RunPython.noop),
+        migrations.RunPython(noop, migrations.RunPython.noop),
     ]
