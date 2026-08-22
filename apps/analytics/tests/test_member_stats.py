@@ -30,12 +30,13 @@ def _schedule(*, instructor, room, start, duration=45, title="RIDE 45"):
     )
 
 
-def _attend(member, schedule, status=member_constants.RESERVATION_STATUS_ATTENDED):
+def _attend(member, schedule, status=member_constants.RESERVATION_STATUS_ATTENDED, spot=None):
     return baker.make(
         "members.Reservation",
         member=member,
         schedule=schedule,
         status=status,
+        spot=spot,
     )
 
 
@@ -79,7 +80,12 @@ def test_member_stats_aggregates_attendance_plan_and_favorite():
     room = baker.make("studios.Room", studio=studio, capacity=20, is_active=True)
 
     plan = baker.make("plans.Plan", name="Starter 8", classes_included=8, price=59000)
-    Wallet.objects.create(user=member_user, is_unlimited_membership_active=False)
+    Wallet.objects.create(
+        user=member_user,
+        is_unlimited_membership_active=False,
+        class_credits=3,
+        guest_pass_credits=1,
+    )
     PlanPurchase.objects.create(
         user=member_user,
         plan=plan,
@@ -92,22 +98,40 @@ def test_member_stats_aggregates_attendance_plan_and_favorite():
     for weeks_ago in (1, 2, 3):
         day = last_monday - timedelta(weeks=weeks_ago)
         start = datetime(day.year, day.month, day.day, 18, 0, tzinfo=dt_timezone.utc)
-        _attend(member, _schedule(instructor=favorite, room=room, start=start))
+        _attend(
+            member,
+            _schedule(instructor=favorite, room=room, start=start, title="Power Ride"),
+            spot=7,
+        )
 
     extra_day = last_monday - timedelta(weeks=1, days=1)
     extra_start = datetime(
         extra_day.year, extra_day.month, extra_day.day, 10, 0, tzinfo=dt_timezone.utc
     )
-    _attend(member, _schedule(instructor=favorite, room=room, start=extra_start, duration=50))
+    _attend(
+        member,
+        _schedule(
+            instructor=favorite, room=room, start=extra_start, duration=50, title="Power Ride"
+        ),
+        spot=7,
+    )
 
     other_day = last_monday - timedelta(weeks=1, days=2)
     other_start = datetime(
         other_day.year, other_day.month, other_day.day, 12, 0, tzinfo=dt_timezone.utc
     )
-    _attend(member, _schedule(instructor=other, room=room, start=other_start))
+    _attend(
+        member,
+        _schedule(instructor=other, room=room, start=other_start, title="Rhythm Ride"),
+        spot=12,
+    )
 
     july = datetime(2026, 7, 2, 19, 0, tzinfo=dt_timezone.utc)
-    _attend(member, _schedule(instructor=favorite, room=room, start=july, duration=45))
+    _attend(
+        member,
+        _schedule(instructor=favorite, room=room, start=july, duration=45, title="Power Ride"),
+        spot=7,
+    )
 
     this_month_reserved = datetime(2026, 8, 18, 19, 0, tzinfo=dt_timezone.utc)
     _attend(
@@ -131,3 +155,13 @@ def test_member_stats_aggregates_attendance_plan_and_favorite():
     assert payload["classes_completed"] == sum(payload["monthly_classes"])
     assert payload["total_ride_minutes"] > 0
     assert payload["monthly_labels"][-1] == "2026-08"
+    assert payload["class_credits"] == 3
+    assert payload["guest_pass_credits"] == 1
+    assert payload["top_instructors"][0]["first_name"] == "Tomás"
+    assert payload["top_instructors"][0]["classes"] >= payload["top_instructors"][1]["classes"]
+    assert payload["favorite_classes"][0]["name"] == "Power Ride"
+    assert payload["favorite_spots"][0]["spot"] == 7
+    assert sum(payload["preferred_hours"]["values"]) == payload["classes_attended_total"]
+    assert sum(payload["weekday_classes"]) == payload["classes_attended_total"]
+    assert payload["rider_persona"] is not None
+    assert payload["attendance_rate"] == 100.0
