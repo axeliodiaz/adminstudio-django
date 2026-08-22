@@ -3,7 +3,7 @@
 Idempotent: demo rows are tagged with the `demo.dash.` username prefix.
 Pass --reset to wipe previous demo rows and recreate them.
 
-Schedules cover six calendar months of history through 31 October so the
+Schedules cover year-to-date history (1 January) through 31 October so the
 admin dashboard and member "Mis estadísticas" page have past and upcoming
 classes. Running the command again fills any missing days without duplicating
 rows, backfills bike spots, and attaches a ride history to real members.
@@ -76,13 +76,8 @@ def demo_horizon_end(today: date) -> date:
 
 
 def demo_history_start(today: date) -> date:
-    """First day of the month five months before today (six calendar months)."""
-    year = today.year
-    month = today.month - 5
-    while month <= 0:
-        month += 12
-        year -= 1
-    return date(year, month, 1)
+    """1 January of the current year (year-to-date history)."""
+    return date(today.year, 1, 1)
 
 
 def _iso_week_start(day: date) -> date:
@@ -108,7 +103,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--history-days",
             type=int,
-            help="How many days of history to include (default: six calendar months).",
+            help="How many days of history to include (default: 1 January of this year).",
         )
         parser.add_argument(
             "--as-of",

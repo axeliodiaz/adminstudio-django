@@ -15,7 +15,6 @@ from apps.members.constants import (
 from apps.members.models import Member, Reservation
 from apps.wallets.models import PlanPurchase, Wallet
 
-MONTHS_WINDOW = 6
 STREAK_CHART_WEEKS = 4
 HOUR_RANGE = range(6, 22)
 TOP_COACHES = 5
@@ -31,7 +30,7 @@ CONSUMED_STATUSES = (
 def get_member_stats(user, *, now=None) -> dict:
     now = now or timezone.now()
     today = timezone.localtime(now).date()
-    month_starts = _last_n_month_starts(today, MONTHS_WINDOW)
+    month_starts = _ytd_month_starts(today)
     week_starts = _last_n_week_starts(today, STREAK_CHART_WEEKS)
 
     member = Member.objects.filter(user=user, is_removed=False).first()
@@ -88,8 +87,8 @@ def get_member_stats(user, *, now=None) -> dict:
         if reservation.status == RESERVATION_STATUS_ATTENDED:
             attended_local.append((reservation, local_dt, schedule))
 
-    monthly_classes = [0] * MONTHS_WINDOW
-    monthly_ride_minutes = [0] * MONTHS_WINDOW
+    monthly_classes = [0] * len(month_starts)
+    monthly_ride_minutes = [0] * len(month_starts)
     month_index = {start: i for i, start in enumerate(month_starts)}
     instructor_counts = Counter()
     instructor_last = {}
@@ -212,9 +211,9 @@ def _empty_payload(
         "last_visit": None,
         "total_ride_minutes": 0,
         "monthly_labels": [start.isoformat()[:7] for start in month_starts],
-        "monthly_classes": [0] * MONTHS_WINDOW,
+        "monthly_classes": [0] * len(month_starts),
         "weekly_streak": [False] * len(week_starts),
-        "monthly_ride_minutes": [0] * MONTHS_WINDOW,
+        "monthly_ride_minutes": [0] * len(month_starts),
         "favorite_instructor": None,
         "top_instructors": [],
         "favorite_classes": [],
@@ -250,15 +249,8 @@ def _active_plan(user, now):
     return None
 
 
-def _shift_month(start: date, months: int) -> date:
-    year = start.year + (start.month - 1 + months) // 12
-    month = (start.month - 1 + months) % 12 + 1
-    return date(year, month, 1)
-
-
-def _last_n_month_starts(today: date, n: int) -> list[date]:
-    first = today.replace(day=1)
-    return [_shift_month(first, offset) for offset in range(-(n - 1), 1)]
+def _ytd_month_starts(today: date) -> list[date]:
+    return [date(today.year, month, 1) for month in range(1, today.month + 1)]
 
 
 def _iso_week_start(day: date) -> date:

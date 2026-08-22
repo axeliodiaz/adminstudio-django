@@ -6,6 +6,7 @@ from decimal import Decimal
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 from drf_expiring_token.models import ExpiringToken
 from model_bakery import baker
 
@@ -54,7 +55,7 @@ class TestMemberStatsView:
         assert response.status_code == 200
         assert response.data["classes_completed"] == 0
         assert response.data["favorite_instructor"] is None
-        assert len(response.data["monthly_classes"]) == 6
+        assert len(response.data["monthly_classes"]) == timezone.localdate().month
         assert len(response.data["weekly_streak"]) == 4
 
 
@@ -154,6 +155,7 @@ def test_member_stats_aggregates_attendance_plan_and_favorite():
     assert payload["favorite_instructor"]["instagram_username"] == "tomasride"
     assert payload["classes_completed"] == sum(payload["monthly_classes"])
     assert payload["total_ride_minutes"] > 0
+    assert payload["monthly_labels"][0] == "2026-01"
     assert payload["monthly_labels"][-1] == "2026-08"
     assert payload["class_credits"] == 3
     assert payload["guest_pass_credits"] == 1
