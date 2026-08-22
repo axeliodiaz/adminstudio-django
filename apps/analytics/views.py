@@ -8,7 +8,7 @@ from apps.analytics.services import get_admin_dashboard
 
 
 class MemberStatsView(APIView):
-    """Activity stats for the authenticated member profile."""
+    """Activity dashboard stats for the authenticated member."""
 
     permission_classes = [IsAuthenticated]
 
