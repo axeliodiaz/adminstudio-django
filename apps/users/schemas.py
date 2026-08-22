@@ -20,6 +20,7 @@ class CurrentUserSchema(UserSchema):
     id: UUID | None = None
     is_staff: bool = False
     is_superuser: bool = False
+    is_coach: bool = False
 
 
 class AdminUserSchema(BaseModel):

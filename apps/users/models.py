@@ -66,6 +66,12 @@ class User(AbstractUser, SoftDeletableModel, UUIDModel, TimeStampedModel):
         help_text="Automatically reserve a spot when one opens from the waitlist.",
     )
 
+    @property
+    def is_coach(self) -> bool:
+        from apps.instructors.models import Instructor
+
+        return Instructor.objects.filter(user_id=self.pk, is_removed=False).exists()
+
 
 class PasswordResetCode(SoftDeletableModel, UUIDModel, TimeStampedModel):
     code = models.CharField(max_length=constants.PASSWORD_RESET_CODE_SIZE, unique=True)

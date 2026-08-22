@@ -24,6 +24,9 @@ class Instructor(SoftDeletableModel, UUIDModel, TimeStampedModel):
     is_verified = models.BooleanField(default=False)
     instructor_since = models.DateField(blank=True, null=True)
     location = models.CharField(max_length=120, blank=True, default="")
+    specialties = models.JSONField(default=list, blank=True)
+    languages = models.JSONField(default=list, blank=True)
+    certifications = models.JSONField(default=list, blank=True)
 
     # Last playlist used per platform
     last_spotify_playlist = models.URLField(blank=True, default="")

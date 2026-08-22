@@ -35,6 +35,9 @@ class InstructorAdmin(admin.ModelAdmin):
                     "location",
                     "instructor_since",
                     "is_verified",
+                    "specialties",
+                    "languages",
+                    "certifications",
                 )
             },
         ),
