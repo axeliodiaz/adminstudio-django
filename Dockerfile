@@ -29,4 +29,4 @@ RUN DJANGO_ENV=prod python manage.py collectstatic --noinput
 
 EXPOSE 80
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn adminstudio_django.wsgi:application --bind 0.0.0.0:80 --workers 3 --threads 2 --timeout 120"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py ensure_superuser && gunicorn adminstudio_django.wsgi:application --bind 0.0.0.0:80 --workers 3 --threads 2 --timeout 120"]
