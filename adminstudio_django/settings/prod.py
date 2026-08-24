@@ -5,6 +5,13 @@ from adminstudio_django.settings.base import *  # noqa
 # Production overrides
 DEBUG = False
 
+# Serve collected static files (admin CSS/JS) from Gunicorn
+MIDDLEWARE = [
+    MIDDLEWARE[0],
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    *MIDDLEWARE[1:],
+]
+
 # Ensure Browsable API is disabled (JSON only from base)
 REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
     "rest_framework.renderers.JSONRenderer",
@@ -18,6 +25,15 @@ STATIC_URL = "/static/"
 
 # Define a directory inside the container to collect static files
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 DATABASES = {
     "default": {

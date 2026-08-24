@@ -24,8 +24,8 @@ COPY . .
 # Create the path for the DB
 RUN mkdir -p /data && chown -R 1000:1000 /data
 
-# Collect static files (harmless if not configured)
-RUN DJANGO_ENV=prod python manage.py collectstatic --noinput || true
+# Collect static files for WhiteNoise / Gunicorn
+RUN DJANGO_ENV=prod python manage.py collectstatic --noinput
 
 EXPOSE 80
 
