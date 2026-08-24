@@ -1,5 +1,7 @@
 import os
 
+import dj_database_url
+
 from adminstudio_django.settings.base import *  # noqa
 
 # Production overrides
@@ -35,10 +37,20 @@ STORAGES = {
     },
 }
 
+# Postgres (Supabase) via DATABASE_URL. SQLite on /data does not survive
+# Render deploys without a disk and is not suitable for multi-instance prod.
+_database_url = os.environ.get("DATABASE_URL", "").strip()
+if not _database_url:
+    raise RuntimeError(
+        "DATABASE_URL is required in production. "
+        "Use the Supabase Postgres URI with sslmode=require."
+    )
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.path.join("/data", "db.sqlite3"),
-        "OPTIONS": {"timeout": 20},
-    }
+    "default": dj_database_url.parse(
+        _database_url,
+        conn_max_age=60,
+        conn_health_checks=True,
+        ssl_require=True,
+    )
 }

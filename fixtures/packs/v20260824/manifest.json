@@ -1,0 +1,121 @@
+{
+  "version": "v20260824",
+  "created": "2026-08-24",
+  "files": [
+    {
+      "model": "studios.address",
+      "file": "studios.address.json.gz",
+      "count": 2
+    },
+    {
+      "model": "studios.studio",
+      "file": "studios.studio.json.gz",
+      "count": 2
+    },
+    {
+      "model": "studios.room",
+      "file": "studios.room.json.gz",
+      "count": 3
+    },
+    {
+      "model": "users.user",
+      "file": "users.user.json.gz",
+      "count": 33
+    },
+    {
+      "model": "instructors.instructor",
+      "file": "instructors.instructor.json.gz",
+      "count": 8
+    },
+    {
+      "model": "members.member",
+      "file": "members.member.json.gz",
+      "count": 33
+    },
+    {
+      "model": "plans.benefit",
+      "file": "plans.benefit.json.gz",
+      "count": 5
+    },
+    {
+      "model": "plans.plan",
+      "file": "plans.plan.json.gz",
+      "count": 10
+    },
+    {
+      "model": "plans.promocode",
+      "file": "plans.promocode.json.gz",
+      "count": 5
+    },
+    {
+      "model": "wallets.wallet",
+      "file": "wallets.wallet.json.gz",
+      "count": 33
+    },
+    {
+      "model": "wallets.planpurchase",
+      "file": "wallets.planpurchase.json.gz",
+      "count": 138
+    },
+    {
+      "model": "schedules.schedule",
+      "file": "schedules.schedule.json.gz",
+      "count": 14791
+    },
+    {
+      "model": "members.reservation",
+      "file": "members.reservation.json.gz",
+      "count": 235350
+    },
+    {
+      "model": "members.waitlistentry",
+      "file": "members.waitlistentry.json.gz",
+      "count": 144
+    },
+    {
+      "model": "coach.playlisttemplate",
+      "file": "coach.playlisttemplate.json.gz",
+      "count": 19
+    },
+    {
+      "model": "coach.classplaylist",
+      "file": "coach.classplaylist.json.gz",
+      "count": 12650
+    },
+    {
+      "model": "coach.playlistsegment",
+      "file": "coach.playlistsegment.json.gz",
+      "count": 63250
+    },
+    {
+      "model": "coach.playlisttrack",
+      "file": "coach.playlisttrack.json.gz",
+      "count": 92172
+    },
+    {
+      "model": "coach.classrating",
+      "file": "coach.classrating.json.gz",
+      "count": 9633
+    },
+    {
+      "model": "notifications.notification",
+      "file": "notifications.notification.json.gz",
+      "count": 20
+    },
+    {
+      "model": "faqs.section",
+      "file": "faqs.section.json.gz",
+      "count": 8
+    },
+    {
+      "model": "faqs.faqitem",
+      "file": "faqs.faqitem.json.gz",
+      "count": 27
+    },
+    {
+      "model": "legal.legaldocument",
+      "file": "legal.legaldocument.json.gz",
+      "count": 5
+    }
+  ]
+}

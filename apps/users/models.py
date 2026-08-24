@@ -73,6 +73,19 @@ class User(AbstractUser, SoftDeletableModel, UUIDModel, TimeStampedModel):
         return Instructor.objects.filter(user_id=self.pk, is_removed=False).exists()
 
 
+class LoadedFixturePack(TimeStampedModel):
+    """Tracks which versioned fixture pack was applied (idempotent loaddata)."""
+
+    version = models.CharField(max_length=32, unique=True)
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-created"]
+
+    def __str__(self):
+        return self.version
+
+
 class PasswordResetCode(SoftDeletableModel, UUIDModel, TimeStampedModel):
     code = models.CharField(max_length=constants.PASSWORD_RESET_CODE_SIZE, unique=True)
     user = models.ForeignKey(

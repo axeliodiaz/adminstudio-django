@@ -3,10 +3,11 @@
 Idempotent: demo rows are tagged with the `demo.dash.` username prefix.
 Pass --reset to wipe previous demo rows and recreate them.
 
-Schedules cover year-to-date history (1 January) through 31 October so the
+Schedules cover last January through February of next year so the
 admin dashboard and member "Mis estadísticas" page have past and upcoming
 classes. Running the command again fills any missing days without duplicating
-rows, backfills bike spots, and attaches a ride history to real members.
+rows, backfills bike spots, and attaches a distinct ride history to every
+active user (socios, staff and superusers).
 """
 
 from collections import defaultdict
@@ -14,6 +15,7 @@ from datetime import date, datetime, timedelta
 from random import Random
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.db.models import Count
 from django.utils import timezone
@@ -32,17 +34,17 @@ from apps.plans.models import Plan
 from apps.schedules import constants as schedule_constants
 from apps.schedules.models import Schedule
 from apps.studios.models import Address, Room, Studio
+from apps.users.demo_catalog import (
+    DEMO_CLOSING,
+    DEMO_OPENING,
+    INSTRUCTORS as CELEBRITY_COACHES,
+    MEMBERS as CELEBRITY_MEMBERS,
+    demo_history_start as catalog_history_start,
+    demo_horizon_end as catalog_horizon_end,
+)
 from apps.wallets.models import PlanPurchase, Wallet
 
 User = get_user_model()
-
-INSTRUCTORS = [
-    ("Camila", "Rojas"),
-    ("Diego", "Muñoz"),
-    ("Valentina", "Soto"),
-    ("Nicolás", "Paz"),
-    ("Paz", "Leiva"),
-]
 
 PLANS = [
     ("Ilimitado", plan_constants.PLAN_TYPE_MEMBERSHIP, 89000, 30, None),
@@ -52,7 +54,7 @@ PLANS = [
     ("Drop-in", plan_constants.PLAN_TYPE_PACKAGE, 12000, 1, 1),
 ]
 
-CLASS_HOURS = [6, 7, 9, 12, 18, 19, 20]
+CLASS_HOURS = [7, 12, 19]
 FORMAT_WEIGHTS = {
     "RIDE": 0.32,
     "POWER": 0.22,
@@ -61,23 +63,31 @@ FORMAT_WEIGHTS = {
     "REFORMER": 0.16,
 }
 DEMO_CLASS_DESCRIPTION = "Clase demo dashboard"
-DEMO_RIDER_USERNAME = f"{DEMO_USERNAME_PREFIX}rider"
+DEMO_RIDER_USERNAME = "chayanne"
 DEMO_RESERVATION_NOTE = "demo.member-stats"
 STORY_SPOTS = (7, 7, 7, 8, 4)
 CLASSES_PER_WEEK = 3
+DEMO_ROOM_CAPACITY = 48
+STUDIO_BIKE_COUNT = 16
+MIN_ATTENDED_FOR_STATS = 8
+PERSONA_HOUR_SETS = (
+    (7, 12),
+    (12, 19),
+    (7, 19),
+    (7,),
+    (19,),
+    (12,),
+)
 
 
 def demo_horizon_end(today: date) -> date:
-    """Cover remaining season through 31 October."""
-    end_day = date(today.year, 10, 31)
-    if today > end_day:
-        end_day = date(today.year + 1, 10, 31)
-    return end_day
+    """Cover remaining season through February of next year."""
+    return catalog_horizon_end(today)
 
 
 def demo_history_start(today: date) -> date:
-    """1 January of the current year (year-to-date history)."""
-    return date(today.year, 1, 1)
+    """1 January of last year."""
+    return catalog_history_start(today)
 
 
 def _iso_week_start(day: date) -> date:
@@ -86,8 +96,8 @@ def _iso_week_start(day: date) -> date:
 
 class Command(BaseCommand):
     help = (
-        "Create demo schedules, reservations and purchases through 31 October "
-        "for the admin and member dashboards."
+        "Create demo schedules, reservations and purchases through February of next year "
+        "for the admin dashboard and per-user statistics."
     )
 
     def add_arguments(self, parser):
@@ -98,12 +108,12 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--until",
-            help="Last calendar day to seed (YYYY-MM-DD). Defaults to 31 October.",
+            help="Last calendar day to seed (YYYY-MM-DD). Defaults to end of February next year.",
         )
         parser.add_argument(
             "--history-days",
             type=int,
-            help="How many days of history to include (default: 1 January of this year).",
+            help="How many days of history to include (default: 1 January of last year).",
         )
         parser.add_argument(
             "--as-of",
@@ -115,6 +125,7 @@ class Command(BaseCommand):
         if options["reset"]:
             self._wipe()
             self.stdout.write(self.style.WARNING("Removed previous dashboard demo data."))
+        call_command("seed_demo_catalog", verbosity=options["verbosity"])
 
         today = date.fromisoformat(options["as_of"]) if options["as_of"] else timezone.localdate()
         end_day = (
@@ -141,7 +152,8 @@ class Command(BaseCommand):
             self._recent_purchases(rng, members, plans, today)
 
         rider = self._showcase_rider(plans, today)
-        attached = self._attach_rider_stories(room, [rider, *self._real_members()], today)
+        stats_members = self._ensure_stats_members(plans, today, extra=(rider, *members))
+        attached = self._attach_rider_stories(room, stats_members, today)
         schedules = Schedule.objects.filter(description=DEMO_CLASS_DESCRIPTION).count()
         last = (
             Schedule.objects.filter(description=DEMO_CLASS_DESCRIPTION)
@@ -171,37 +183,45 @@ class Command(BaseCommand):
         demo_users.delete()
 
     def _studio(self):
-        address, _ = Address.objects.get_or_create(address="Camino El Alba 12345, demo")
+        address, _ = Address.objects.get_or_create(
+            address="Camino El Alba 12345, demo",
+            defaults={"latitude": "-33.402890", "longitude": "-70.580210"},
+        )
+        if address.latitude is None:
+            address.latitude = "-33.402890"
+            address.longitude = "-70.580210"
+            address.save(update_fields=["latitude", "longitude"])
         studio, _ = Studio.objects.get_or_create(
             name="PulseFit Patio Andino (demo)",
-            defaults={"address": address, "is_active": True},
+            defaults={
+                "address": address,
+                "is_active": True,
+                "opening_time": DEMO_OPENING,
+                "closing_time": DEMO_CLOSING,
+            },
         )
+        studio.address = address
+        studio.is_active = True
+        studio.opening_time = DEMO_OPENING
+        studio.closing_time = DEMO_CLOSING
+        studio.save()
         room, _ = Room.objects.get_or_create(
             studio=studio,
             name="Sala Demo PulseFit",
-            defaults={"capacity": 16, "is_active": True},
+            defaults={"capacity": DEMO_ROOM_CAPACITY, "is_active": True},
         )
+        room.is_active = True
+        if room.capacity < DEMO_ROOM_CAPACITY:
+            room.capacity = DEMO_ROOM_CAPACITY
+        room.save()
         return studio, room
 
     def _instructors(self):
-        instructors = []
-        for first, last in INSTRUCTORS:
-            slug = first.lower()
-            user, created = User.objects.get_or_create(
-                username=f"{DEMO_USERNAME_PREFIX}instructor.{slug}",
-                defaults={
-                    "email": f"instructor.{slug}@{DEMO_EMAIL_DOMAIN}",
-                    "first_name": first,
-                    "last_name": last,
-                    "is_staff": True,
-                },
-            )
-            if created:
-                user.set_password("demo1234")
-                user.save()
-            instructor, _ = Instructor.objects.get_or_create(user=user)
-            instructors.append(instructor)
-        return instructors
+        names = [persona.username for persona in CELEBRITY_COACHES]
+        instructors = list(
+            Instructor.objects.filter(user__username__in=names).select_related("user")
+        )
+        return instructors or list(Instructor.objects.filter(is_removed=False)[:8])
 
     def _plans(self):
         plans = []
@@ -221,52 +241,11 @@ class Command(BaseCommand):
         return plans
 
     def _members(self, rng, plans, today):
-        existing = list(
-            Member.objects.filter(user__username__startswith=f"{DEMO_USERNAME_PREFIX}member.")
-            .select_related("user")
-            .order_by("user__username")
-        )
-        if existing:
-            return existing
-
-        members = []
-        mix = [plans[0]] * 18 + [plans[1]] * 12 + [plans[2]] * 8 + [plans[3]] * 4 + [plans[4]] * 6
-        rng.shuffle(mix)
-        first_names = [
-            "Ana",
-            "Benja",
-            "Carla",
-            "Dani",
-            "Elena",
-            "Felipe",
-            "Gabi",
-            "Hugo",
-            "Inés",
-            "Javiera",
-            "Karla",
-            "Lucas",
-            "Maca",
-            "Nico",
-            "Olga",
-            "Pablo",
-        ]
-        last_names = ["Silva", "Vargas", "Cortés", "Navarro", "Bravo", "Fuentes"]
-
-        for index, plan in enumerate(mix, start=1):
-            user, created = User.objects.get_or_create(
-                username=f"{DEMO_USERNAME_PREFIX}member.{index:03d}",
-                defaults={
-                    "email": f"member.{index:03d}@{DEMO_EMAIL_DOMAIN}",
-                    "first_name": first_names[(index - 1) % len(first_names)],
-                    "last_name": last_names[(index - 1) % len(last_names)],
-                },
-            )
-            if created:
-                user.set_password("demo1234")
-                user.save()
-            member, _ = Member.objects.get_or_create(user=user)
-            self._activate_wallet(user, plan, today, rng, index)
-            members.append(member)
+        names = [persona.username for persona in CELEBRITY_MEMBERS]
+        members = list(Member.objects.filter(user__username__in=names).select_related("user"))
+        for index, member in enumerate(members, start=1):
+            plan = plans[index % len(plans)]
+            self._activate_wallet(member.user, plan, today, rng, index)
         return members
 
     def _activate_wallet(self, user, plan, today, rng, index):
@@ -277,6 +256,7 @@ class Command(BaseCommand):
                 user=user,
                 plan=plan,
                 price_paid=plan.price,
+                payment_method=plan_constants.PAYMENT_METHOD_WEBPAY,
                 activated_since=activated,
             )
             PlanPurchase.objects.filter(pk=purchase.pk).update(
@@ -298,17 +278,15 @@ class Command(BaseCommand):
 
     def _showcase_rider(self, plans, today):
         smart = next((plan for plan in plans if "Smart 8" in plan.name), plans[2])
-        user, created = User.objects.get_or_create(
-            username=DEMO_RIDER_USERNAME,
-            defaults={
-                "email": f"rider@{DEMO_EMAIL_DOMAIN}",
-                "first_name": "Alex",
-                "last_name": "Rider",
-            },
-        )
-        if created:
-            user.set_password("demo1234")
-            user.save()
+        user = User.objects.filter(username=DEMO_RIDER_USERNAME).first()
+        if user is None:
+            user = User.objects.create_user(
+                username=DEMO_RIDER_USERNAME,
+                email=f"chayanne@{DEMO_EMAIL_DOMAIN}",
+                password="demo1234",
+                first_name="Chayanne",
+                last_name="Figueroa",
+            )
         member, _ = Member.objects.get_or_create(user=user)
         wallet, _ = Wallet.objects.get_or_create(user=user)
         if not PlanPurchase.objects.filter(user=user, plan=smart).exists():
@@ -316,21 +294,35 @@ class Command(BaseCommand):
                 user=user,
                 plan=smart,
                 price_paid=smart.price,
+                payment_method=plan_constants.PAYMENT_METHOD_MERCADOPAGO,
                 activated_since=today - timedelta(days=20),
             )
-        wallet.active_membership_end_date = date(today.year, 10, 31)
+        wallet.active_membership_end_date = catalog_horizon_end(today)
         wallet.is_unlimited_membership_active = False
         wallet.class_credits = 5
         wallet.guest_pass_credits = 2
         wallet.save()
         return member
 
-    def _real_members(self):
-        return list(
-            Member.objects.filter(is_removed=False)
-            .exclude(user__username__startswith=DEMO_USERNAME_PREFIX)
-            .select_related("user")
-        )
+    def _ensure_stats_members(self, plans, today, extra=()):
+        """Every active user gets a Member profile plus a plan, so stats can render."""
+        default_plan = next((plan for plan in plans if "Smart 8" in plan.name), plans[0])
+        by_id = {}
+        for member in extra:
+            if member is not None:
+                by_id[str(member.id)] = member
+
+        for user in User.objects.filter(is_removed=False, is_active=True).order_by("username"):
+            member, _ = Member.objects.get_or_create(user=user)
+            member.user = user
+            by_id[str(member.id)] = member
+            if PlanPurchase.objects.filter(user=user).exists():
+                continue
+            rng = Random(f"wallet:{user.username}")
+            plan = default_plan if user.is_staff else plans[rng.randrange(len(plans))]
+            self._activate_wallet(user, plan, today, rng, rng.randint(1, 40))
+
+        return list(by_id.values())
 
     def _pick_format(self, rng):
         roll = rng.random()
@@ -352,7 +344,7 @@ class Command(BaseCommand):
         total_days = (end_day - start_day).days + 1
         for offset in range(total_days):
             day = start_day + timedelta(days=offset)
-            hours = CLASS_HOURS if day.weekday() < 5 else [9, 10, 18, 19]
+            hours = CLASS_HOURS if day.weekday() < 5 else [10, 18]
             for hour in hours:
                 start_time = timezone.make_aware(datetime(day.year, day.month, day.day, hour, 0))
                 if start_time in existing:
@@ -396,11 +388,12 @@ class Command(BaseCommand):
             elif hour in (6, 9, 20):
                 base = 0.84
             occupied = max(
-                8, min(room.capacity, int(room.capacity * (base + rng.uniform(-0.08, 0.08))))
+                8,
+                min(STUDIO_BIKE_COUNT, int(STUDIO_BIKE_COUNT * (base + rng.uniform(-0.08, 0.08)))),
             )
-            occupied = min(occupied, len(members), room.capacity)
+            occupied = min(occupied, len(members), room.capacity, STUDIO_BIKE_COUNT)
             chosen = rng.sample(members, k=occupied)
-            spots = rng.sample(range(1, room.capacity + 1), k=occupied)
+            spots = rng.sample(range(1, STUDIO_BIKE_COUNT + 1), k=occupied)
             local_day = timezone.localtime(schedule.start_time).date()
             for member, spot in zip(chosen, spots):
                 status = member_constants.RESERVATION_STATUS_ATTENDED
@@ -462,21 +455,28 @@ class Command(BaseCommand):
         }
         spots_taken = defaultdict(set)
         already = defaultdict(set)
-        for schedule_id, member_id, spot in Reservation.objects.filter(
+        attended_by_member = defaultdict(int)
+        for schedule_id, member_id, spot, status in Reservation.objects.filter(
             schedule__in=schedules
-        ).values_list("schedule_id", "member_id", "spot"):
+        ).values_list("schedule_id", "member_id", "spot", "status"):
             already[str(schedule_id)].add(str(member_id))
             if spot:
                 spots_taken[str(schedule_id)].add(spot)
+            if status == member_constants.RESERVATION_STATUS_ATTENDED:
+                attended_by_member[str(member_id)] += 1
 
-        favorite_id = schedules[0].instructor_id
+        instructors = []
+        seen_instructors = set()
         for schedule in schedules:
-            if schedule.instructor and schedule.instructor.user.first_name == "Camila":
-                favorite_id = schedule.instructor_id
-                break
+            instructor = schedule.instructor
+            if instructor is None or str(instructor.id) in seen_instructors:
+                continue
+            seen_instructors.add(str(instructor.id))
+            instructors.append(instructor)
 
         to_create = []
         for member in members:
+            persona = self._member_persona(member, instructors)
             to_create.extend(
                 self._story_reservations(
                     member,
@@ -486,12 +486,26 @@ class Command(BaseCommand):
                     occupancy,
                     spots_taken,
                     already,
-                    favorite_id,
+                    persona,
+                    attended=attended_by_member[str(member.id)],
                 )
             )
         if to_create:
             Reservation.objects.bulk_create(to_create, batch_size=500)
         return len(to_create)
+
+    def _member_persona(self, member, instructors):
+        rng = Random(f"stats:{member.user.username}")
+        favorite = instructors[rng.randrange(len(instructors))] if instructors else None
+        return {
+            "hours": PERSONA_HOUR_SETS[rng.randrange(len(PERSONA_HOUR_SETS))],
+            "favorite_id": favorite.id if favorite else None,
+            "classes_per_week": rng.choice((2, 3, 4)),
+            "spots": tuple(rng.sample(range(1, 17), k=5)),
+            "prefer_power": rng.random() < 0.45,
+            "prefer_ride": rng.random() < 0.55,
+            "miss_every": rng.choice((0, 9, 11, 13)),
+        }
 
     def _story_reservations(
         self,
@@ -502,14 +516,18 @@ class Command(BaseCommand):
         occupancy,
         spots_taken,
         already,
-        favorite_id,
+        persona,
+        attended=0,
     ):
         scored = sorted(
-            schedules, key=lambda item: (-self._story_score(item, favorite_id), item.start_time)
+            schedules, key=lambda item: (-self._story_score(item, persona), item.start_time)
         )
         used_days = set()
         per_week = defaultdict(int)
         member_key = str(member.id)
+        weekly_cap = persona.get("classes_per_week") or CLASSES_PER_WEEK
+        miss_every = persona.get("miss_every") or 0
+        preferred_spots = persona.get("spots") or STORY_SPOTS
         for schedule in schedules:
             if member_key not in already[str(schedule.id)]:
                 continue
@@ -522,22 +540,32 @@ class Command(BaseCommand):
             local_day = local_dt.date()
             week = _iso_week_start(local_day)
             sid = str(schedule.id)
+            needs_floor = (
+                attended
+                + sum(
+                    1
+                    for _schedule, status, _spot in picked
+                    if status == member_constants.RESERVATION_STATUS_ATTENDED
+                )
+                < MIN_ATTENDED_FOR_STATS
+            )
             if str(member.id) in already[sid]:
                 continue
             if occupancy.get(sid, 0) >= capacity:
                 continue
             if local_day in used_days:
                 continue
-            if per_week[week] >= CLASSES_PER_WEEK:
+            if not needs_floor and per_week[week] >= weekly_cap:
                 continue
-            free_spot = self._next_spot(spots_taken[sid], capacity)
+            free_spot = self._next_spot(spots_taken[sid], capacity, preferred_spots)
             if free_spot is None:
                 continue
             status = member_constants.RESERVATION_STATUS_RESERVED
             if local_day < today:
+                miss = miss_every and ((len(picked) + 1) % miss_every == 0)
                 status = (
                     member_constants.RESERVATION_STATUS_MISSED
-                    if (len(picked) % 11 == 10)
+                    if miss
                     else member_constants.RESERVATION_STATUS_ATTENDED
                 )
             picked.append((schedule, status, free_spot))
@@ -558,24 +586,27 @@ class Command(BaseCommand):
             for schedule, status, spot in picked
         ]
 
-    def _story_score(self, schedule, favorite_id) -> int:
+    def _story_score(self, schedule, persona) -> int:
         hour = timezone.localtime(schedule.start_time).hour
         title = schedule.title or ""
         score = 0
-        if hour in (18, 19):
+        preferred_hours = persona.get("hours") or (18, 19)
+        if hour in preferred_hours:
+            score += 6
+        elif hour in (7, 12, 19):
+            score += 1
+        if persona.get("favorite_id") and schedule.instructor_id == persona["favorite_id"]:
             score += 5
-        elif hour in (7, 9):
-            score += 2
-        if schedule.instructor_id == favorite_id:
-            score += 4
-        if "POWER" in title:
+        if persona.get("prefer_power") and "POWER" in title:
             score += 3
-        elif "RIDE" in title:
-            score += 2
+        elif persona.get("prefer_ride") and "RIDE" in title:
+            score += 3
+        elif "POWER" in title or "RIDE" in title:
+            score += 1
         return score
 
-    def _next_spot(self, taken, capacity):
-        for spot in STORY_SPOTS:
+    def _next_spot(self, taken, capacity, preferred=STORY_SPOTS):
+        for spot in preferred:
             if spot not in taken and spot <= capacity:
                 return spot
         for spot in range(1, capacity + 1):

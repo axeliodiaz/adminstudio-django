@@ -24,9 +24,12 @@ COPY . .
 # Create the path for the DB
 RUN mkdir -p /data && chown -R 1000:1000 /data
 
-# Collect static files for WhiteNoise / Gunicorn
-RUN DJANGO_ENV=prod python manage.py collectstatic --noinput
+# Collect static files for WhiteNoise / Gunicorn.
+# prod settings require DATABASE_URL at import time; collectstatic does not
+# open a connection, so a dummy URI is enough at build.
+RUN DATABASE_URL=postgres://build:build@127.0.0.1:5432/postgres \
+    DJANGO_ENV=prod python manage.py collectstatic --noinput
 
 EXPOSE 80
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py ensure_superuser && gunicorn adminstudio_django.wsgi:application --bind 0.0.0.0:80 --workers 3 --threads 2 --timeout 120"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && python manage.py ensure_superuser && python manage.py load_versioned_fixtures && python manage.py seed_demo_catalog && python manage.py seed_coach_demo && python manage.py seed_dashboard_demo && gunicorn adminstudio_django.wsgi:application --bind 0.0.0.0:80 --workers 3 --threads 2 --timeout 120"]
