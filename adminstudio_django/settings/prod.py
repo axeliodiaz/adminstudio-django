@@ -50,6 +50,8 @@ if _database_url:
             ssl_require="sslmode=disable" not in _database_url.lower(),
         )
     }
+    # Supabase (and other) poolers reject Django server-side cursors.
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 else:
     DATABASES = {
         "default": {
