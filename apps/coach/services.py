@@ -4,6 +4,7 @@ from datetime import date, datetime, time, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
 
@@ -685,7 +686,7 @@ def build_ics(instructor: Instructor, raw_from: str | None, raw_to: str | None) 
         end_utc = (start + timedelta(minutes=item["duration_minutes"] or 0)).astimezone(
             ZoneInfo("UTC")
         )
-        uid = f"{item['id']}@pulsefit.cl"
+        uid = f"{item['id']}@{settings.EMAIL_DOMAIN}"
         summary = item["title"].replace(",", r"\,")
         location = (item.get("room_name") or "").replace(",", r"\,")
         lines.extend(

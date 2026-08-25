@@ -166,9 +166,19 @@ EMAIL_PORT = int(os.getenv("EMAIL_PORT", 2525))
 # For SendGrid: EMAIL_USE_TLS can be False or True depending on port
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() in {"1", "true", "yes", "on"}
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
+# Product domain for demo identities, ICS UIDs, and similar branding.
+# Override per env (local/prod) or with EMAIL_DOMAIN. Distinct from DEFAULT_FROM_EMAIL.
+EMAIL_DOMAIN = os.getenv("EMAIL_DOMAIN", "pulsefit.com")
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 MAILTRAP_API_KEY = os.getenv("MAILTRAP_API_KEY")
+MAILTRAP_INBOX_ID = os.getenv("MAILTRAP_INBOX_ID")
+MAILTRAP_USE_SANDBOX = os.environ.get("MAILTRAP_USE_SANDBOX", "False").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 VERIFICATION_CODE_EXPIRATION_MINUTES = 5
 

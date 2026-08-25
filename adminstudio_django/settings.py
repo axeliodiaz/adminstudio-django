@@ -4,7 +4,9 @@ import os
 from importlib import import_module
 
 _env = os.environ.get("DJANGO_ENV", "local").lower()
-if _env not in {"local", "prod"}:
+if _env == "dev":
+    _env = "develop"
+if _env not in {"local", "prod", "develop"}:
     _env = "local"
 # Explicit absolute import to the package module, then copy UPPERCASE attrs
 _module = import_module(f"adminstudio_django.settings.{_env}")

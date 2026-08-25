@@ -3,7 +3,6 @@ from typing import Any
 
 import requests
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.shortcuts import get_object_or_404
 
 from apps.notifications import constants
@@ -32,36 +31,58 @@ class Email:
         self.recipient_list = recipient_list
         self.html_content = html_content
 
-    def get_mailing_client(self) -> str:
-        """
-        Determines and returns the mailing client based on available API keys and SMTP configuration.
-
-        Priority order:
-        1. Mailtrap (if configured via SMTP or API key) - preferred for development/testing
-        2. SendGrid (if API key is present)
-        3. Resend (if API key is present)
-        4. Default (external service)
-
-        Returns:
-            str: The identifier for the selected mailing client.
-        """
-        # Check Mailtrap first (preferred for development/testing)
-        # Check if Mailtrap is configured via SMTP (as per Mailtrap documentation)
-        email_host = getattr(settings, "EMAIL_HOST", "")
+    def _mailtrap_is_configured(self) -> bool:
+        email_host = getattr(settings, "EMAIL_HOST", "") or ""
         email_user = getattr(settings, "EMAIL_HOST_USER", None)
         email_password = getattr(settings, "EMAIL_HOST_PASSWORD", None)
-        if email_host and "mailtrap" in email_host.lower() and email_user and email_password:
-            return constants.MAIL_CLIENT_MAILTRAP
-        # Also check for MAILTRAP_API_KEY (for API mode, though we'll use SMTP)
-        if getattr(settings, "MAILTRAP_API_KEY", None):
-            return constants.MAIL_CLIENT_MAILTRAP
+        smtp_ok = "mailtrap" in email_host.lower() and email_user and email_password
+        return bool(smtp_ok or getattr(settings, "MAILTRAP_API_KEY", None))
 
-        # Then check other providers
+    def get_mailing_client(self) -> str:
+        """Pick a provider. Local (DEBUG) prefers Mailtrap; prod prefers SendGrid then Resend."""
+        if getattr(settings, "DEBUG", False) and self._mailtrap_is_configured():
+            return constants.MAIL_CLIENT_MAILTRAP
         if getattr(settings, "SENDGRID_API_KEY", None):
             return constants.MAIL_CLIENT_SENDGRID
         if getattr(settings, "RESEND_API_KEY", None):
             return constants.MAIL_CLIENT_RESEND
+        if self._mailtrap_is_configured():
+            return constants.MAIL_CLIENT_MAILTRAP
         return constants.MAIL_CLIENT_DEFAULT
+
+    def _mailtrap_from(self) -> dict:
+        if not self.from_email:
+            raise ValueError("from_email is required")
+        raw = self.from_email.strip()
+        if "<" in raw and raw.endswith(">"):
+            name, rest = raw.split("<", 1)
+            return {"name": name.strip().strip('"'), "email": rest[:-1].strip()}
+        return {"email": raw}
+
+    def _mailtrap_api_url(self) -> str:
+        use_sandbox = getattr(settings, "MAILTRAP_USE_SANDBOX", False)
+        inbox_id = getattr(settings, "MAILTRAP_INBOX_ID", None)
+        if use_sandbox and inbox_id:
+            return f"{constants.MAILTRAP_SANDBOX_API_URL}/{inbox_id}"
+        return constants.MAILTRAP_API_URL
+
+    def _send_via_mailtrap(self) -> None:
+        api_key = settings.MAILTRAP_API_KEY
+        payload = {
+            "from": self._mailtrap_from(),
+            "to": [{"email": address} for address in self.recipient_list],
+            "subject": self.subject,
+            "text": self.message,
+        }
+        if self.html_content:
+            payload["html"] = self.html_content
+        resp = requests.post(
+            self._mailtrap_api_url(),
+            json=payload,
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=60,
+        )
+        resp.raise_for_status()
 
     def _get_api_key_for_provider(self, provider: str) -> str | None:
         if provider == constants.MAIL_CLIENT_SENDGRID:
@@ -85,42 +106,13 @@ class Email:
             "mailing_client": mailing_client,
         }
 
-        # Use SMTP directly for Mailtrap (as per Mailtrap Django documentation)
         if mailing_client == constants.MAIL_CLIENT_MAILTRAP:
-            import time
-
-            start_time = time.time()
-            try:
-                email = EmailMultiAlternatives(
-                    subject=self.subject,
-                    body=self.message,
-                    from_email=self.from_email,
-                    to=self.recipient_list,
-                )
-                if self.html_content:
-                    email.attach_alternative(self.html_content, "text/html")
-                email.send()
-                elapsed_time = time.time() - start_time
-                logger.info(
-                    "Email sent successfully via Mailtrap SMTP",
-                    extra={
-                        **log_base,
-                        "recipient_count": len(self.recipient_list),
-                        "email_host": getattr(settings, "EMAIL_HOST", "N/A"),
-                        "elapsed_seconds": round(elapsed_time, 2),
-                    },
-                )
-            except Exception as e:
-                elapsed_time = time.time() - start_time
-                logger.exception(
-                    "Failed to send email via Mailtrap SMTP",
-                    extra={
-                        **log_base,
-                        "error": str(e),
-                        "elapsed_seconds": round(elapsed_time, 2),
-                    },
-                )
-                raise
+            self._send_via_mailtrap()
+            logger.info(
+                "Email sent successfully via Mailtrap",
+                extra={**log_base, "recipient_count": len(self.recipient_list)},
+            )
+            return
         else:
             # Use external service for SendGrid, Resend, or default
             request_payload = {

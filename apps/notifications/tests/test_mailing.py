@@ -113,6 +113,7 @@ class TestGetApiKeyForProvider:
 
 class TestGetMailingClient:
     def test_returns_sendgrid_when_api_key_present(self, settings):
+        settings.DEBUG = False
         settings.SENDGRID_API_KEY = "SG.TEST"
         settings.RESEND_API_KEY = "RS.TEST"
         settings.MAILTRAP_API_KEY = "MT.TEST"
@@ -125,6 +126,7 @@ class TestGetMailingClient:
         assert email.get_mailing_client() == constants.MAIL_CLIENT_SENDGRID
 
     def test_returns_resend_when_only_resend_key_present(self, settings):
+        settings.DEBUG = False
         settings.SENDGRID_API_KEY = None
         settings.RESEND_API_KEY = "RS.TEST"
         settings.MAILTRAP_API_KEY = "MT.TEST"
@@ -137,6 +139,7 @@ class TestGetMailingClient:
         assert email.get_mailing_client() == constants.MAIL_CLIENT_RESEND
 
     def test_returns_mailtrap_when_configured(self, settings):
+        settings.DEBUG = False
         settings.SENDGRID_API_KEY = None
         settings.RESEND_API_KEY = None
         settings.MAILTRAP_API_KEY = "MT.TEST"
@@ -148,10 +151,27 @@ class TestGetMailingClient:
         )
         assert email.get_mailing_client() == constants.MAIL_CLIENT_MAILTRAP
 
+    def test_returns_mailtrap_in_debug_even_if_other_providers_present(self, settings):
+        settings.DEBUG = True
+        settings.SENDGRID_API_KEY = "SG.TEST"
+        settings.RESEND_API_KEY = "RS.TEST"
+        settings.MAILTRAP_API_KEY = "MT.TEST"
+        email = Email(
+            notification_id="nid",
+            subject="subj",
+            message="msg",
+            recipient_list=["a@b.com"],
+        )
+        assert email.get_mailing_client() == constants.MAIL_CLIENT_MAILTRAP
+
     def test_returns_default_when_no_providers_configured(self, settings):
+        settings.DEBUG = False
         settings.SENDGRID_API_KEY = None
         settings.RESEND_API_KEY = None
         settings.MAILTRAP_API_KEY = None
+        settings.EMAIL_HOST = "localhost"
+        settings.EMAIL_HOST_USER = None
+        settings.EMAIL_HOST_PASSWORD = None
         email = Email(
             notification_id="nid",
             subject="subj",
@@ -201,7 +221,7 @@ class TestEmailSendMail:
         args, kwargs = post_mock.call_args
         assert args[0] == constants.PYTHON_MAILING_URL
         assert kwargs["json"] == expected_json
-        assert kwargs.get("timeout") == 20
+        assert kwargs.get("timeout") == 60
 
     def test_http_error_handled_sendgrid(self, mocker, settings):
         # Arrange
@@ -257,6 +277,7 @@ class TestEmailSendMail:
         # Arrange
         settings.DEFAULT_FROM_EMAIL = "from@example.com"
         settings.MAILTRAP_API_KEY = "MT.TEST"
+        settings.MAILTRAP_USE_SANDBOX = False
         email = Email(
             notification_id="123",
             subject="Hello",
@@ -290,6 +311,7 @@ class TestEmailSendMail:
         # Arrange
         settings.DEFAULT_FROM_EMAIL = "from@example.com"
         settings.MAILTRAP_API_KEY = "MT.TEST"
+        settings.MAILTRAP_USE_SANDBOX = False
         email = Email(
             notification_id="123",
             subject="Hello",
@@ -320,6 +342,7 @@ class TestEmailSendMail:
         # Arrange
         settings.DEFAULT_FROM_EMAIL = "from@example.com"
         settings.MAILTRAP_API_KEY = "MT.TEST"
+        settings.MAILTRAP_USE_SANDBOX = False
         email = Email(
             notification_id="123",
             subject="Hello",
@@ -345,6 +368,7 @@ class TestEmailSendMail:
         # Arrange
         settings.DEFAULT_FROM_EMAIL = None
         settings.MAILTRAP_API_KEY = "MT.TEST"
+        settings.MAILTRAP_USE_SANDBOX = False
         email = Email(
             notification_id="123",
             subject="Hello",
@@ -359,3 +383,27 @@ class TestEmailSendMail:
         # Act & Assert: ValueError should be raised
         with pytest.raises(ValueError, match="from_email is required"):
             email.send_mail()
+
+    def test_uses_sandbox_url_when_configured(self, mocker, settings):
+        settings.DEFAULT_FROM_EMAIL = "from@example.com"
+        settings.MAILTRAP_API_KEY = "MT.TEST"
+        settings.MAILTRAP_USE_SANDBOX = True
+        settings.MAILTRAP_INBOX_ID = "509395"
+        email = Email(
+            notification_id="123",
+            subject="Hello",
+            message="World",
+            recipient_list=["to@example.com"],
+        )
+        mocker.patch.object(
+            Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_MAILTRAP
+        )
+        resp = mocker.Mock()
+        resp.status_code = 200
+        resp.raise_for_status.return_value = None
+        post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
+
+        email.send_mail()
+
+        post_mock.assert_called_once()
+        assert post_mock.call_args[0][0] == f"{constants.MAILTRAP_SANDBOX_API_URL}/509395"
