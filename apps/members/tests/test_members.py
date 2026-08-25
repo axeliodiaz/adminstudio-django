@@ -518,3 +518,25 @@ class TestMembersDomain:
     def test_get_reservation_by_id_not_found_raises_exception(self):
         with pytest.raises(Reservation.DoesNotExist):
             get_reservation_by_id(str(uuid.uuid4()))
+
+    def test_public_member_register_creates_inactive_user_with_password(self, mocker):
+        from apps.members.members import get_or_create_member_user
+
+        verify_mock = mocker.patch("apps.members.members.create_verification_code")
+        password = "S3cretPass!"
+        member, created = get_or_create_member_user(
+            {
+                "email": "rider@example.com",
+                "password": password,
+                "first_name": "Ana",
+                "last_name": "Rider",
+                "phone_number": "+56911111111",
+            },
+            is_active=False,
+        )
+
+        user = member.user
+        assert created is True
+        assert user.is_active is False
+        assert user.check_password(password)
+        verify_mock.assert_called_once_with(user=user)

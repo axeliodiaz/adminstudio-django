@@ -25,7 +25,7 @@ class TestCreateNotification:
 
         # Assert
         create_notification_mock.assert_called_once_with(
-            notification.subject, notification.message, notification.user
+            notification.subject, notification.message, notification.user, html_content=None
         )
         send_pending_emails_mock.assert_called_once()
 

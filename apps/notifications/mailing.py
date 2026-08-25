@@ -192,6 +192,7 @@ def send_pending_emails(notifications: list[dict[str, str]]):
             subject=notification.subject,
             message=notification.message,
             recipient_list=recipient_list,
+            html_content=notification.html_content or None,
         )
         email.send_mail()
         mark_notification_as_sent(str(notification.id))

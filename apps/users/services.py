@@ -41,6 +41,7 @@ def create_user(validated_data: dict) -> User:
     first_name = validated_data.get("first_name", "")
     last_name = validated_data.get("last_name", "")
     phone_number = (validated_data.get("phone_number") or "").strip()
+    is_active = validated_data.get("is_active", True)
 
     user = User.objects.create_user(
         username=email,
@@ -48,6 +49,7 @@ def create_user(validated_data: dict) -> User:
         email=email,
         first_name=first_name,
         last_name=last_name,
+        is_active=is_active,
     )
     # Only set and save phone_number if it is non-empty
     if phone_number:

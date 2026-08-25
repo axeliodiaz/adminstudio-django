@@ -18,10 +18,12 @@ from apps.verifications.services import (
 
 class TestValidateCode:
     @pytest.mark.django_db
-    def test_activates_user_and_soft_deletes_code(self, inactive_user, verification_code):
+    def test_activates_user_and_soft_deletes_code(self, mocker, inactive_user, verification_code):
         # Precondition
         assert not inactive_user.is_active
         assert not verification_code.is_removed
+
+        welcome_mock = mocker.patch("apps.verifications.services.send_welcome_email")
 
         # Act
         returned = validate_code(verification_code)
@@ -31,6 +33,7 @@ class TestValidateCode:
         assert inactive_user.is_active is True
         returned.refresh_from_db()
         assert returned.is_removed is True
+        welcome_mock.assert_called_once_with(inactive_user)
 
 
 class TestSendEmailVerification:
@@ -46,17 +49,34 @@ class TestSendEmailVerification:
         send_email_verification(user, verification_uuid, code)
 
         # Assert
-        expected_subject = "Please confirm your subscription"
+        expected_subject = "Confirma tu correo en PulseFit"
+        expected_url = f"{settings.FRONTEND_URL.rstrip('/')}/#verify/{verification_uuid}/{code}"
         expected_message = (
-            f"Your verification code is: {code} and expires in "
-            f"{settings.VERIFICATION_CODE_EXPIRATION_MINUTES} minutes. "
-            f"UUID: {verification_uuid}"
+            f"Confirma tu correo para activar tu cuenta: {expected_url} "
+            f"(caduca en {settings.EMAIL_VERIFICATION_EXPIRATION_HOURS} horas)."
         )
-        create_notification_mock.assert_called_once_with(
-            subject=expected_subject,
-            message=expected_message,
-            recipient_list=[user],
-        )
+        create_notification_mock.assert_called_once()
+        kwargs = create_notification_mock.call_args.kwargs
+        assert kwargs["subject"] == expected_subject
+        assert kwargs["message"] == expected_message
+        assert kwargs["recipient_list"] == [user]
+        assert expected_url in (kwargs.get("html_content") or "")
+
+
+class TestSendWelcomeEmail:
+    @pytest.mark.django_db
+    def test_calls_create_notification_with_welcome_template(self, mocker):
+        user = baker.make("users.User", email="maria@example.com", first_name="María")
+        create_notification_mock = mocker.patch("apps.verifications.services.create_notification")
+
+        from apps.verifications.services import send_welcome_email
+
+        send_welcome_email(user)
+
+        kwargs = create_notification_mock.call_args.kwargs
+        assert kwargs["subject"] == "Bienvenida a PulseFit, María"
+        assert kwargs["recipient_list"] == [user]
+        assert "Reservar mi primera clase" in (kwargs.get("html_content") or "")
 
 
 class TestCreateVerificationCode:

@@ -177,6 +177,10 @@ MAILTRAP_USE_SANDBOX = os.environ.get("MAILTRAP_USE_SANDBOX", "False").lower() i
 }
 
 VERIFICATION_CODE_EXPIRATION_MINUTES = 5
+EMAIL_VERIFICATION_EXPIRATION_HOURS = int(
+    os.environ.get("EMAIL_VERIFICATION_EXPIRATION_HOURS", "24")
+)
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
 # Token expiration settings for drf-expiring-token
 # Tokens will expire after this time period (default: 24 hours)

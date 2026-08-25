@@ -32,12 +32,14 @@ def get_member_from_user_id(user_id: str | UUID) -> MemberSchema:
     return MemberSchema.model_validate(member)
 
 
-def get_or_create_member_user(validated_data: dict) -> tuple[MemberSchema, bool]:
+def get_or_create_member_user(
+    validated_data: dict, *, is_active: bool = True
+) -> tuple[MemberSchema, bool]:
     """
     Application service: delegates to domain logic (apps.members.members)
     and returns a Pydantic MemberSchema along with the created flag.
     """
-    member, created = members.get_or_create_member_user(validated_data)
+    member, created = members.get_or_create_member_user(validated_data, is_active=is_active)
     return MemberSchema.model_validate(member), created
 
 

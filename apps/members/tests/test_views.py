@@ -134,6 +134,7 @@ class TestMemberViewSet:
         called_args, called_kwargs = get_or_create_mock.call_args
         assert called_args
         assert called_args[0]["email"] == payload["email"]
+        assert called_kwargs.get("is_active") is False
         assert resp.data["email"] == payload["email"]
 
     def test_create_returns_200_when_member_already_exists(self, mocker, api_client, payload):
@@ -270,6 +271,7 @@ class TestMemberViewSet:
         called_args, called_kwargs = get_or_create_mock.call_args
         assert called_args
         assert called_args[0]["email"] == payload["email"]
+        assert called_kwargs.get("is_active") is False
         assert resp.data["email"] == payload["email"]
 
     def test_create_returns_200_when_member_already_exists(self, mocker, api_client, payload):

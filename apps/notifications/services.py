@@ -9,7 +9,12 @@ from apps.users.services import get_user_from_id
 User = get_user_model()
 
 
-def create_notification(subject: str, message: str, recipient_list: list[User]) -> None:
+def create_notification(
+    subject: str,
+    message: str,
+    recipient_list: list[User],
+    html_content: str | None = None,
+) -> None:
     """
     Creates a notification for each recipient and sends pending emails.
 
@@ -22,7 +27,7 @@ def create_notification(subject: str, message: str, recipient_list: list[User]) 
         A list of User objects representing the recipients of the
         notification.
     """
-    notifications.create_notification(subject, message, recipient_list)
+    notifications.create_notification(subject, message, recipient_list, html_content=html_content)
     pending_notifications = get_pending_notifications()
     send_pending_emails([notification.model_dump() for notification in pending_notifications])
 

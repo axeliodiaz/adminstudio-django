@@ -30,15 +30,21 @@ def get_member_by_user_id(user_id: str) -> Member:
     return Member.objects.get(user_id=user_id)
 
 
-def get_or_create_member_user(validated_data: dict) -> tuple[Member, bool]:
+def get_or_create_member_user(
+    validated_data: dict, *, is_active: bool = True
+) -> tuple[Member, bool]:
     """
     Domain logic for members: get or create Member linked to a User.
 
     Returns a tuple of (Member instance, created flag).
+    Public registration should pass is_active=False so the account
+    stays inactive until the email is confirmed.
     """
-    user = get_or_create_user(validated_data)
+    payload = dict(validated_data)
+    payload.setdefault("is_active", is_active)
+    user = get_or_create_user(payload)
     member, created = Member.objects.get_or_create(user=user)
-    if created:
+    if created or not user.is_active:
         create_verification_code(user=member.user)
     return member, created
 

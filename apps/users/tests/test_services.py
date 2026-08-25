@@ -49,6 +49,7 @@ class TestCreateUser:
             email=validated["email"],
             first_name=validated["first_name"],
             last_name=validated["last_name"],
+            is_active=True,
         )
         # phone_number should be saved via update_fields when attribute exists
         assert getattr(returned_user, "save").called
@@ -80,7 +81,29 @@ class TestCreateUser:
             email=validated["email"],
             first_name=validated["first_name"],
             last_name=validated["last_name"],
+            is_active=True,
         )
+
+    @pytest.mark.django_db
+    def test_create_user_can_create_inactive_account(self, mocker, validated_registration_data):
+        validated = {**validated_registration_data, "is_active": False}
+        create_user_manager_mock = mocker.patch(
+            "apps.users.services.User.objects.create_user",
+        )
+        returned_user = mocker.Mock(spec=["save", "phone_number"])
+        create_user_manager_mock.return_value = returned_user
+
+        result = create_user(validated)
+
+        create_user_manager_mock.assert_called_once_with(
+            username=validated["email"],
+            password=validated["password"],
+            email=validated["email"],
+            first_name=validated["first_name"],
+            last_name=validated["last_name"],
+            is_active=False,
+        )
+        assert result is returned_user
         assert getattr(returned_user, "save").called
         assert result is returned_user
 
