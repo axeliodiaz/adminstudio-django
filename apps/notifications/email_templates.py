@@ -95,6 +95,31 @@ def render_verify_email(*, email: str, verify_url: str, frontend_url: str, hours
     )
 
 
+def render_email_change(
+    *,
+    new_email: str,
+    confirm_url: str,
+    frontend_url: str,
+    hours: int = 24,
+) -> str:
+    body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">Confirma tu nuevo correo</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  Un administrador de PulseFit pidió cambiar el correo de tu cuenta a <strong>{escape(new_email)}</strong>.
+  Confirma este buzón para completar el cambio.
+</p>
+{_cta_button(confirm_url, "Confirmar nuevo correo")}
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{MUTED}">
+  El enlace caduca en {hours} horas. Si no esperabas este cambio, ignora este mensaje; tu correo actual no se modifica.
+</p>
+"""
+    return _shell(
+        preheader="Confirma tu nuevo correo. El enlace caduca en 24 horas.",
+        body_html=body,
+        frontend_url=frontend_url,
+    )
+
+
 def render_welcome_email(*, first_name: str, classes_url: str, frontend_url: str) -> str:
     greeting = (
         f"Hola {escape(first_name)}, bienvenida al pelotón"

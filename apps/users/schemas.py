@@ -37,6 +37,7 @@ class AdminUserSchema(BaseModel):
     is_superuser: bool = False
     is_active: bool = True
     last_login: datetime | None = None
+    pending_email: str | None = None
 
     model_config = {"from_attributes": True}
 

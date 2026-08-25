@@ -28,6 +28,7 @@ class AdminMemberSchema(BaseModel):
     username: str | None = None
     gender: str | None = None
     is_active: bool = True
+    pending_email: str | None = None
     last_login: datetime | None = None
     class_credits: int = 0
     reservation_count: int = 0

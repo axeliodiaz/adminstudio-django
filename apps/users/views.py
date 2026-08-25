@@ -11,6 +11,8 @@ from apps.users.serializers import (
     ChangePasswordSerializer,
     PasswordRecoveryRequestSerializer,
     PasswordRecoveryConfirmSerializer,
+    EmailChangeRequestSerializer,
+    EmailChangeConfirmSerializer,
 )
 from pydantic import ValidationError as PydanticValidationError
 
@@ -23,6 +25,8 @@ from apps.users.services import (
     list_admin_users,
     request_admin_password_recovery,
     update_admin_user,
+    request_admin_email_change,
+    confirm_email_change,
 )
 
 
@@ -157,6 +161,55 @@ class AdminUserPasswordRecoveryView(APIView):
             {"detail": constants.PASSWORD_RECOVERY_ADMIN_SUCCESS_MESSAGE},
             status=status.HTTP_200_OK,
         )
+
+
+class AdminUserEmailChangeView(APIView):
+    """Request an email change for a user. Staff only. The user must confirm by email."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, user_id, *args, **kwargs):
+        serializer = EmailChangeRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            pending_email = request_admin_email_change(
+                user_id=user_id,
+                email=serializer.validated_data["email"],
+                actor=request.user,
+            )
+        except PermissionError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "detail": constants.EMAIL_CHANGE_ADMIN_SUCCESS_MESSAGE,
+                "pending_email": pending_email,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class EmailChangeConfirmView(APIView):
+    """Confirm a staff-requested email change from the mailed link."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def patch(self, request, change_uuid, *args, **kwargs):
+        serializer = EmailChangeConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            confirm_email_change(change_uuid, serializer.validated_data["code"])
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": constants.EMAIL_CHANGE_CONFIRM_SUCCESS_MESSAGE},
+            status=status.HTTP_200_OK,
+        )
+
+    def put(self, request, *args, **kwargs):
+        return self.patch(request, *args, **kwargs)
 
 
 class ChangePasswordView(APIView):

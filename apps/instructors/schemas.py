@@ -96,6 +96,7 @@ class AdminInstructorSchema(BaseModel):
     """Flattened instructor row for the PulseFit staff admin."""
 
     id: uuid.UUID
+    user_id: uuid.UUID
     first_name: str | None = None
     last_name: str | None = None
     email: str | None = None
@@ -114,6 +115,7 @@ class AdminInstructorSchema(BaseModel):
     last_youtube_music_playlist: str = ""
     profile_image: str | None = None
     is_active: bool = True
+    pending_email: str | None = None
     created: datetime
     modified: datetime
 
@@ -124,6 +126,7 @@ class AdminInstructorSchema(BaseModel):
         user = instructor.user
         return cls(
             id=instructor.id,
+            user_id=user.id,
             first_name=user.first_name,
             last_name=user.last_name,
             email=user.email,

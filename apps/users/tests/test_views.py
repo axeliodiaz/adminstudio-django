@@ -440,6 +440,124 @@ class TestAdminUserDetailView:
 
 
 @pytest.mark.django_db
+class TestAdminUserEmailChangeView:
+    def test_email_change_requires_staff(self, api_client, user):
+        url = reverse("users:user-email-change", kwargs={"user_id": user.id})
+        token = ExpiringToken.objects.create(user=user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.post(url, data={"email": "nuevo@example.com"}, format="json")
+
+        assert response.status_code == 403
+
+    def test_staff_can_request_email_change_without_updating_current(
+        self, api_client, user, mocker
+    ):
+        send_email_mock = mocker.patch("apps.users.services.send_email_change_email")
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        url = reverse("users:user-email-change", kwargs={"user_id": user.id})
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.post(url, data={"email": "nuevo@example.com"}, format="json")
+
+        assert response.status_code == 200
+        assert response.data["pending_email"] == "nuevo@example.com"
+        user.refresh_from_db()
+        assert user.email == "test@example.com"
+        send_email_mock.assert_called_once()
+
+    def test_staff_cannot_patch_email_directly(self, api_client, user):
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        url = reverse("users:user-detail", kwargs={"user_id": user.id})
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.patch(url, data={"email": "nuevo@example.com"}, format="json")
+
+        assert response.status_code == 400
+        user.refresh_from_db()
+        assert user.email == "test@example.com"
+
+    def test_staff_patch_keeps_same_email(self, api_client, user):
+        staff_user = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        url = reverse("users:user-detail", kwargs={"user_id": user.id})
+        token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.patch(
+            url,
+            data={"email": "test@example.com", "first_name": "Ana"},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.data["first_name"] == "Ana"
+        assert response.data["email"] == "test@example.com"
+
+
+@pytest.mark.django_db
+class TestEmailChangeConfirmView:
+    def test_confirm_updates_email(self, api_client, user):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.users.models import EmailChangeRequest
+
+        change = EmailChangeRequest.objects.create(
+            user=user,
+            new_email="nuevo@example.com",
+            code="ABC123",
+            expires_at=timezone.now() + timedelta(hours=24),
+        )
+        url = reverse("users:email-change-confirm", kwargs={"change_uuid": change.id})
+
+        response = api_client.patch(url, data={"code": "abc123"}, format="json")
+
+        assert response.status_code == 200
+        user.refresh_from_db()
+        assert user.email == "nuevo@example.com"
+        assert EmailChangeRequest.objects.filter(id=change.id, is_removed=False).count() == 0
+
+    def test_confirm_fails_with_invalid_code(self, api_client, user):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.users.models import EmailChangeRequest
+
+        change = EmailChangeRequest.objects.create(
+            user=user,
+            new_email="nuevo@example.com",
+            code="ABC123",
+            expires_at=timezone.now() + timedelta(hours=24),
+        )
+        url = reverse("users:email-change-confirm", kwargs={"change_uuid": change.id})
+
+        response = api_client.patch(url, data={"code": "XXXXXX"}, format="json")
+
+        assert response.status_code == 400
+        user.refresh_from_db()
+        assert user.email == "test@example.com"
+
+
+@pytest.mark.django_db
 class TestAdminUserPasswordRecoveryView:
     def test_password_recovery_requires_staff(self, api_client, user):
         url = reverse("users:user-password-recovery", kwargs={"user_id": user.id})

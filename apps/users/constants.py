@@ -12,3 +12,15 @@ PASSWORD_RECOVERY_ADMIN_SUCCESS_MESSAGE = (
 )
 PASSWORD_RECOVERY_ADMIN_MISSING_EMAIL_MESSAGE = "El usuario no tiene un correo electrónico."
 PASSWORD_RECOVERY_ADMIN_INACTIVE_MESSAGE = "No se puede enviar recuperación a una cuenta inactiva."
+
+EMAIL_CHANGE_ADMIN_SUCCESS_MESSAGE = (
+    "Se envió un correo de confirmación a la nueva dirección. "
+    "El correo actual se mantiene hasta que el usuario confirme."
+)
+EMAIL_CHANGE_SAME_EMAIL_MESSAGE = "El nuevo correo es igual al actual."
+EMAIL_CHANGE_TAKEN_MESSAGE = "Ya existe un usuario con ese correo."
+EMAIL_CHANGE_INVALID_CODE_MESSAGE = "El enlace de confirmación es inválido o ha expirado."
+EMAIL_CHANGE_CONFIRM_SUCCESS_MESSAGE = "Correo actualizado exitosamente."
+EMAIL_CHANGE_REQUIRES_CONFIRMATION_MESSAGE = (
+    "El correo no se puede cambiar directamente. El usuario debe confirmar el nuevo correo."
+)

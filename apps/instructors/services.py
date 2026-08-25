@@ -23,6 +23,7 @@ from apps.instructors.schemas import (
     InstructorPublicSchema,
 )
 from apps.users.schemas import UserSchema
+from apps.users.services import pending_email_for, reject_immediate_email_change
 
 User = get_user_model()
 
@@ -114,8 +115,11 @@ def update_instructor(pk, validated_data: dict, *, partial: bool = False) -> dic
     return InstructorPublicSchema.model_validate(instructor).model_dump()
 
 
-def _admin_instructor_dict(instructor: Instructor) -> dict:
-    return AdminInstructorSchema.from_instructor(instructor).model_dump(mode="json")
+def _admin_instructor_dict(instructor: Instructor, *, include_pending_email: bool = False) -> dict:
+    payload = AdminInstructorSchema.from_instructor(instructor).model_dump(mode="json")
+    if include_pending_email:
+        payload["pending_email"] = pending_email_for(instructor.user)
+    return payload
 
 
 def list_admin_instructors(
@@ -154,36 +158,19 @@ def get_admin_instructor(*, instructor_id: str | UUID) -> dict:
         Instructor.objects.select_related("user"),
         id=instructor_id,
     )
-    return _admin_instructor_dict(instructor)
+    return _admin_instructor_dict(instructor, include_pending_email=True)
 
 
 def _apply_admin_instructor_fields(instructor: Instructor, data: dict) -> Instructor:
     user = instructor.user
     user_dirty: list[str] = []
     instructor_dirty: list[str] = []
-    sync_username = bool(user.username) and user.username == (user.email or "")
 
-    if "email" in data:
-        email = (data["email"] or "").strip()
-        if not email:
-            raise ValueError("El correo electrónico es obligatorio.")
-        taken = (
-            User.objects.filter(is_removed=False)
-            .filter(Q(email__iexact=email) | Q(username__iexact=email))
-            .exclude(id=user.id)
-            .exists()
-        )
-        if taken:
-            raise ValueError("Ya existe un usuario con ese correo.")
+    reject_immediate_email_change(data, user)
 
     for field, value in data.items():
         if field in USER_ADMIN_FIELDS:
-            if field == "email":
-                value = (value or "").strip()
-                if sync_username:
-                    user.username = value
-                    user_dirty.append("username")
-            elif field in {"first_name", "last_name", "phone_number"} and value is None:
+            if field in {"first_name", "last_name", "phone_number"} and value is None:
                 value = ""
             setattr(user, field, value)
             user_dirty.append(field)
@@ -223,4 +210,4 @@ def update_admin_instructor(*, instructor_id: str | UUID, data: dict) -> dict:
     )
     instructor = _apply_admin_instructor_fields(instructor, data)
     instructor.refresh_from_db()
-    return _admin_instructor_dict(instructor)
+    return _admin_instructor_dict(instructor, include_pending_email=True)
