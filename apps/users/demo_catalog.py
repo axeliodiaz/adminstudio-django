@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from datetime import date, time
 from decimal import Decimal
 
+from django.conf import settings
+
 PRESERVED_USERNAMES = frozenset({"axelio"})
 DEMO_PASSWORD = "demo1234"
 KRISTINA_USERNAME = "kristina.girod"
@@ -52,7 +54,7 @@ class Persona:
     waitlist_auto_confirm: bool = False
     tagline: str = ""
     description: str = ""
-    website_url: str = ""
+    website_path: str = ""
     instagram_username: str = ""
     tiktok_username: str = ""
     is_verified: bool = False
@@ -67,7 +69,13 @@ class Persona:
 
     @property
     def email(self) -> str:
-        return f"{self.username.replace('.', '_')}@pulsefit.cl"
+        return f"{self.username.replace('.', '_')}@{settings.EMAIL_DOMAIN}"
+
+    @property
+    def website_url(self) -> str:
+        if not self.website_path:
+            return ""
+        return f"https://{settings.EMAIL_DOMAIN}/{self.website_path}"
 
 
 def _d(value: str) -> Decimal:
@@ -99,7 +107,7 @@ INSTRUCTORS: tuple[Persona, ...] = (
             "mezcla cueing quirúrgico con playlists que hacen llorar a los woofers. "
             "Si el puesto 1 está libre, no lo está: lo está guardando el destino."
         ),
-        website_url="https://pulsefit.cl/coaches/kristina-girod",
+        website_path="coaches/kristina-girod",
         instagram_username="kristinagirod",
         tiktok_username="kristina.girod.ride",
         is_verified=True,
@@ -135,7 +143,7 @@ INSTRUCTORS: tuple[Persona, ...] = (
         cycling_shoe_size=_d("43.0"),
         tagline="Power Ride · HIIT cycling",
         description="Coach de indoor cycling en PulseFit. Power, climbs y sprints.",
-        website_url="https://pulsefit.cl/coaches/tomas-munoz",
+        website_path="coaches/tomas-munoz",
         instagram_username="tomasride",
         tiktok_username="tomasride",
         is_verified=True,
@@ -170,7 +178,7 @@ INSTRUCTORS: tuple[Persona, ...] = (
             "Arms Tour 2026: ahora con cadencia. Michelle dirige el Let's Move Ride "
             "y no acepta resistencia 1 ni como broma."
         ),
-        website_url="https://pulsefit.cl/coaches/michelle-obama",
+        website_path="coaches/michelle-obama",
         instagram_username="michelleobama",
         tiktok_username="flotus.ride",
         is_verified=True,
@@ -205,7 +213,7 @@ INSTRUCTORS: tuple[Persona, ...] = (
             "Tom no enseña sprints: los filma en IMAX. Si se cae el manubrio, "
             "lo sostiene con la sonrisa."
         ),
-        website_url="https://pulsefit.cl/coaches/tom-cruise",
+        website_path="coaches/tom-cruise",
         instagram_username="tomcruise",
         tiktok_username="ethanhunt.ride",
         is_verified=True,
@@ -240,7 +248,7 @@ INSTRUCTORS: tuple[Persona, ...] = (
             "Nicole enseña climbs en cámara lenta emocional. El cool-down incluye "
             "un monólogo y un vaso de agua sparkling."
         ),
-        website_url="https://pulsefit.cl/coaches/nicole-kidman",
+        website_path="coaches/nicole-kidman",
         instagram_username="nicolekidman",
         tiktok_username="kidman.climb",
         is_verified=True,
@@ -275,7 +283,7 @@ INSTRUCTORS: tuple[Persona, ...] = (
             "Usain convierte cada sprint en final olímpica. El lightning pose es "
             "mandatory al minuto 32."
         ),
-        website_url="https://pulsefit.cl/coaches/usain-bolt",
+        website_path="coaches/usain-bolt",
         instagram_username="usainbolt",
         tiktok_username="lightning.ride",
         is_verified=True,
@@ -307,7 +315,7 @@ INSTRUCTORS: tuple[Persona, ...] = (
         cycling_shoe_size=_d("37.0"),
         tagline="Hips don't lie, the cadence does not either",
         description="Shakira enseña SCULPT Ride: si las caderas no se mueven, la resistencia sí.",
-        website_url="https://pulsefit.cl/coaches/shakira",
+        website_path="coaches/shakira",
         instagram_username="shakira",
         tiktok_username="shakira.sculpt",
         is_verified=True,
@@ -339,7 +347,7 @@ INSTRUCTORS: tuple[Persona, ...] = (
         cycling_shoe_size=_d("43.0"),
         tagline="This is the Way (a 140 BPM)",
         description="Pedro abre la sala como si fuera un set. Abrazos post-clase: ilimitados.",
-        website_url="https://pulsefit.cl/coaches/pedro-pascal",
+        website_path="coaches/pedro-pascal",
         instagram_username="pascallisp",
         tiktok_username="daddy.cadence",
         is_verified=True,

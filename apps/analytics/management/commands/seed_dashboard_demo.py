@@ -14,6 +14,7 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from random import Random
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
@@ -22,7 +23,6 @@ from django.utils import timezone
 
 from apps.analytics.constants import (
     CLASS_FORMATS,
-    DEMO_EMAIL_DOMAIN,
     DEMO_PLAN_PREFIX,
     DEMO_USERNAME_PREFIX,
 )
@@ -282,7 +282,7 @@ class Command(BaseCommand):
         if user is None:
             user = User.objects.create_user(
                 username=DEMO_RIDER_USERNAME,
-                email=f"chayanne@{DEMO_EMAIL_DOMAIN}",
+                email=f"chayanne@{settings.EMAIL_DOMAIN}",
                 password="demo1234",
                 first_name="Chayanne",
                 last_name="Figueroa",

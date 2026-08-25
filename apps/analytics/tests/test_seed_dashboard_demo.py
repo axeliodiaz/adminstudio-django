@@ -3,6 +3,7 @@
 from datetime import date, datetime, timezone as dt_timezone
 
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 
@@ -85,7 +86,7 @@ def test_seed_dashboard_demo_fills_member_charts_through_until():
 def test_seed_dashboard_demo_gives_every_user_independent_stats():
     staff = User.objects.create_user(
         username="instructor.camila",
-        email="instructor.camila@pulsefit.demo",
+        email=f"instructor.camila@{settings.EMAIL_DOMAIN}",
         password="pass1234",
         first_name="Camila",
         last_name="Rojas",
@@ -93,7 +94,7 @@ def test_seed_dashboard_demo_gives_every_user_independent_stats():
     )
     rider_a = User.objects.create_user(
         username="ana.bravo",
-        email="member.017@pulsefit.demo",
+        email=f"member.017@{settings.EMAIL_DOMAIN}",
         password="pass1234",
         first_name="Ana",
         last_name="Bravo",

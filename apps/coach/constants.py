@@ -49,7 +49,6 @@ DEMO_USERNAME_PREFIX = "demo.coach."
 DEMO_SHOWCASE_USERNAME = "kristina.girod"
 DEMO_CLASS_DESCRIPTION = "demo.coach"
 DEMO_EVENT_DESCRIPTION = "demo.coach.event"
-DEMO_EMAIL_DOMAIN = "pulsefit.cl"
 INJURY_KEYWORDS = ("lesión", "lesion", "injury")
 TIP_TITLE = "Tip del día"
 

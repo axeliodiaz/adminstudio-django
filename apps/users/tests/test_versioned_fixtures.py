@@ -4,6 +4,7 @@ import gzip
 import json
 
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 
@@ -33,7 +34,8 @@ def test_seed_demo_catalog_creates_kristina_and_preserves_axelio():
     instructor = Instructor.objects.get(user=kristina)
     assert instructor.tagline
     assert instructor.instagram_username == "kristinagirod"
-    assert instructor.website_url
+    assert instructor.website_url == f"https://{settings.EMAIL_DOMAIN}/coaches/kristina-girod"
+    assert kristina.email == f"kristina_girod@{settings.EMAIL_DOMAIN}"
     assert kristina.address
     assert kristina.height_cm
     assert User.objects.filter(username="usain.bolt").exists()

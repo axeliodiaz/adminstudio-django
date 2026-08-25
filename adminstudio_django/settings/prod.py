@@ -81,3 +81,5 @@ else:
             "OPTIONS": {"timeout": 20},
         }
     }
+
+EMAIL_DOMAIN = os.getenv("EMAIL_DOMAIN", "pulsefit.com")

@@ -4,7 +4,9 @@ import os
 from importlib import import_module
 
 _env = os.environ.get("DJANGO_ENV", "local").lower()
-if _env not in {"local", "prod"}:
+if _env == "dev":
+    _env = "develop"
+if _env not in {"local", "prod", "develop"}:
     _env = "local"
 _module = import_module(f"{__name__}.{_env}")
 for _k, _v in _module.__dict__.items():

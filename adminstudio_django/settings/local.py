@@ -35,9 +35,16 @@ CSRF_TRUSTED_ORIGINS = [
 """
 
 CORS_ALLOW_CREDENTIALS = True
-# Mailtrap API Key - Get it from https://mailtrap.io/ -> Settings -> API Tokens
-# Set it as environment variable: export MAILTRAP_API_KEY="your_token_here"
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")
+EMAIL_DOMAIN = os.getenv("EMAIL_DOMAIN", "pulsefit.com")
 MAILTRAP_API_KEY = os.getenv("MAILTRAP_API_KEY")
+MAILTRAP_INBOX_ID = os.getenv("MAILTRAP_INBOX_ID")
+MAILTRAP_USE_SANDBOX = os.environ.get("MAILTRAP_USE_SANDBOX", "True").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 if not MAILTRAP_API_KEY:
     import warnings
 
@@ -46,7 +53,6 @@ if not MAILTRAP_API_KEY:
         "Get your API token from https://mailtrap.io/ -> Settings -> API Tokens",
         UserWarning,
     )
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@example.com")
 
 # Celery: Run tasks synchronously in local development (no RabbitMQ needed)
 CELERY_TASK_ALWAYS_EAGER = True
