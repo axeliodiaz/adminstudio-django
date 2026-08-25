@@ -157,19 +157,15 @@ DEFAULT_PASSWORD_LENGTH = 13
 # Get credentials from: https://mailtrap.io/ -> Your Inbox -> Integration -> SMTP
 EMAIL_HOST = os.getenv("EMAIL_HOST", "sandbox.smtp.mailtrap.io")
 EMAIL_API_KEY = os.getenv("EMAIL_API_KEY")
-EMAIL_HOST_USER = os.getenv(
-    "EMAIL_HOST_USER", "apikey"
-)  # 'apikey' for Sendgrid, Mailtrap username for Mailtrap
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")  # Mailtrap SMTP username when using SMTP
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", 2525))
 # For Mailtrap: set EMAIL_USE_TLS=True (default port 2525 uses STARTTLS)
-# For SendGrid: EMAIL_USE_TLS can be False or True depending on port
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() in {"1", "true", "yes", "on"}
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 # Product domain for demo identities, ICS UIDs, and similar branding.
 # Override per env (local/prod) or with EMAIL_DOMAIN. Distinct from DEFAULT_FROM_EMAIL.
 EMAIL_DOMAIN = os.getenv("EMAIL_DOMAIN", "pulsefit.com")
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 MAILTRAP_API_KEY = os.getenv("MAILTRAP_API_KEY")
 MAILTRAP_INBOX_ID = os.getenv("MAILTRAP_INBOX_ID")
@@ -229,20 +225,8 @@ LOGGING = {
             "level": os.getenv("DJANGO_APPS_LOG_LEVEL", "DEBUG" if DEBUG else "INFO"),
             "propagate": True,
         },
-        # Celery logger (worker output)
-        "celery": {
-            "handlers": ["console"],
-            "level": os.getenv("DJANGO_CELERY_LOG_LEVEL", "INFO"),
-            "propagate": True,
-        },
     },
 }
-
-CELERY_BROKER_URL = "amqp://guest:guest@rabbitmq:5672//"
-CELERY_RESULT_BACKEND = "rpc://"
-CELERY_ACCEPT_CONTENT = ["json"]
-CELERY_TASK_SERIALIZER = "json"
-CELERY_RESULT_SERIALIZER = "json"
 
 # Payment Service Provider (PSP) feature flag
 # Set to True to enable monetary transactions with PSP (e.g., Stripe, PayPal)
