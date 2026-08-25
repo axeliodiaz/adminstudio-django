@@ -37,20 +37,24 @@ STORAGES = {
     },
 }
 
-# Postgres (Supabase) via DATABASE_URL. SQLite on /data does not survive
-# Render deploys without a disk and is not suitable for multi-instance prod.
+# Postgres via DATABASE_URL when set (Supabase, Render Postgres, etc.).
+# Render free often has no URL yet; sqlite on /data still lets boot finish
+# and load versioned fixtures into the instance database.
 _database_url = os.environ.get("DATABASE_URL", "").strip()
-if not _database_url:
-    raise RuntimeError(
-        "DATABASE_URL is required in production. "
-        "Use the Supabase Postgres URI with sslmode=require."
-    )
-
-DATABASES = {
-    "default": dj_database_url.parse(
-        _database_url,
-        conn_max_age=60,
-        conn_health_checks=True,
-        ssl_require=True,
-    )
-}
+if _database_url:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            _database_url,
+            conn_max_age=60,
+            conn_health_checks=True,
+            ssl_require="sslmode=disable" not in _database_url.lower(),
+        )
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": os.path.join("/data", "db.sqlite3"),
+            "OPTIONS": {"timeout": 20},
+        }
+    }
