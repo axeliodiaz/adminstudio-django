@@ -41,14 +41,31 @@ class Command(BaseCommand):
             self.stdout.write(f"Fixture pack {version} already loaded.")
             return
 
+        skip_heavy = os.environ.get("LOAD_HEAVY_FIXTURES", "").lower() not in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        heavy_cutoff = int(os.environ.get("FIXTURE_HEAVY_ROW_CUTOFF", "5000"))
+
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         for entry in manifest.get("files", []):
             path = pack_dir / entry["file"]
             if not path.exists():
                 raise CommandError(f"Missing fixture file: {path}")
-            if entry.get("count", 1) == 0:
+            count = int(entry.get("count") or 0)
+            if count == 0:
                 continue
-            self.stdout.write(f"Loading {entry['model']} ({entry.get('count', '?')} rows)")
+            if skip_heavy and count > heavy_cutoff:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Skipping {entry['model']} ({count} rows) on this instance; "
+                        "set LOAD_HEAVY_FIXTURES=1 to force, or rely on seed_* commands."
+                    )
+                )
+                continue
+            self.stdout.write(f"Loading {entry['model']} ({count} rows)")
             call_command("loaddata", str(path), verbosity=options["verbosity"])
 
         LoadedFixturePack.objects.get_or_create(

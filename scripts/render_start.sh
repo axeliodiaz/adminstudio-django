@@ -9,6 +9,8 @@ python manage.py ensure_superuser
 (
   python manage.py load_versioned_fixtures
   python manage.py seed_demo_catalog
+  python manage.py seed_coach_demo
+  python manage.py seed_dashboard_demo
 ) &
 
 exec gunicorn adminstudio_django.wsgi:application \
