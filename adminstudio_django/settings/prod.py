@@ -1,7 +1,5 @@
 import os
 
-import dj_database_url
-
 from adminstudio_django.settings.base import *  # noqa
 
 # Production overrides
@@ -62,12 +60,15 @@ STORAGES = {
 # and load versioned fixtures into the instance database.
 _database_url = os.environ.get("DATABASE_URL", "").strip()
 if _database_url:
+    import dj_database_url
+
+    _is_postgres = _database_url.lower().startswith(("postgres://", "postgresql://"))
     DATABASES = {
         "default": dj_database_url.parse(
             _database_url,
             conn_max_age=0,
             conn_health_checks=True,
-            ssl_require="sslmode=disable" not in _database_url.lower(),
+            ssl_require=_is_postgres and "sslmode=disable" not in _database_url.lower(),
         )
     }
     # Supabase (and other) poolers reject Django server-side cursors.
