@@ -18,9 +18,7 @@ class TestCreateNotification:
         create_notification_mock = mocker.patch(
             "apps.notifications.notifications.create_notification"
         )
-        async_send_notifications_mock = mocker.patch(
-            "apps.notifications.tasks.async_send_notifications.delay"
-        )
+        send_pending_emails_mock = mocker.patch("apps.notifications.services.send_pending_emails")
 
         # Act
         create_notification(notification.subject, notification.message, notification.user)
@@ -29,7 +27,7 @@ class TestCreateNotification:
         create_notification_mock.assert_called_once_with(
             notification.subject, notification.message, notification.user
         )
-        async_send_notifications_mock.assert_called_once()
+        send_pending_emails_mock.assert_called_once()
 
 
 class TestGetPendingNotifications:

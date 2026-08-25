@@ -77,19 +77,7 @@ class TestMarkNotificationAsSent:
 
 
 class TestGetApiKeyForProvider:
-    def test_returns_sendgrid_key(self, settings):
-        settings.SENDGRID_API_KEY = "SG.TEST"
-        settings.RESEND_API_KEY = "RS.TEST"
-        email = Email(
-            notification_id="nid",
-            subject="subj",
-            message="msg",
-            recipient_list=["a@b.com"],
-        )
-        assert email._get_api_key_for_provider(constants.MAIL_CLIENT_SENDGRID) == "SG.TEST"
-
     def test_returns_resend_key(self, settings):
-        settings.SENDGRID_API_KEY = ""
         settings.RESEND_API_KEY = "RS.TEST"
         email = Email(
             notification_id="nid",
@@ -100,7 +88,6 @@ class TestGetApiKeyForProvider:
         assert email._get_api_key_for_provider(constants.MAIL_CLIENT_RESEND) == "RS.TEST"
 
     def test_returns_none_for_unknown(self, settings):
-        settings.SENDGRID_API_KEY = "SG.TEST"
         settings.RESEND_API_KEY = "RS.TEST"
         email = Email(
             notification_id="nid",
@@ -112,22 +99,8 @@ class TestGetApiKeyForProvider:
 
 
 class TestGetMailingClient:
-    def test_returns_sendgrid_when_api_key_present(self, settings):
+    def test_returns_resend_when_api_key_present(self, settings):
         settings.DEBUG = False
-        settings.SENDGRID_API_KEY = "SG.TEST"
-        settings.RESEND_API_KEY = "RS.TEST"
-        settings.MAILTRAP_API_KEY = "MT.TEST"
-        email = Email(
-            notification_id="nid",
-            subject="subj",
-            message="msg",
-            recipient_list=["a@b.com"],
-        )
-        assert email.get_mailing_client() == constants.MAIL_CLIENT_SENDGRID
-
-    def test_returns_resend_when_only_resend_key_present(self, settings):
-        settings.DEBUG = False
-        settings.SENDGRID_API_KEY = None
         settings.RESEND_API_KEY = "RS.TEST"
         settings.MAILTRAP_API_KEY = "MT.TEST"
         email = Email(
@@ -140,7 +113,6 @@ class TestGetMailingClient:
 
     def test_returns_mailtrap_when_configured(self, settings):
         settings.DEBUG = False
-        settings.SENDGRID_API_KEY = None
         settings.RESEND_API_KEY = None
         settings.MAILTRAP_API_KEY = "MT.TEST"
         email = Email(
@@ -153,7 +125,6 @@ class TestGetMailingClient:
 
     def test_returns_mailtrap_in_debug_even_if_other_providers_present(self, settings):
         settings.DEBUG = True
-        settings.SENDGRID_API_KEY = "SG.TEST"
         settings.RESEND_API_KEY = "RS.TEST"
         settings.MAILTRAP_API_KEY = "MT.TEST"
         email = Email(
@@ -166,7 +137,6 @@ class TestGetMailingClient:
 
     def test_returns_default_when_no_providers_configured(self, settings):
         settings.DEBUG = False
-        settings.SENDGRID_API_KEY = None
         settings.RESEND_API_KEY = None
         settings.MAILTRAP_API_KEY = None
         settings.EMAIL_HOST = "localhost"
@@ -183,8 +153,7 @@ class TestGetMailingClient:
 
 class TestEmailSendMail:
     def test_posts_payload_success(self, mocker, settings):
-        # Arrange settings and client
-        settings.SENDGRID_API_KEY = "SG.TEST"
+        settings.RESEND_API_KEY = "RS.TEST"
         settings.DEFAULT_FROM_EMAIL = "from@example.com"
         email = Email(
             notification_id="123",
@@ -192,29 +161,23 @@ class TestEmailSendMail:
             message="World",
             recipient_list=["to@example.com"],
         )
-        # Force client selection to sendgrid to keep assertions stable
-        mocker.patch.object(
-            Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_SENDGRID
-        )
+        mocker.patch.object(Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_RESEND)
 
-        # Mock requests.post to succeed
         resp = mocker.Mock()
         resp.status_code = 200
         resp.text = "ok"
         resp.raise_for_status.return_value = None
         post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
 
-        # Act
         email.send_mail()
 
-        # Assert: called with expected payload and URL
         expected_json = {
-            "provider": constants.MAIL_CLIENT_SENDGRID,
+            "provider": constants.MAIL_CLIENT_RESEND,
             "subject": "Hello",
             "message": "World",
             "recipient_list": ["to@example.com"],
             "from_email": "from@example.com",
-            "api_key": "SG.TEST",
+            "api_key": "RS.TEST",
             "html_content": None,
         }
         post_mock.assert_called_once()
@@ -222,32 +185,6 @@ class TestEmailSendMail:
         assert args[0] == constants.PYTHON_MAILING_URL
         assert kwargs["json"] == expected_json
         assert kwargs.get("timeout") == 60
-
-    def test_http_error_handled_sendgrid(self, mocker, settings):
-        # Arrange
-        settings.SENDGRID_API_KEY = "SG.TEST"
-        settings.DEFAULT_FROM_EMAIL = "from@example.com"
-        email = Email(
-            notification_id="123",
-            subject="Hello",
-            message="World",
-            recipient_list=["to@example.com"],
-        )
-        mocker.patch.object(
-            Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_SENDGRID
-        )
-
-        # Mock post returns a response but raise_for_status raises HTTPError
-        resp = mocker.Mock()
-        resp.text = "bad"
-        resp.raise_for_status.side_effect = Exception("HTTP 500")
-        post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
-
-        # Act - should not raise
-        email.send_mail()
-
-        # Assert: post called and error handled (no exception raised)
-        assert post_mock.called
 
     def test_http_error_handled_resend(self, mocker, settings):
         # Arrange
