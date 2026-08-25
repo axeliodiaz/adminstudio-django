@@ -72,3 +72,41 @@ def test_dump_and_load_versioned_fixtures(tmp_path, monkeypatch):
     assert User.objects.filter(username="kristina.girod").exists()
     call_command("load_versioned_fixtures", pack="vtest", verbosity=0)
     assert LoadedFixturePack.objects.filter(version="vtest").count() == 1
+
+
+@pytest.mark.django_db
+def test_load_skips_schedule_dependents_when_schedules_are_heavy(tmp_path, monkeypatch, capsys):
+    from apps.users.management.commands import load_versioned_fixtures
+
+    monkeypatch.setattr(load_versioned_fixtures, "PACKS_ROOT", tmp_path)
+    monkeypatch.delenv("LOAD_HEAVY_FIXTURES", raising=False)
+    pack = tmp_path / "vheavy"
+    pack.mkdir()
+    (pack / "users.user.json.gz").write_bytes(gzip.compress(b"[]"))
+    (pack / "schedules.schedule.json.gz").write_bytes(gzip.compress(b"[]"))
+    (pack / "members.waitlistentry.json.gz").write_bytes(gzip.compress(b"[]"))
+    (pack / "manifest.json").write_text(
+        json.dumps(
+            {
+                "version": "vheavy",
+                "files": [
+                    {"model": "users.user", "file": "users.user.json.gz", "count": 1},
+                    {
+                        "model": "schedules.schedule",
+                        "file": "schedules.schedule.json.gz",
+                        "count": 9000,
+                    },
+                    {
+                        "model": "members.waitlistentry",
+                        "file": "members.waitlistentry.json.gz",
+                        "count": 10,
+                    },
+                ],
+            }
+        )
+    )
+    call_command("load_versioned_fixtures", pack="vheavy", verbosity=1)
+    captured = capsys.readouterr().out
+    assert "Skipping schedules.schedule" in captured
+    assert "Skipping members.waitlistentry" in captured
+    assert LoadedFixturePack.objects.filter(version="vheavy").exists()

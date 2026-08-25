@@ -7,7 +7,7 @@ python manage.py ensure_superuser
 # Bind HTTP immediately so Render's deploy health check passes. Fixture
 # loaddata is large (~200k reservations) and would otherwise time out boot.
 (
-  python manage.py load_versioned_fixtures
+  python manage.py load_versioned_fixtures || echo "load_versioned_fixtures failed; continuing with seeds"
   python manage.py seed_demo_catalog
   python manage.py seed_coach_demo
   python manage.py seed_dashboard_demo

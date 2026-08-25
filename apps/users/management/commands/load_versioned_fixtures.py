@@ -7,9 +7,23 @@ import os
 
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
+from django.db.utils import IntegrityError
 
 from apps.users.fixture_packs import PACKS_ROOT
 from apps.users.models import LoadedFixturePack
+
+# These fixtures point at schedule rows. Skip them when the schedule dump
+# is too large for the instance, then let seed_* commands create calendars.
+SCHEDULE_DEPENDENT_MODELS = frozenset(
+    {
+        "members.reservation",
+        "members.waitlistentry",
+        "coach.classplaylist",
+        "coach.playlistsegment",
+        "coach.playlisttrack",
+        "coach.classrating",
+    }
+)
 
 
 class Command(BaseCommand):
@@ -50,6 +64,7 @@ class Command(BaseCommand):
         heavy_cutoff = int(os.environ.get("FIXTURE_HEAVY_ROW_CUTOFF", "5000"))
 
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        skipped_models: set[str] = set()
         for entry in manifest.get("files", []):
             path = pack_dir / entry["file"]
             if not path.exists():
@@ -57,16 +72,30 @@ class Command(BaseCommand):
             count = int(entry.get("count") or 0)
             if count == 0:
                 continue
-            if skip_heavy and count > heavy_cutoff:
+            model = entry["model"]
+            skip_dependent = (
+                skip_heavy
+                and "schedules.schedule" in skipped_models
+                and model in SCHEDULE_DEPENDENT_MODELS
+            )
+            if skip_heavy and (count > heavy_cutoff or skip_dependent):
+                skipped_models.add(model)
+                reason = "depends on skipped schedules" if skip_dependent else f"{count} rows"
                 self.stdout.write(
                     self.style.WARNING(
-                        f"Skipping {entry['model']} ({count} rows) on this instance; "
+                        f"Skipping {model} ({reason}) on this instance; "
                         "set LOAD_HEAVY_FIXTURES=1 to force, or rely on seed_* commands."
                     )
                 )
                 continue
-            self.stdout.write(f"Loading {entry['model']} ({count} rows)")
-            call_command("loaddata", str(path), verbosity=options["verbosity"])
+            self.stdout.write(f"Loading {model} ({count} rows)")
+            try:
+                call_command("loaddata", str(path), verbosity=options["verbosity"])
+            except IntegrityError as exc:
+                skipped_models.add(model)
+                self.stdout.write(
+                    self.style.WARNING(f"Skipping {model} after IntegrityError: {exc}")
+                )
 
         LoadedFixturePack.objects.get_or_create(
             version=version,
