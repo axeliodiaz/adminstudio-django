@@ -1,4 +1,7 @@
-from apps.notifications.email_templates import render_booking_confirmed
+from apps.notifications.email_templates import (
+    render_booking_confirmed,
+    render_class_cancelled,
+)
 
 
 def test_render_booking_confirmed_matches_sketch_copy():
@@ -23,3 +26,23 @@ def test_render_booking_confirmed_matches_sketch_copy():
     assert "Sala A · Spot 18" in html
     assert "Ver mi reserva" in html
     assert "Cancelación gratuita hasta 2 horas antes. Después se descuenta el crédito." in html
+
+
+def test_render_class_cancelled_matches_sketch_copy():
+    html = render_class_cancelled(
+        class_title="Morning Climb",
+        coach_name="Camila Rojas",
+        when_label="martes 26 ago a las 06:30",
+        reason="instructor no disponible",
+        classes_url="http://localhost:5173/#classes",
+        frontend_url="http://localhost:5173",
+        credit_refunded=True,
+    )
+
+    assert "Tuvimos que cancelar la clase" in html
+    assert "Morning Climb" in html
+    assert "Camila Rojas" in html
+    assert "El crédito ya está de vuelta en tu billetera." in html
+    assert "Motivo: instructor no disponible. No se descuenta asistencia." in html
+    assert "Ver otras clases del día" in html
+    assert "Devolvimos el crédito a tu billetera. Disculpa el cambio." in html

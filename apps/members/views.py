@@ -14,6 +14,7 @@ from apps.members.exceptions import (
     ReservationInvalidStateException,
     WaitlistException,
 )
+from apps.wallets.exceptions import InsufficientCreditsException
 from apps.members.schemas import (
     AdminMemberCreateSchema,
     AdminMemberUpdateSchema,
@@ -105,6 +106,10 @@ class ReservationView(ViewSet):
         except RoomFullException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except InvalidSpotException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InsufficientCreditsException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except ReservationInvalidStateException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation.model_dump(), status=status.HTTP_201_CREATED)
 
@@ -321,6 +326,10 @@ class AdminReservationListView(APIView):
         except RoomFullException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except InvalidSpotException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InsufficientCreditsException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except ReservationInvalidStateException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation, status=status.HTTP_201_CREATED)
 

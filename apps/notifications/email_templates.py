@@ -199,3 +199,58 @@ def render_booking_confirmed(
 """
     preheader = f"Spot {spot} · {coach_name} · {room_name} · {studio_name}"
     return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)
+
+
+def _notice_box(text: str, *, tone: str = "danger") -> str:
+    if tone == "danger":
+        bg, border, color = "#f8d7da", "#f1aeb5", "#58151c"
+    elif tone == "success":
+        bg, border, color = "#d1e7dd", "#a3cfbb", "#0a3622"
+    else:
+        bg, border, color = "#fff8e8", GOLD, DARK
+    return f"""
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 20px">
+  <tr>
+    <td style="padding:12px 14px;background-color:{bg};border-left:4px solid {border};font-family:{FONT};font-size:14px;line-height:20px;color:{color}">
+      {escape(text)}
+    </td>
+  </tr>
+</table>
+"""
+
+
+def render_class_cancelled(
+    *,
+    class_title: str,
+    coach_name: str,
+    when_label: str,
+    reason: str,
+    classes_url: str,
+    frontend_url: str,
+    credit_refunded: bool = True,
+) -> str:
+    credit_line = (
+        " El crédito ya está de vuelta en tu billetera."
+        if credit_refunded
+        else " Tu membresía ilimitada no descuenta créditos."
+    )
+    reason_text = (reason or "").strip() or "Cancelación del estudio"
+    notice = f"Motivo: {reason_text}. No se descuenta asistencia."
+    body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">Tuvimos que cancelar la clase</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  La clase <strong>{escape(class_title)}</strong> del {escape(when_label)} con
+  {escape(coach_name)} no se realizará.{credit_line}
+</p>
+{_notice_box(notice, tone="danger")}
+{_cta_button(classes_url, "Ver otras clases del día")}
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{MUTED}">
+  Si ya ibas en camino, recepción en Patio Andino puede orientarte con alternativas.
+</p>
+"""
+    preheader = (
+        "Devolvimos el crédito a tu billetera. Disculpa el cambio."
+        if credit_refunded
+        else "Disculpa el cambio. Puedes reservar otra clase."
+    )
+    return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)

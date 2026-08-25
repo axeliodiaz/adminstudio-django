@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from typing import Iterable, List
 from uuid import UUID
 
+from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 
@@ -146,6 +147,7 @@ def _serialize_admin_schedule(schedule: Schedule, *, copies_created: int | None 
             ).count()
         ),
         "status": schedule.status,
+        "cancellation_reason": schedule.cancellation_reason or "",
         "copies_created": copies_created,
     }
     return AdminScheduleSchema.model_validate(payload).model_dump(mode="json")
@@ -275,7 +277,56 @@ def update_admin_schedule(*, schedule_id: str | UUID, data: dict) -> dict:
     if "title" in data and data["title"] is not None:
         data["title"] = str(data["title"]).strip()
 
+    new_status = data.get("status")
+    transitioning_to_canceled = (
+        new_status == constants.SCHEDULE_STATUS_CANCELED
+        and schedule.status != constants.SCHEDULE_STATUS_CANCELED
+    )
+    if transitioning_to_canceled:
+        reason = data.get("cancellation_reason")
+        if reason is None:
+            reason = schedule.cancellation_reason or ""
+        return cancel_admin_schedule(schedule_id=schedule.id, reason=str(reason or ""))
+
     update_schedule_model(schedule, data=data)
+    return get_admin_schedule(schedule_id=schedule.id)
+
+
+def cancel_admin_schedule(*, schedule_id: str | UUID, reason: str = "") -> dict:
+    """Cancel a class: cascade to reservations (refund + email) and expire waitlist."""
+    from apps.members.members import cancel_reservation
+    from apps.members.waitlist import expire_waitlist_for_cancelled_schedule
+
+    with transaction.atomic():
+        schedule = get_object_or_404(
+            Schedule.objects.select_for_update(), id=schedule_id, is_removed=False
+        )
+        if schedule.status != constants.SCHEDULE_STATUS_CANCELED:
+            schedule.status = constants.SCHEDULE_STATUS_CANCELED
+            schedule.cancellation_reason = (reason or "").strip()
+            schedule.save(update_fields=["status", "cancellation_reason", "modified"])
+        elif reason is not None and (reason or "").strip() != (schedule.cancellation_reason or ""):
+            schedule.cancellation_reason = (reason or "").strip()
+            schedule.save(update_fields=["cancellation_reason", "modified"])
+
+        reserved_ids = list(
+            Reservation.objects.filter(
+                schedule_id=schedule.id,
+                status=member_constants.RESERVATION_STATUS_RESERVED,
+                is_removed=False,
+            ).values_list("id", flat=True)
+        )
+
+    for reservation_id in reserved_ids:
+        cancel_reservation(
+            str(reservation_id),
+            bypass_free_cancel_window=True,
+            cancellation_source=member_constants.CANCELLATION_SOURCE_SCHEDULE,
+            cancellation_reason=schedule.cancellation_reason,
+            promote_waitlist=False,
+        )
+
+    expire_waitlist_for_cancelled_schedule(schedule.id)
     return get_admin_schedule(schedule_id=schedule.id)
 
 

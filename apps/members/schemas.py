@@ -94,6 +94,8 @@ class ReservationSchema(BaseModel):
     schedule_id: uuid.UUID
     status: str
     spot: int | None = None
+    credit_charged: bool = False
+    cancellation_source: str = ""
 
     model_config = {"from_attributes": True}
 
@@ -122,6 +124,8 @@ class AdminReservationSchema(BaseModel):
     status: str
     spot: int | None = None
     notes: str = ""
+    credit_charged: bool = False
+    cancellation_source: str = ""
 
     model_config = {"from_attributes": True}
 

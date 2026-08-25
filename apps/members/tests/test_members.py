@@ -177,10 +177,28 @@ class TestMembersDomain:
         qs = list_reservations_by_date_range(start_date=start_date, end_date=end_date)
 
         ids = {str(x.id) for x in qs}
-        # Should include RESERVED and ATTENDED, but exclude CANCELLED
+        # Should include RESERVED and ATTENDED, but exclude member-CANCELLED
         assert str(r1.id) in ids
         assert str(r3.id) in ids
         assert str(r2.id) not in ids
+
+    def test_list_reservations_includes_studio_cancelled_reservations(self, base_graph):
+        member, instructor, room = base_graph
+        base = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base,
+            duration_minutes=60,
+            room=room,
+        )
+        studio_cancelled = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_CANCELLED,
+            cancellation_source=constants.CANCELLATION_SOURCE_SCHEDULE,
+        )
+        qs = list_reservations_by_date_range(start_date=base.date(), end_date=base.date())
+        assert str(studio_cancelled.id) in {str(x.id) for x in qs}
 
     def test_change_reservation_spot_success_updates_spot(self):
         User = get_user_model()
@@ -364,6 +382,10 @@ class TestMembersDomain:
         assert reservation.spot == 1
         assert reservation.notes == "Test notes"
         assert reservation.status == constants.RESERVATION_STATUS_RESERVED
+        assert reservation.credit_charged is True
+        from apps.wallets.models import Wallet
+
+        assert Wallet.objects.get(user=member.user).class_credits == 9
 
     def test_create_reservation_sends_confirmed_email(self, mocker, base_graph):
         send_email = mocker.patch("apps.members.notifications.send_reservation_confirmed_email")
@@ -397,6 +419,9 @@ class TestMembersDomain:
             email=f"newuser_{uuid.uuid4()}@ex.com",
             password="pass",
         )
+        from apps.wallets.models import Wallet
+
+        Wallet.objects.create(user=user, class_credits=5)
         schedule = Schedule.objects.create(
             instructor=instructor,
             start_time=timezone.now() + datetime.timedelta(days=1),

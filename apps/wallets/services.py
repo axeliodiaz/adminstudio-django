@@ -5,10 +5,14 @@ Encapsulate wallet activation logic for plan purchases.
 
 from datetime import timedelta
 
+from django.db import transaction
 from django.utils import timezone
 
 from apps.wallets.constants import BenefitName, WalletField
-from apps.wallets.exceptions import PurchaseAlreadyActivatedException
+from apps.wallets.exceptions import (
+    InsufficientCreditsException,
+    PurchaseAlreadyActivatedException,
+)
 from apps.wallets.models import PlanPurchase, Wallet
 
 
@@ -114,3 +118,34 @@ class WalletService:
         wallet.save()
 
         return wallet
+
+    @staticmethod
+    def consume_class_credit(user) -> bool:
+        """
+        Deduct one class credit for a booking.
+
+        Returns True if a credit was charged, False if the member has an active
+        unlimited membership (no debit). Raises InsufficientCreditsException
+        when the wallet has no credits left.
+        """
+        with transaction.atomic():
+            wallet, _ = Wallet.objects.select_for_update().get_or_create(user=user)
+            if wallet.is_unlimited_membership_active:
+                return False
+            if wallet.class_credits <= 0:
+                raise InsufficientCreditsException(
+                    "No te quedan créditos de clase. Compra un plan para reservar."
+                )
+            wallet.class_credits -= 1
+            wallet.save(update_fields=["class_credits", "modified"])
+            return True
+
+    @staticmethod
+    def refund_class_credit(user) -> None:
+        """Return one class credit to the wallet (no-op for unlimited members)."""
+        with transaction.atomic():
+            wallet, _ = Wallet.objects.select_for_update().get_or_create(user=user)
+            if wallet.is_unlimited_membership_active:
+                return
+            wallet.class_credits += 1
+            wallet.save(update_fields=["class_credits", "modified"])

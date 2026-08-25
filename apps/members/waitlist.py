@@ -65,6 +65,15 @@ def expire_stale_offers(
     return expired
 
 
+def expire_waitlist_for_cancelled_schedule(schedule_id: str | UUID) -> int:
+    """Expire all active waitlist entries when a class is cancelled by the studio."""
+    entries = list(active_waitlist_queryset(schedule_id))
+    for entry in entries:
+        entry.status = constants.WAITLIST_STATUS_EXPIRED
+        entry.save(update_fields=["status", "modified"])
+    return len(entries)
+
+
 def join_waitlist(*, user_id: str | UUID, schedule_id: str | UUID) -> WaitlistEntry:
     member = Member.objects.get(user_id=user_id)
     schedule = get_schedule_by_id(schedule_id)

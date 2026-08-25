@@ -17,6 +17,8 @@ User = get_user_model()
 
 
 def _make_member(suffix=""):
+    from apps.wallets.models import Wallet
+
     user = User.objects.create_user(
         username=f"wl_{suffix}_{uuid.uuid4()}",
         email=f"wl_{suffix}_{uuid.uuid4()}@ex.com",
@@ -24,6 +26,7 @@ def _make_member(suffix=""):
         first_name="Wait",
         last_name=suffix or "List",
     )
+    Wallet.objects.create(user=user, class_credits=10)
     return Member.objects.create(user=user)
 
 

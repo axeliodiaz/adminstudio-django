@@ -32,6 +32,11 @@ class Schedule(UUIDModel, SoftDeletableModel, TimeStampedModel):
         choices=STATUS,
         default=constants.SCHEDULE_STATUS_DRAFT,
     )
+    cancellation_reason = models.TextField(
+        blank=True,
+        default="",
+        help_text="Optional reason shown to members when the class is cancelled.",
+    )
 
     class Meta:
         ordering = ["start_time"]

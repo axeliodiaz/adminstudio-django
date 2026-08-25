@@ -233,6 +233,8 @@ def _serialize_admin_reservation(reservation: Reservation) -> dict:
         "status": reservation.status,
         "spot": reservation.spot,
         "notes": reservation.notes or "",
+        "credit_charged": bool(reservation.credit_charged),
+        "cancellation_source": reservation.cancellation_source or "",
     }
     return AdminReservationSchema.model_validate(payload).model_dump(mode="json")
 
@@ -333,8 +335,15 @@ def create_admin_reservation(data: dict) -> dict:
 
 def cancel_admin_reservation(reservation_id: str | UUID) -> dict:
     """Cancel a reservation from the staff admin (ignores free-cancel window)."""
+    from apps.members import constants as member_constants
+
     try:
-        members.cancel_reservation(str(reservation_id), bypass_free_cancel_window=True)
+        members.cancel_reservation(
+            str(reservation_id),
+            bypass_free_cancel_window=True,
+            cancellation_source=member_constants.CANCELLATION_SOURCE_STUDIO,
+            cancellation_reason="Cancelación del estudio",
+        )
     except Reservation.DoesNotExist as exc:
         raise ValueError("Reservation not found.") from exc
     return get_admin_reservation(reservation_id)

@@ -42,6 +42,7 @@ class AdminScheduleSchema(BaseModel):
     room_capacity: int | None = None
     reservation_count: int = 0
     status: str
+    cancellation_reason: str = ""
     copies_created: int | None = None
 
     model_config = {"from_attributes": True}
@@ -57,4 +58,5 @@ class AdminScheduleWriteSchema(BaseModel):
     duration_minutes: int | None = None
     room_id: uuid.UUID | None = None
     status: str | None = None
+    cancellation_reason: str | None = None
     repeat_weeks: int | None = Field(default=None, ge=1, le=16)
