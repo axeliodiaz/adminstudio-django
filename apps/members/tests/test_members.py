@@ -340,7 +340,8 @@ class TestMembersDomain:
         with pytest.raises(InvalidSpotException):
             change_reservation_spot(str(schedule.id), str(user1.id), 5)
 
-    def test_create_reservation_success_creates_reservation(self, base_graph):
+    def test_create_reservation_success_creates_reservation(self, mocker, base_graph):
+        mocker.patch("apps.members.notifications.send_reservation_confirmed_email")
         member, instructor, room = base_graph
         schedule = Schedule.objects.create(
             instructor=instructor,
@@ -364,10 +365,32 @@ class TestMembersDomain:
         assert reservation.notes == "Test notes"
         assert reservation.status == constants.RESERVATION_STATUS_RESERVED
 
+    def test_create_reservation_sends_confirmed_email(self, mocker, base_graph):
+        send_email = mocker.patch("apps.members.notifications.send_reservation_confirmed_email")
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            title="Power Ride 45",
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+
+        reservation = create_reservation(
+            {
+                "user_id": member.user.id,
+                "schedule_id": schedule.id,
+                "spot": 3,
+            }
+        )
+
+        send_email.assert_called_once_with(reservation)
+
     def test_create_reservation_creates_member_if_not_exists(self, mocker, base_graph):
         _, instructor, room = base_graph
         # Mock create_verification_code to avoid Celery connection issues
         mocker.patch("apps.members.members.create_verification_code")
+        mocker.patch("apps.members.notifications.send_reservation_confirmed_email")
         User = get_user_model()
         user = User.objects.create_user(
             username=f"newuser_{uuid.uuid4()}",
@@ -451,6 +474,42 @@ class TestMembersDomain:
         assert cancelled_reservation.status == constants.RESERVATION_STATUS_CANCELLED
         reservation.refresh_from_db()
         assert reservation.status == constants.RESERVATION_STATUS_CANCELLED
+
+    def test_cancel_reservation_within_free_window_raises(self, base_graph):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(minutes=30),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=1,
+        )
+
+        with pytest.raises(ReservationInvalidStateException):
+            cancel_reservation(str(reservation.id))
+
+    def test_cancel_reservation_bypass_free_window_for_staff(self, base_graph):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(minutes=30),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=1,
+        )
+
+        cancelled = cancel_reservation(str(reservation.id), bypass_free_cancel_window=True)
+        assert cancelled.status == constants.RESERVATION_STATUS_CANCELLED
 
     def test_cancel_reservation_not_found_raises_exception(self):
         with pytest.raises(Reservation.DoesNotExist):

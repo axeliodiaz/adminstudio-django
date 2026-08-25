@@ -57,3 +57,31 @@ class Room(SoftDeletableModel, UUIDModel, TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+class StudioSettings(TimeStampedModel):
+    """Singleton studio-wide policy settings (pk forced to 1)."""
+
+    free_cancellation_hours = models.PositiveIntegerField(
+        default=2,
+        help_text="Hours before class start when members can cancel for free.",
+    )
+
+    class Meta:
+        verbose_name = "Studio settings"
+        verbose_name_plural = "Studio settings"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def load(cls) -> "StudioSettings":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return f"Studio settings (free cancel: {self.free_cancellation_hours}h)"

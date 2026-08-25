@@ -144,3 +144,58 @@ def render_welcome_email(*, first_name: str, classes_url: str, frontend_url: str
         body_html=body,
         frontend_url=frontend_url,
     )
+
+
+def _detail_rows(rows: list[tuple[str, str]]) -> str:
+    cells = []
+    for label, value in rows:
+        cells.append(
+            f"""
+<tr>
+  <td style="padding:10px 0;border-bottom:1px solid {BORDER};font-family:{FONT};font-size:13px;color:{MUTED};width:38%;vertical-align:top">{escape(label)}</td>
+  <td style="padding:10px 0;border-bottom:1px solid {BORDER};font-family:{FONT};font-size:15px;font-weight:700;color:{DARK};vertical-align:top">{escape(value)}</td>
+</tr>
+"""
+        )
+    return (
+        '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
+        f'style="width:100%;border-collapse:collapse;margin:8px 0 20px">{"".join(cells)}</table>'
+    )
+
+
+def render_booking_confirmed(
+    *,
+    first_name: str,
+    class_title: str,
+    coach_name: str,
+    when_label: str,
+    duration_minutes: int,
+    studio_name: str,
+    room_name: str,
+    spot: int,
+    reservation_url: str,
+    frontend_url: str,
+    free_cancellation_hours: int = 2,
+) -> str:
+    greeting_name = escape(first_name) if first_name else "rider"
+    sala_spot = f"{room_name} · Spot {spot}"
+    body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">Tu spot está reservado</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  {greeting_name}, confirmamos tu reserva. Llega 10 minutos antes para montar la bici y dejar las pertenencias en lockers.
+</p>
+{_detail_rows([
+    ("Clase", class_title),
+    ("Coach", coach_name),
+    ("Cuando", when_label),
+    ("Duración", f"{duration_minutes} min"),
+    ("Estudio", studio_name),
+    ("Sala / Spot", sala_spot),
+])}
+{_cta_button(reservation_url, "Ver mi reserva")}
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{MUTED}">
+  Cancelación gratuita hasta {int(free_cancellation_hours)} horas antes. Después se descuenta el crédito.
+</p>
+"""
+    preheader = f"Spot {spot} · {coach_name} · {room_name} · {studio_name}"
+    return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)

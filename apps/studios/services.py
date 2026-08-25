@@ -9,13 +9,14 @@ from uuid import UUID
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
-from apps.studios.models import Address, Room, Studio
+from apps.studios.models import Address, Room, Studio, StudioSettings
 from apps.studios.schemas import (
     AddressSchema,
     AdminRoomSchema,
     AdminStudioSchema,
     RoomSchema,
     StudioSchema,
+    StudioSettingsSchema,
 )
 from apps.studios.studios import (
     addresses_queryset,
@@ -252,3 +253,20 @@ def update_admin_room(*, room_id: str | UUID, data: dict) -> dict:
 
     room.save()
     return _serialize_admin_room(room)
+
+
+def get_studio_settings() -> dict:
+    """Return current studio policy settings."""
+    return StudioSettingsSchema.model_validate(StudioSettings.load()).model_dump()
+
+
+def update_studio_settings(data: dict) -> dict:
+    """Update studio policy settings (superuser callers only)."""
+    settings_obj = StudioSettings.load()
+    if "free_cancellation_hours" in data:
+        hours = data["free_cancellation_hours"]
+        if hours is None or int(hours) < 0:
+            raise ValueError("free_cancellation_hours must be a non-negative integer.")
+        settings_obj.free_cancellation_hours = int(hours)
+        settings_obj.save(update_fields=["free_cancellation_hours", "modified"])
+    return get_studio_settings()

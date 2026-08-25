@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from django.db import transaction
 from django.db.models import Q, QuerySet
+from django.utils import timezone
 
 from apps.members import constants
 from apps.members.exceptions import (
@@ -9,6 +12,7 @@ from apps.members.exceptions import (
 )
 from apps.members.models import Member, Reservation
 from apps.schedules.schedules import get_schedule_by_id
+from apps.studios.models import StudioSettings
 from apps.users.services import get_or_create_user
 from apps.verifications.services import create_verification_code
 
@@ -116,6 +120,9 @@ def create_reservation(validated_data: dict) -> Reservation:
         spot=spot,
         notes=validated_data.get("notes") or "",
     )
+    from apps.members.notifications import send_reservation_confirmed_email
+
+    send_reservation_confirmed_email(reservation)
     return reservation
 
 
@@ -124,15 +131,25 @@ def get_reservation_by_id(reservation_id: str) -> Reservation:
     return Reservation.objects.get(id=reservation_id)
 
 
-def cancel_reservation(reservation_id: str) -> Reservation:
+def cancel_reservation(
+    reservation_id: str, *, bypass_free_cancel_window: bool = False
+) -> Reservation:
     """Cancel a reservation if it is currently in RESERVED status.
 
     Raises Reservation.DoesNotExist if the reservation does not exist.
-    Raises ReservationInvalidStateException if the reservation is not in RESERVED status.
+    Raises ReservationInvalidStateException if the reservation is not in RESERVED status
+    or the free-cancellation window has closed (unless bypassed for staff).
     """
     reservation = get_reservation_by_id(reservation_id)
     if reservation.status != constants.RESERVATION_STATUS_RESERVED:
         raise ReservationInvalidStateException("Only RESERVED reservations can be cancelled.")
+    if not bypass_free_cancel_window:
+        hours = StudioSettings.load().free_cancellation_hours
+        deadline = reservation.schedule.start_time - timedelta(hours=hours)
+        if timezone.now() >= deadline:
+            raise ReservationInvalidStateException(
+                f"Cancelación gratuita solo hasta {hours} horas antes de la clase."
+            )
     reservation.status = constants.RESERVATION_STATUS_CANCELLED
     reservation.save(update_fields=["status", "modified"])
     from apps.members.waitlist import promote_waitlist_for_schedule

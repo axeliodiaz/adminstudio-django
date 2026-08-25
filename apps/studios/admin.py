@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import admin
 
-from apps.studios.models import Address, Room, Studio
+from apps.studios.models import Address, Room, Studio, StudioSettings
 
 
 class AddressAdminForm(forms.ModelForm):
@@ -55,6 +55,17 @@ class RoomAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "capacity", "created")
 
 
+class StudioSettingsAdmin(admin.ModelAdmin):
+    list_display = ("free_cancellation_hours", "modified")
+
+    def has_add_permission(self, request):
+        return not StudioSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 admin.site.register(Address, AddressAdmin)
 admin.site.register(Studio, StudioAdmin)
 admin.site.register(Room, RoomAdmin)
+admin.site.register(StudioSettings, StudioSettingsAdmin)

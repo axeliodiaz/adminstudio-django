@@ -332,9 +332,9 @@ def create_admin_reservation(data: dict) -> dict:
 
 
 def cancel_admin_reservation(reservation_id: str | UUID) -> dict:
-    """Cancel a reservation from the staff admin."""
+    """Cancel a reservation from the staff admin (ignores free-cancel window)."""
     try:
-        members.cancel_reservation(str(reservation_id))
+        members.cancel_reservation(str(reservation_id), bypass_free_cancel_window=True)
     except Reservation.DoesNotExist as exc:
         raise ValueError("Reservation not found.") from exc
     return get_admin_reservation(reservation_id)
