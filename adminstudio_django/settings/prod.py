@@ -7,13 +7,6 @@ from adminstudio_django.settings.base import *  # noqa
 # Production overrides
 DEBUG = False
 
-# Serve collected static files (admin CSS/JS) from Gunicorn
-MIDDLEWARE = [
-    MIDDLEWARE[0],
-    "whitenoise.middleware.WhiteNoiseMiddleware",
-    *MIDDLEWARE[1:],
-]
-
 # Ensure Browsable API is disabled (JSON only from base)
 REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
     "rest_framework.renderers.JSONRenderer",
@@ -21,6 +14,33 @@ REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
 
 # Hosts can be provided via env; keep the one already used plus sane defaults
 ALLOWED_HOSTS += ["adminstudio-django.onrender.com"]  # from base; override via DJANGO_ALLOWED_HOSTS
+
+INSTALLED_APPS += ["corsheaders"]
+MIDDLEWARE = [
+    MIDDLEWARE[0],
+    "corsheaders.middleware.CorsMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    *MIDDLEWARE[1:],
+]
+
+_cors_extra = [
+    origin.strip()
+    for origin in os.environ.get("DJANGO_CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
+CORS_ALLOWED_ORIGINS = [
+    "https://studio.axeldiaz.com",
+    "https://www.studio.axeldiaz.com",
+    "https://adminstudio-kohl.vercel.app",
+    "https://adminstudio-axeldiaz.vercel.app",
+    *_cors_extra,
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://adminstudio(-[\w]+)?-axeldiaz\.vercel\.app$",
+    r"^https://adminstudio-[\w-]+\.vercel\.app$",
+]
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS)
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "/static/"
