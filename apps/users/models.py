@@ -92,3 +92,12 @@ class PasswordResetCode(SoftDeletableModel, UUIDModel, TimeStampedModel):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="password_reset_codes"
     )
     expires_at = models.DateTimeField()
+
+
+class EmailChangeRequest(SoftDeletableModel, UUIDModel, TimeStampedModel):
+    code = models.CharField(max_length=constants.PASSWORD_RESET_CODE_SIZE, unique=True)
+    new_email = models.EmailField()
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="email_change_requests"
+    )
+    expires_at = models.DateTimeField()

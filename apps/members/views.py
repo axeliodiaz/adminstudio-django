@@ -14,6 +14,7 @@ from apps.members.exceptions import (
     ReservationInvalidStateException,
     WaitlistException,
 )
+from apps.wallets.exceptions import InsufficientCreditsException
 from apps.members.schemas import (
     AdminMemberCreateSchema,
     AdminMemberUpdateSchema,
@@ -76,7 +77,9 @@ class MemberView(ViewSet):
     def create(self, request, *args, **kwargs):
         member_serializer = MemberSerializer(data=request.data)
         member_serializer.is_valid(raise_exception=True)
-        member_schema, created = get_or_create_member_user(member_serializer.validated_data)
+        member_schema, created = get_or_create_member_user(
+            member_serializer.validated_data, is_active=False
+        )
         data = member_schema.user.model_dump()
         if created:
             return Response(data, status=status.HTTP_201_CREATED)
@@ -103,6 +106,10 @@ class ReservationView(ViewSet):
         except RoomFullException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except InvalidSpotException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InsufficientCreditsException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except ReservationInvalidStateException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation.model_dump(), status=status.HTTP_201_CREATED)
 
@@ -319,6 +326,10 @@ class AdminReservationListView(APIView):
         except RoomFullException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except InvalidSpotException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except InsufficientCreditsException as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except ReservationInvalidStateException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation, status=status.HTTP_201_CREATED)
 

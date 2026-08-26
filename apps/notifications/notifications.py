@@ -10,7 +10,12 @@ from apps.notifications.models import Notification
 User = get_user_model()
 
 
-def create_notification(subject: str, message: str, recipient_list: list[User]) -> None:
+def create_notification(
+    subject: str,
+    message: str,
+    recipient_list: list[User],
+    html_content: str | None = None,
+) -> None:
     """
     Creates and sends notifications to a list of recipients.
 
@@ -28,7 +33,12 @@ def create_notification(subject: str, message: str, recipient_list: list[User]) 
         None
     """
     notifications = [
-        Notification(user=recipient, subject=subject, message=message)
+        Notification(
+            user=recipient,
+            subject=subject,
+            message=message,
+            html_content=html_content or "",
+        )
         for recipient in recipient_list
     ]
     Notification.objects.bulk_create(notifications)

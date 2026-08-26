@@ -1,6 +1,7 @@
 import os
 
 from adminstudio_django.settings.base import *  # noqa
+from adminstudio_django.settings.database import production_databases
 
 # Production overrides
 DEBUG = False
@@ -55,31 +56,8 @@ STORAGES = {
     },
 }
 
-# Postgres via DATABASE_URL when set (Supabase, Render Postgres, etc.).
-# Render free often has no URL yet; sqlite on /data still lets boot finish
-# and load versioned fixtures into the instance database.
-_database_url = os.environ.get("DATABASE_URL", "").strip()
-if _database_url:
-    import dj_database_url
-
-    _is_postgres = _database_url.lower().startswith(("postgres://", "postgresql://"))
-    DATABASES = {
-        "default": dj_database_url.parse(
-            _database_url,
-            conn_max_age=0,
-            conn_health_checks=True,
-            ssl_require=_is_postgres and "sslmode=disable" not in _database_url.lower(),
-        )
-    }
-    # Supabase (and other) poolers reject Django server-side cursors.
-    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": os.path.join("/data", "db.sqlite3"),
-            "OPTIONS": {"timeout": 20},
-        }
-    }
+# Production always uses Postgres. On Render, set DATABASE_URL to the
+# Supabase session pooler (port 5432). migrate + fixtures run in render_start.sh.
+DATABASES = production_databases()
 
 EMAIL_DOMAIN = os.getenv("EMAIL_DOMAIN", "pulsefit.com")

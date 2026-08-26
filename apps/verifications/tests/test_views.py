@@ -18,11 +18,12 @@ class TestVerificationView:
         self.client = APIClient()
 
     def test_successful_verification_activates_user_and_soft_deletes(
-        self, inactive_user, verification_code
+        self, mocker, inactive_user, verification_code
     ):
         # Precondition
         assert inactive_user.is_active is False
         assert verification_code.is_removed is False
+        mocker.patch("apps.verifications.services.send_welcome_email")
 
         # Act
         endpoint = reverse("verification", kwargs={"verification_uuid": str(verification_code.id)})

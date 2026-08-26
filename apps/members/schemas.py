@@ -28,6 +28,7 @@ class AdminMemberSchema(BaseModel):
     username: str | None = None
     gender: str | None = None
     is_active: bool = True
+    pending_email: str | None = None
     last_login: datetime | None = None
     class_credits: int = 0
     reservation_count: int = 0
@@ -93,6 +94,8 @@ class ReservationSchema(BaseModel):
     schedule_id: uuid.UUID
     status: str
     spot: int | None = None
+    credit_charged: bool = False
+    cancellation_source: str = ""
 
     model_config = {"from_attributes": True}
 
@@ -121,6 +124,8 @@ class AdminReservationSchema(BaseModel):
     status: str
     spot: int | None = None
     notes: str = ""
+    credit_charged: bool = False
+    cancellation_source: str = ""
 
     model_config = {"from_attributes": True}
 

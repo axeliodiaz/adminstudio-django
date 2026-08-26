@@ -53,6 +53,10 @@ def base_graph():
     )
     member = Member.objects.create(user=user_member)
 
+    from apps.wallets.models import Wallet
+
+    Wallet.objects.create(user=user_member, class_credits=10)
+
     # Studio/Room
     address = Address.objects.create(address="Addr")
     studio = Studio.objects.create(name="S1", address=address, is_active=True)

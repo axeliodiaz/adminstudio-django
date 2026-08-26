@@ -2,11 +2,15 @@
 
 from pydantic import ValidationError as PydanticValidationError
 from rest_framework import status, viewsets
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.permissions import AllowAny, BasePermission, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.studios.schemas import AdminRoomWriteSchema, AdminStudioWriteSchema
+from apps.studios.schemas import (
+    AdminRoomWriteSchema,
+    AdminStudioWriteSchema,
+    StudioSettingsWriteSchema,
+)
 from apps.studios.serializers import AddressSerializer, RoomSerializer, StudioSerializer
 from apps.studios.services import (
     create_admin_room,
@@ -19,11 +23,20 @@ from apps.studios.services import (
     get_list_studios,
     get_room,
     get_studio,
+    get_studio_settings,
     list_admin_rooms,
     list_admin_studios,
     update_admin_room,
     update_admin_studio,
+    update_studio_settings,
 )
+
+
+class IsSuperUser(BasePermission):
+    """Only Django superusers."""
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated and request.user.is_superuser)
 
 
 def _pydantic_error_response(exc: PydanticValidationError) -> Response:
@@ -170,3 +183,27 @@ class AdminRoomDetailView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(room, status=status.HTTP_200_OK)
+
+
+class AdminStudioSettingsView(APIView):
+    """Read/update studio policy settings. GET: staff. PATCH: superuser only."""
+
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), IsSuperUser()]
+        return [IsAuthenticated(), IsAdminUser()]
+
+    def get(self, request, *args, **kwargs):
+        return Response(get_studio_settings(), status=status.HTTP_200_OK)
+
+    def patch(self, request, *args, **kwargs):
+        try:
+            payload = StudioSettingsWriteSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        try:
+            settings_data = update_studio_settings(payload.model_dump())
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(settings_data, status=status.HTTP_200_OK)

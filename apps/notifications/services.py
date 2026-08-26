@@ -1,21 +1,22 @@
 from django.contrib.auth import get_user_model
 
 from apps.notifications import notifications
+from apps.notifications.mailing import send_pending_emails
 from apps.notifications.schemas import Notification as NotificationSchema
-from apps.notifications.tasks import async_send_notifications
 from apps.users.schemas import UserSchema
 from apps.users.services import get_user_from_id
 
 User = get_user_model()
 
 
-def create_notification(subject: str, message: str, recipient_list: list[User]) -> None:
+def create_notification(
+    subject: str,
+    message: str,
+    recipient_list: list[User],
+    html_content: str | None = None,
+) -> None:
     """
-    Creates and sends a notification to a list of recipients asynchronously.
-
-    This function creates a notification with the given subject and message for
-    a list of recipients. After creating the notification, it triggers an
-    asynchronous task to send the notifications.
+    Creates a notification for each recipient and sends pending emails.
 
     Parameters:
     subject: str
@@ -25,14 +26,10 @@ def create_notification(subject: str, message: str, recipient_list: list[User]) 
     recipient_list: list[User]
         A list of User objects representing the recipients of the
         notification.
-
-    Returns:
-    None
     """
-    notifications.create_notification(subject, message, recipient_list)
+    notifications.create_notification(subject, message, recipient_list, html_content=html_content)
     pending_notifications = get_pending_notifications()
-    _notifications = [notification.model_dump() for notification in pending_notifications]
-    async_send_notifications.delay(notifications=_notifications)
+    send_pending_emails([notification.model_dump() for notification in pending_notifications])
 
 
 def get_pending_notifications() -> list[NotificationSchema]:

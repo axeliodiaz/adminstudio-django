@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from apps.users.models import PasswordResetCode
+from apps.users.models import EmailChangeRequest, PasswordResetCode
 from apps.users.services import (
     create_user,
     get_user_from_id,
@@ -14,6 +14,8 @@ from apps.users.services import (
     request_admin_password_recovery,
     confirm_password_reset,
     generate_password_reset_code,
+    request_admin_email_change,
+    confirm_email_change,
 )
 
 User = get_user_model()
@@ -49,6 +51,7 @@ class TestCreateUser:
             email=validated["email"],
             first_name=validated["first_name"],
             last_name=validated["last_name"],
+            is_active=True,
         )
         # phone_number should be saved via update_fields when attribute exists
         assert getattr(returned_user, "save").called
@@ -80,7 +83,29 @@ class TestCreateUser:
             email=validated["email"],
             first_name=validated["first_name"],
             last_name=validated["last_name"],
+            is_active=True,
         )
+
+    @pytest.mark.django_db
+    def test_create_user_can_create_inactive_account(self, mocker, validated_registration_data):
+        validated = {**validated_registration_data, "is_active": False}
+        create_user_manager_mock = mocker.patch(
+            "apps.users.services.User.objects.create_user",
+        )
+        returned_user = mocker.Mock(spec=["save", "phone_number"])
+        create_user_manager_mock.return_value = returned_user
+
+        result = create_user(validated)
+
+        create_user_manager_mock.assert_called_once_with(
+            username=validated["email"],
+            password=validated["password"],
+            email=validated["email"],
+            first_name=validated["first_name"],
+            last_name=validated["last_name"],
+            is_active=False,
+        )
+        assert result is returned_user
         assert getattr(returned_user, "save").called
         assert result is returned_user
 
@@ -343,3 +368,96 @@ class TestConfirmPasswordReset:
 
         user.refresh_from_db()
         assert user.check_password("oldpassword123")  # Password unchanged
+
+
+@pytest.mark.django_db
+class TestAdminEmailChange:
+    def test_request_keeps_current_email_and_sends_to_new_address(self, mocker):
+        actor = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        user = User.objects.create_user(
+            username="test@example.com",
+            email="test@example.com",
+            password="testpass123",
+        )
+        send_email_mock = mocker.patch("apps.users.services.send_email_change_email")
+
+        pending = request_admin_email_change(
+            user_id=user.id, email="nuevo@example.com", actor=actor
+        )
+
+        user.refresh_from_db()
+        change = EmailChangeRequest.objects.get(user=user, is_removed=False)
+        assert pending == "nuevo@example.com"
+        assert user.email == "test@example.com"
+        assert change.new_email == "nuevo@example.com"
+        send_email_mock.assert_called_once_with(user, "nuevo@example.com", change.id, change.code)
+
+    def test_request_rejects_taken_email(self, mocker):
+        actor = User.objects.create_user(
+            username="adminuser",
+            email="admin@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        User.objects.create_user(
+            username="taken@example.com",
+            email="taken@example.com",
+            password="testpass123",
+        )
+        user = User.objects.create_user(
+            username="test@example.com",
+            email="test@example.com",
+            password="testpass123",
+        )
+        mocker.patch("apps.users.services.send_email_change_email")
+
+        with pytest.raises(ValueError, match="Ya existe un usuario"):
+            request_admin_email_change(user_id=user.id, email="taken@example.com", actor=actor)
+
+        user.refresh_from_db()
+        assert user.email == "test@example.com"
+        assert EmailChangeRequest.objects.filter(user=user, is_removed=False).count() == 0
+
+    def test_confirm_applies_email_and_synced_username(self):
+        user = User.objects.create_user(
+            username="test@example.com",
+            email="test@example.com",
+            password="testpass123",
+        )
+        change = EmailChangeRequest.objects.create(
+            user=user,
+            new_email="nuevo@example.com",
+            code="ABC123",
+            expires_at=timezone.now() + timedelta(hours=24),
+        )
+
+        confirm_email_change(change.id, "ABC123")
+
+        user.refresh_from_db()
+        assert user.email == "nuevo@example.com"
+        assert user.username == "nuevo@example.com"
+        assert EmailChangeRequest.objects.filter(id=change.id, is_removed=False).count() == 0
+
+    def test_confirm_rejects_expired_code(self):
+        user = User.objects.create_user(
+            username="test@example.com",
+            email="test@example.com",
+            password="testpass123",
+        )
+        change = EmailChangeRequest.objects.create(
+            user=user,
+            new_email="nuevo@example.com",
+            code="ABC123",
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+
+        with pytest.raises(ValueError, match="inválido o ha expirado"):
+            confirm_email_change(change.id, "ABC123")
+
+        user.refresh_from_db()
+        assert user.email == "test@example.com"

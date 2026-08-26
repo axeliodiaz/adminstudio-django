@@ -50,6 +50,16 @@ class Reservation(SoftDeletableModel, UUIDModel, TimeStampedModel):
         blank=True,
         help_text="The bike spot/puesto number chosen for this reservation.",
     )
+    credit_charged = models.BooleanField(
+        default=False,
+        help_text="True when a class credit was deducted from the wallet for this reservation.",
+    )
+    cancellation_source = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="Who cancelled: member, studio (staff), or schedule (class cancelled).",
+    )
 
     def __str__(self):
         return f"{self.member} → {self.schedule} ({self.status})"

@@ -18,7 +18,8 @@ User = get_user_model()
 
 @pytest.mark.django_db
 class TestWalletViewSetActivatePurchase:
-    def test_activate_purchase_success(self, api_client, user, plan):
+    def test_activate_purchase_success(self, api_client, user, plan, mocker):
+        send_email = mocker.patch("apps.wallets.notifications.send_purchase_receipt_email")
         """Test successful activation of a purchase."""
         # Create a purchase
         purchase = PlanPurchase.objects.create(
@@ -50,6 +51,7 @@ class TestWalletViewSetActivatePurchase:
         # Verify wallet was created/updated
         wallet = Wallet.objects.get(user=user)
         assert wallet is not None
+        send_email.assert_called_once()
 
     def test_activate_purchase_already_activated(self, api_client, user, activated_plan_purchase):
         """Test that activating an already activated purchase returns 400."""

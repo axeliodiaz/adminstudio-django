@@ -177,10 +177,28 @@ class TestMembersDomain:
         qs = list_reservations_by_date_range(start_date=start_date, end_date=end_date)
 
         ids = {str(x.id) for x in qs}
-        # Should include RESERVED and ATTENDED, but exclude CANCELLED
+        # Should include RESERVED and ATTENDED, but exclude member-CANCELLED
         assert str(r1.id) in ids
         assert str(r3.id) in ids
         assert str(r2.id) not in ids
+
+    def test_list_reservations_includes_studio_cancelled_reservations(self, base_graph):
+        member, instructor, room = base_graph
+        base = timezone.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=base,
+            duration_minutes=60,
+            room=room,
+        )
+        studio_cancelled = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_CANCELLED,
+            cancellation_source=constants.CANCELLATION_SOURCE_SCHEDULE,
+        )
+        qs = list_reservations_by_date_range(start_date=base.date(), end_date=base.date())
+        assert str(studio_cancelled.id) in {str(x.id) for x in qs}
 
     def test_change_reservation_spot_success_updates_spot(self):
         User = get_user_model()
@@ -340,7 +358,8 @@ class TestMembersDomain:
         with pytest.raises(InvalidSpotException):
             change_reservation_spot(str(schedule.id), str(user1.id), 5)
 
-    def test_create_reservation_success_creates_reservation(self, base_graph):
+    def test_create_reservation_success_creates_reservation(self, mocker, base_graph):
+        mocker.patch("apps.members.notifications.send_reservation_confirmed_email")
         member, instructor, room = base_graph
         schedule = Schedule.objects.create(
             instructor=instructor,
@@ -363,17 +382,46 @@ class TestMembersDomain:
         assert reservation.spot == 1
         assert reservation.notes == "Test notes"
         assert reservation.status == constants.RESERVATION_STATUS_RESERVED
+        assert reservation.credit_charged is True
+        from apps.wallets.models import Wallet
+
+        assert Wallet.objects.get(user=member.user).class_credits == 9
+
+    def test_create_reservation_sends_confirmed_email(self, mocker, base_graph):
+        send_email = mocker.patch("apps.members.notifications.send_reservation_confirmed_email")
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            title="Power Ride 45",
+            start_time=timezone.now() + datetime.timedelta(days=1),
+            duration_minutes=45,
+            room=room,
+        )
+
+        reservation = create_reservation(
+            {
+                "user_id": member.user.id,
+                "schedule_id": schedule.id,
+                "spot": 3,
+            }
+        )
+
+        send_email.assert_called_once_with(reservation)
 
     def test_create_reservation_creates_member_if_not_exists(self, mocker, base_graph):
         _, instructor, room = base_graph
         # Mock create_verification_code to avoid Celery connection issues
         mocker.patch("apps.members.members.create_verification_code")
+        mocker.patch("apps.members.notifications.send_reservation_confirmed_email")
         User = get_user_model()
         user = User.objects.create_user(
             username=f"newuser_{uuid.uuid4()}",
             email=f"newuser_{uuid.uuid4()}@ex.com",
             password="pass",
         )
+        from apps.wallets.models import Wallet
+
+        Wallet.objects.create(user=user, class_credits=5)
         schedule = Schedule.objects.create(
             instructor=instructor,
             start_time=timezone.now() + datetime.timedelta(days=1),
@@ -452,6 +500,42 @@ class TestMembersDomain:
         reservation.refresh_from_db()
         assert reservation.status == constants.RESERVATION_STATUS_CANCELLED
 
+    def test_cancel_reservation_within_free_window_raises(self, base_graph):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(minutes=30),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=1,
+        )
+
+        with pytest.raises(ReservationInvalidStateException):
+            cancel_reservation(str(reservation.id))
+
+    def test_cancel_reservation_bypass_free_window_for_staff(self, base_graph):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(minutes=30),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            spot=1,
+        )
+
+        cancelled = cancel_reservation(str(reservation.id), bypass_free_cancel_window=True)
+        assert cancelled.status == constants.RESERVATION_STATUS_CANCELLED
+
     def test_cancel_reservation_not_found_raises_exception(self):
         with pytest.raises(Reservation.DoesNotExist):
             cancel_reservation(str(uuid.uuid4()))
@@ -518,3 +602,25 @@ class TestMembersDomain:
     def test_get_reservation_by_id_not_found_raises_exception(self):
         with pytest.raises(Reservation.DoesNotExist):
             get_reservation_by_id(str(uuid.uuid4()))
+
+    def test_public_member_register_creates_inactive_user_with_password(self, mocker):
+        from apps.members.members import get_or_create_member_user
+
+        verify_mock = mocker.patch("apps.members.members.create_verification_code")
+        password = "S3cretPass!"
+        member, created = get_or_create_member_user(
+            {
+                "email": "rider@example.com",
+                "password": password,
+                "first_name": "Ana",
+                "last_name": "Rider",
+                "phone_number": "+56911111111",
+            },
+            is_active=False,
+        )
+
+        user = member.user
+        assert created is True
+        assert user.is_active is False
+        assert user.check_password(password)
+        verify_mock.assert_called_once_with(user=user)

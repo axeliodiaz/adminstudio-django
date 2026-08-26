@@ -12,6 +12,11 @@ from apps.wallets.models import PlanPurchase, Wallet
 from apps.wallets.services import WalletService
 
 
+@pytest.fixture(autouse=True)
+def mute_purchase_receipt_email(mocker):
+    mocker.patch("apps.wallets.notifications.send_purchase_receipt_email")
+
+
 class TestWalletServiceActivatePurchase:
     @pytest.mark.django_db
     def test_activates_purchase_and_creates_wallet(self, user, plan):

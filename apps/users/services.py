@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from apps.users import constants
-from apps.users.models import PasswordResetCode
+from apps.users.models import EmailChangeRequest, PasswordResetCode
 from apps.users.schemas import (
     UserSchema,
     UserProfileSchema,
@@ -41,6 +41,7 @@ def create_user(validated_data: dict) -> User:
     first_name = validated_data.get("first_name", "")
     last_name = validated_data.get("last_name", "")
     phone_number = (validated_data.get("phone_number") or "").strip()
+    is_active = validated_data.get("is_active", True)
 
     user = User.objects.create_user(
         username=email,
@@ -48,6 +49,7 @@ def create_user(validated_data: dict) -> User:
         email=email,
         first_name=first_name,
         last_name=last_name,
+        is_active=is_active,
     )
     # Only set and save phone_number if it is non-empty
     if phone_number:
@@ -287,6 +289,129 @@ def list_admin_users(*, search: str | None = None, role: str | None = None) -> l
     return [AdminUserSchema.model_validate(user).model_dump(mode="json") for user in queryset]
 
 
+def pending_email_for(user: User) -> str | None:
+    now = timezone.now()
+    request = (
+        EmailChangeRequest.objects.filter(user=user, is_removed=False, expires_at__gt=now)
+        .order_by("-created")
+        .first()
+    )
+    return request.new_email if request else None
+
+
+def assert_email_available(email: str, *, exclude_user_id: str | UUID | None = None) -> str:
+    normalized = (email or "").strip()
+    if not normalized:
+        raise ValueError("El correo electrónico es obligatorio.")
+    queryset = User.objects.filter(is_removed=False).filter(
+        Q(email__iexact=normalized) | Q(username__iexact=normalized)
+    )
+    if exclude_user_id is not None:
+        queryset = queryset.exclude(id=exclude_user_id)
+    if queryset.exists():
+        raise ValueError(constants.EMAIL_CHANGE_TAKEN_MESSAGE)
+    return normalized
+
+
+def reject_immediate_email_change(data: dict, user: User) -> None:
+    """Staff cannot apply a new email without the confirmation flow."""
+    if "email" not in data:
+        return
+    incoming = (data.get("email") or "").strip()
+    current = (user.email or "").strip()
+    if incoming.lower() != current.lower():
+        raise ValueError(constants.EMAIL_CHANGE_REQUIRES_CONFIRMATION_MESSAGE)
+    data.pop("email", None)
+
+
+def apply_confirmed_email(user: User, email: str) -> None:
+    dirty_fields = ["email"]
+    sync_username = bool(user.username) and user.username == (user.email or "")
+    if sync_username:
+        user.username = email
+        dirty_fields.append("username")
+    user.email = email
+    user.save(update_fields=dirty_fields)
+
+
+def _frontend_url() -> str:
+    return (getattr(settings, "FRONTEND_URL", None) or "http://localhost:5173").rstrip("/")
+
+
+def send_email_change_email(
+    user: User, new_email: str, change_uuid: str | UUID, change_code: str
+) -> None:
+    from apps.notifications.email_templates import render_email_change
+    from apps.notifications.mailing import Email, mark_notification_as_sent
+    from apps.notifications.models import Notification
+
+    hours = getattr(settings, "EMAIL_VERIFICATION_EXPIRATION_HOURS", 24)
+    frontend_url = _frontend_url()
+    confirm_url = f"{frontend_url}/#confirm-email/{change_uuid}/{change_code}"
+    subject = "Confirma tu nuevo correo en PulseFit"
+    message = f"Confirma tu nuevo correo {new_email}: {confirm_url} " f"(caduca en {hours} horas)."
+    html_content = render_email_change(
+        new_email=new_email,
+        confirm_url=confirm_url,
+        frontend_url=frontend_url,
+        hours=hours,
+    )
+    notification = Notification.objects.create(
+        user=user,
+        subject=subject,
+        message=message,
+        html_content=html_content,
+    )
+    Email(
+        notification_id=str(notification.id),
+        subject=subject,
+        message=message,
+        recipient_list=[new_email],
+        html_content=html_content,
+    ).send_mail()
+    mark_notification_as_sent(str(notification.id))
+
+
+def request_admin_email_change(*, user_id: str | UUID, email: str, actor: User) -> str:
+    """Staff-triggered email change. The current email stays until the user confirms."""
+    user = get_object_or_404(User, id=user_id, is_removed=False)
+    assert_can_manage_admin_user(actor, user)
+
+    new_email = assert_email_available(email, exclude_user_id=user.id)
+    if new_email.lower() == (user.email or "").strip().lower():
+        raise ValueError(constants.EMAIL_CHANGE_SAME_EMAIL_MESSAGE)
+
+    EmailChangeRequest.objects.filter(user=user, is_removed=False).delete()
+    change_request = EmailChangeRequest.objects.create(
+        user=user,
+        new_email=new_email,
+        code=generate_password_reset_code(),
+        expires_at=timezone.now()
+        + timedelta(hours=getattr(settings, "EMAIL_VERIFICATION_EXPIRATION_HOURS", 24)),
+    )
+    send_email_change_email(user, new_email, change_request.id, change_request.code)
+    return new_email
+
+
+def confirm_email_change(change_uuid: str | UUID, code: str) -> None:
+    now = timezone.now()
+    try:
+        change_request = EmailChangeRequest.objects.select_related("user").get(
+            id=change_uuid,
+            code=code,
+            is_removed=False,
+            expires_at__gt=now,
+        )
+    except EmailChangeRequest.DoesNotExist:
+        raise ValueError(constants.EMAIL_CHANGE_INVALID_CODE_MESSAGE)
+
+    new_email = assert_email_available(
+        change_request.new_email, exclude_user_id=change_request.user_id
+    )
+    apply_confirmed_email(change_request.user, new_email)
+    change_request.delete()
+
+
 def assert_can_manage_admin_user(actor: User, user: User) -> None:
     if user.is_superuser and not actor.is_superuser:
         raise PermissionError("Solo un superuser puede editar a un superuser.")
@@ -296,7 +421,9 @@ def get_admin_user(*, user_id: str | UUID, actor: User) -> dict:
     """Return one non-deleted user for the staff admin."""
     user = get_object_or_404(User, id=user_id, is_removed=False)
     assert_can_manage_admin_user(actor, user)
-    return AdminUserSchema.model_validate(user).model_dump(mode="json")
+    payload = AdminUserSchema.model_validate(user).model_dump(mode="json")
+    payload["pending_email"] = pending_email_for(user)
+    return payload
 
 
 def update_admin_user(*, user_id: str | UUID, data: dict, actor: User) -> dict:
@@ -317,18 +444,7 @@ def update_admin_user(*, user_id: str | UUID, data: dict, actor: User) -> dict:
     if "gender" in data and data["gender"] is not None and data["gender"] not in gender_values:
         raise ValueError("Género inválido.")
 
-    if "email" in data:
-        email = (data["email"] or "").strip()
-        if not email:
-            raise ValueError("El correo electrónico es obligatorio.")
-        taken = (
-            User.objects.filter(is_removed=False)
-            .filter(Q(email__iexact=email) | Q(username__iexact=email))
-            .exclude(id=user.id)
-            .exists()
-        )
-        if taken:
-            raise ValueError("Ya existe un usuario con ese correo.")
+    reject_immediate_email_change(data, user)
 
     if actor.id == user.id:
         if data.get("is_staff") is False:
@@ -337,17 +453,11 @@ def update_admin_user(*, user_id: str | UUID, data: dict, actor: User) -> dict:
             raise ValueError("No puedes desactivar tu propia cuenta.")
 
     dirty_fields: list[str] = []
-    sync_username = bool(user.username) and user.username == (user.email or "")
 
     for field, value in data.items():
         if field not in allowed_fields:
             continue
-        if field == "email":
-            value = (value or "").strip()
-            if sync_username:
-                user.username = value
-                dirty_fields.append("username")
-        elif field in {"first_name", "last_name", "phone_number", "gender"} and value is None:
+        if field in {"first_name", "last_name", "phone_number", "gender"} and value is None:
             value = ""
         setattr(user, field, value)
         dirty_fields.append(field)
@@ -355,4 +465,6 @@ def update_admin_user(*, user_id: str | UUID, data: dict, actor: User) -> dict:
     if dirty_fields:
         user.save(update_fields=list(dict.fromkeys(dirty_fields)))
 
-    return AdminUserSchema.model_validate(user).model_dump(mode="json")
+    payload = AdminUserSchema.model_validate(user).model_dump(mode="json")
+    payload["pending_email"] = pending_email_for(user)
+    return payload

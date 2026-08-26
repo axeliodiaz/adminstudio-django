@@ -15,6 +15,7 @@ from apps.members.schemas import (
     WaitlistEntrySchema,
 )
 from apps.users.services import get_or_create_user as _get_or_create_user
+from apps.users.services import pending_email_for, reject_immediate_email_change
 
 User = get_user_model()
 
@@ -32,17 +33,22 @@ def get_member_from_user_id(user_id: str | UUID) -> MemberSchema:
     return MemberSchema.model_validate(member)
 
 
-def get_or_create_member_user(validated_data: dict) -> tuple[MemberSchema, bool]:
+def get_or_create_member_user(
+    validated_data: dict, *, is_active: bool = True
+) -> tuple[MemberSchema, bool]:
     """
     Application service: delegates to domain logic (apps.members.members)
     and returns a Pydantic MemberSchema along with the created flag.
     """
-    member, created = members.get_or_create_member_user(validated_data)
+    member, created = members.get_or_create_member_user(validated_data, is_active=is_active)
     return MemberSchema.model_validate(member), created
 
 
-def _admin_member_dict(member: Member) -> dict:
-    return AdminMemberSchema.from_member(member).model_dump(mode="json")
+def _admin_member_dict(member: Member, *, include_pending_email: bool = False) -> dict:
+    payload = AdminMemberSchema.from_member(member).model_dump(mode="json")
+    if include_pending_email:
+        payload["pending_email"] = pending_email_for(member.user)
+    return payload
 
 
 def list_admin_members(
@@ -83,39 +89,22 @@ def get_admin_member(*, member_id: str | UUID) -> dict:
         ),
         id=member_id,
     )
-    return _admin_member_dict(member)
+    return _admin_member_dict(member, include_pending_email=True)
 
 
 def _apply_admin_member_fields(member: Member, data: dict) -> Member:
     user = member.user
     user_dirty: list[str] = []
-    sync_username = bool(user.username) and user.username == (user.email or "")
 
     if "gender" in data and data["gender"] is not None and data["gender"] not in GENDER_VALUES:
         raise ValueError("Género inválido.")
 
-    if "email" in data:
-        email = (data["email"] or "").strip()
-        if not email:
-            raise ValueError("El correo electrónico es obligatorio.")
-        taken = (
-            User.objects.filter(is_removed=False)
-            .filter(Q(email__iexact=email) | Q(username__iexact=email))
-            .exclude(id=user.id)
-            .exists()
-        )
-        if taken:
-            raise ValueError("Ya existe un usuario con ese correo.")
+    reject_immediate_email_change(data, user)
 
     for field, value in data.items():
         if field not in USER_ADMIN_FIELDS:
             continue
-        if field == "email":
-            value = (value or "").strip()
-            if sync_username:
-                user.username = value
-                user_dirty.append("username")
-        elif field in {"first_name", "last_name", "phone_number", "gender"} and value is None:
+        if field in {"first_name", "last_name", "phone_number", "gender"} and value is None:
             value = ""
         setattr(user, field, value)
         user_dirty.append(field)
@@ -139,7 +128,7 @@ def update_admin_member(*, member_id: str | UUID, data: dict) -> dict:
         ),
         id=member_id,
     )
-    return _admin_member_dict(member)
+    return _admin_member_dict(member, include_pending_email=True)
 
 
 def create_admin_member(*, data: dict) -> tuple[dict, bool]:
@@ -244,6 +233,8 @@ def _serialize_admin_reservation(reservation: Reservation) -> dict:
         "status": reservation.status,
         "spot": reservation.spot,
         "notes": reservation.notes or "",
+        "credit_charged": bool(reservation.credit_charged),
+        "cancellation_source": reservation.cancellation_source or "",
     }
     return AdminReservationSchema.model_validate(payload).model_dump(mode="json")
 
@@ -343,9 +334,16 @@ def create_admin_reservation(data: dict) -> dict:
 
 
 def cancel_admin_reservation(reservation_id: str | UUID) -> dict:
-    """Cancel a reservation from the staff admin."""
+    """Cancel a reservation from the staff admin (ignores free-cancel window)."""
+    from apps.members import constants as member_constants
+
     try:
-        members.cancel_reservation(str(reservation_id))
+        members.cancel_reservation(
+            str(reservation_id),
+            bypass_free_cancel_window=True,
+            cancellation_source=member_constants.CANCELLATION_SOURCE_STUDIO,
+            cancellation_reason="Cancelación del estudio",
+        )
     except Reservation.DoesNotExist as exc:
         raise ValueError("Reservation not found.") from exc
     return get_admin_reservation(reservation_id)

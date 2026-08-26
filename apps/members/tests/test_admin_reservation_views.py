@@ -168,6 +168,8 @@ class TestAdminReservationViews:
         assert miss.data == []
 
     def test_create_cancel_and_change_spot(self, staff_client, reservation_graph):
+        from apps.wallets.models import Wallet
+
         schedule = reservation_graph["schedule"]
         other_user = User.objects.create_user(
             username="otro@example.com",
@@ -176,6 +178,7 @@ class TestAdminReservationViews:
             first_name="Luis",
             last_name="Pérez",
         )
+        Wallet.objects.create(user=other_user, class_credits=5)
 
         create_response = staff_client.post(
             reverse("admin-reservation-list"),

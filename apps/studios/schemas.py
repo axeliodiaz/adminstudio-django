@@ -120,3 +120,17 @@ class AdminRoomWriteSchema(BaseModel):
     name: str | None = None
     capacity: int | None = None
     is_active: bool | None = None
+
+
+class StudioSettingsSchema(BaseModel):
+    """Studio-wide policy settings."""
+
+    free_cancellation_hours: int = Field(ge=0, le=168)
+
+    model_config = {"from_attributes": True}
+
+
+class StudioSettingsWriteSchema(BaseModel):
+    """Partial update for studio settings (superuser only)."""
+
+    free_cancellation_hours: int = Field(ge=0, le=168)

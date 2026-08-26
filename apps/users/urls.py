@@ -6,6 +6,8 @@ from apps.users.views import (
     AdminUserListView,
     AdminUserDetailView,
     AdminUserPasswordRecoveryView,
+    AdminUserEmailChangeView,
+    EmailChangeConfirmView,
     ChangePasswordView,
     PasswordRecoveryRequestView,
     PasswordRecoveryConfirmView,
@@ -22,6 +24,11 @@ urlpatterns = [
         AdminUserPasswordRecoveryView.as_view(),
         name="user-password-recovery",
     ),
+    path(
+        "users/<uuid:user_id>/email-change/",
+        AdminUserEmailChangeView.as_view(),
+        name="user-email-change",
+    ),
     path("users/<uuid:user_id>/", AdminUserDetailView.as_view(), name="user-detail"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),
     path(
@@ -33,5 +40,10 @@ urlpatterns = [
         "password-recovery/confirm/",
         PasswordRecoveryConfirmView.as_view(),
         name="password-recovery-confirm",
+    ),
+    path(
+        "email-change/confirm/<uuid:change_uuid>/",
+        EmailChangeConfirmView.as_view(),
+        name="email-change-confirm",
     ),
 ]

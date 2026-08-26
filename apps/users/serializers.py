@@ -41,3 +41,19 @@ class PasswordRecoveryConfirmSerializer(serializers.Serializer):
     def validate_code(self, value: str) -> str:
         """Strip whitespace from code."""
         return value.strip().upper()
+
+
+class EmailChangeRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True, help_text="New email address")
+
+
+class EmailChangeConfirmSerializer(serializers.Serializer):
+    code = serializers.CharField(
+        required=True,
+        max_length=6,
+        min_length=6,
+        help_text="6-character confirmation code",
+    )
+
+    def validate_code(self, value: str) -> str:
+        return value.strip().upper()

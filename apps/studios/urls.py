@@ -7,6 +7,7 @@ from apps.studios.views import (
     AdminRoomListView,
     AdminStudioDetailView,
     AdminStudioListView,
+    AdminStudioSettingsView,
     RoomViewSet,
     StudioViewSet,
 )
@@ -17,6 +18,7 @@ router.register(r"rooms", RoomViewSet, basename="room")
 router.register(r"addresses", AddressViewSet, basename="address")
 
 urlpatterns = [
+    path("admin/settings/", AdminStudioSettingsView.as_view(), name="admin-studio-settings"),
     path("admin/studios/", AdminStudioListView.as_view(), name="admin-studio-list"),
     path(
         "admin/studios/<uuid:studio_id>/",

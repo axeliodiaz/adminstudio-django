@@ -99,7 +99,14 @@ def update_schedule(schedule: Schedule, *, data: dict) -> Schedule:
         schedule.room_id = data["room_id"]
         dirty.append("room_id")
 
-    for field in ("title", "description", "start_time", "duration_minutes", "status"):
+    for field in (
+        "title",
+        "description",
+        "start_time",
+        "duration_minutes",
+        "status",
+        "cancellation_reason",
+    ):
         if field in data:
             setattr(schedule, field, data[field])
             dirty.append(field)

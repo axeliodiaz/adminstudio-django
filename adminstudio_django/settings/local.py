@@ -53,7 +53,3 @@ if not MAILTRAP_API_KEY:
         "Get your API token from https://mailtrap.io/ -> Settings -> API Tokens",
         UserWarning,
     )
-
-# Celery: Run tasks synchronously in local development (no RabbitMQ needed)
-CELERY_TASK_ALWAYS_EAGER = True
-CELERY_TASK_EAGER_PROPAGATES = True

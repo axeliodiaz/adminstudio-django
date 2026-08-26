@@ -39,11 +39,9 @@ class Email:
         return bool(smtp_ok or getattr(settings, "MAILTRAP_API_KEY", None))
 
     def get_mailing_client(self) -> str:
-        """Pick a provider. Local (DEBUG) prefers Mailtrap; prod prefers SendGrid then Resend."""
+        """Pick a provider. Local (DEBUG) prefers Mailtrap; prod prefers Resend."""
         if getattr(settings, "DEBUG", False) and self._mailtrap_is_configured():
             return constants.MAIL_CLIENT_MAILTRAP
-        if getattr(settings, "SENDGRID_API_KEY", None):
-            return constants.MAIL_CLIENT_SENDGRID
         if getattr(settings, "RESEND_API_KEY", None):
             return constants.MAIL_CLIENT_RESEND
         if self._mailtrap_is_configured():
@@ -85,8 +83,6 @@ class Email:
         resp.raise_for_status()
 
     def _get_api_key_for_provider(self, provider: str) -> str | None:
-        if provider == constants.MAIL_CLIENT_SENDGRID:
-            return settings.SENDGRID_API_KEY
         if provider == constants.MAIL_CLIENT_RESEND:
             return settings.RESEND_API_KEY
         if provider == constants.MAIL_CLIENT_MAILTRAP:
@@ -97,8 +93,8 @@ class Email:
         """
         Send email using the appropriate mailing client.
 
-        For Mailtrap, sends directly via SMTP using Django's email backend (as per Mailtrap documentation).
-        For other providers (SendGrid, Resend), proxies to external mailing service API via HTTP POST.
+        For Mailtrap, sends via the Mailtrap HTTP API.
+        For Resend (and the default client), proxies to the external mailing service API via HTTP POST.
         """
         mailing_client = self.get_mailing_client()
         log_base = {
@@ -114,7 +110,7 @@ class Email:
             )
             return
         else:
-            # Use external service for SendGrid, Resend, or default
+            # Use external service for Resend or default
             request_payload = {
                 "provider": mailing_client,
                 "subject": self.subject,
@@ -196,6 +192,7 @@ def send_pending_emails(notifications: list[dict[str, str]]):
             subject=notification.subject,
             message=notification.message,
             recipient_list=recipient_list,
+            html_content=notification.html_content or None,
         )
         email.send_mail()
         mark_notification_as_sent(str(notification.id))

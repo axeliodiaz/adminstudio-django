@@ -1,5 +1,8 @@
+from datetime import timedelta
+
 from django.db import transaction
 from django.db.models import Q, QuerySet
+from django.utils import timezone
 
 from apps.members import constants
 from apps.members.exceptions import (
@@ -9,6 +12,7 @@ from apps.members.exceptions import (
 )
 from apps.members.models import Member, Reservation
 from apps.schedules.schedules import get_schedule_by_id
+from apps.studios.models import StudioSettings
 from apps.users.services import get_or_create_user
 from apps.verifications.services import create_verification_code
 
@@ -30,15 +34,21 @@ def get_member_by_user_id(user_id: str) -> Member:
     return Member.objects.get(user_id=user_id)
 
 
-def get_or_create_member_user(validated_data: dict) -> tuple[Member, bool]:
+def get_or_create_member_user(
+    validated_data: dict, *, is_active: bool = True
+) -> tuple[Member, bool]:
     """
     Domain logic for members: get or create Member linked to a User.
 
     Returns a tuple of (Member instance, created flag).
+    Public registration should pass is_active=False so the account
+    stays inactive until the email is confirmed.
     """
-    user = get_or_create_user(validated_data)
+    payload = dict(validated_data)
+    payload.setdefault("is_active", is_active)
+    user = get_or_create_user(payload)
     member, created = Member.objects.get_or_create(user=user)
-    if created:
+    if created or not user.is_active:
         create_verification_code(user=member.user)
     return member, created
 
@@ -56,9 +66,12 @@ def create_reservation(validated_data: dict) -> Reservation:
     """Domain logic: create a Reservation for a member and schedule.
 
     Expects keys: user_id (UUID), schedule_id (UUID), spot (int), optional notes.
+    Consumes one class credit unless the member has an unlimited membership.
     """
     # First, ensure the referenced user exists to avoid FK violations when creating Member
     from django.contrib.auth import get_user_model
+
+    from apps.wallets.services import WalletService
 
     User = get_user_model()
     user = User.objects.get(id=validated_data["user_id"])  # may raise DoesNotExist
@@ -87,29 +100,37 @@ def create_reservation(validated_data: dict) -> Reservation:
     if existing_for_member.exists():
         raise ReservationInvalidStateException("Ya tienes una reserva para esta clase.")
 
-    reserved_count = Reservation.objects.filter(
-        schedule=schedule,
-        status=constants.RESERVATION_STATUS_RESERVED,
-        is_removed=False,
-    ).count()
-    if reserved_count >= room_capacity:
-        raise RoomFullException("Room is full.")
+    with transaction.atomic():
+        reserved_count = Reservation.objects.filter(
+            schedule=schedule,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            is_removed=False,
+        ).count()
+        if reserved_count >= room_capacity:
+            raise RoomFullException("Room is full.")
 
-    taken_spot = Reservation.objects.filter(
-        schedule=schedule,
-        spot=spot,
-        status=constants.RESERVATION_STATUS_RESERVED,
-        is_removed=False,
-    ).exists()
-    if taken_spot:
-        raise InvalidSpotException(f"Spot {spot} is already taken.")
+        taken_spot = Reservation.objects.filter(
+            schedule=schedule,
+            spot=spot,
+            status=constants.RESERVATION_STATUS_RESERVED,
+            is_removed=False,
+        ).exists()
+        if taken_spot:
+            raise InvalidSpotException(f"Spot {spot} is already taken.")
 
-    reservation = Reservation.objects.create(
-        member=member,
-        schedule=schedule,
-        spot=spot,
-        notes=validated_data.get("notes") or "",
-    )
+        credit_charged = WalletService.consume_class_credit(user)
+
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            spot=spot,
+            notes=validated_data.get("notes") or "",
+            credit_charged=credit_charged,
+        )
+
+    from apps.members.notifications import send_reservation_confirmed_email
+
+    send_reservation_confirmed_email(reservation)
     return reservation
 
 
@@ -118,20 +139,73 @@ def get_reservation_by_id(reservation_id: str) -> Reservation:
     return Reservation.objects.get(id=reservation_id)
 
 
-def cancel_reservation(reservation_id: str) -> Reservation:
+def cancel_reservation(
+    reservation_id: str,
+    *,
+    bypass_free_cancel_window: bool = False,
+    cancellation_source: str = constants.CANCELLATION_SOURCE_MEMBER,
+    cancellation_reason: str = "",
+    promote_waitlist: bool | None = None,
+    notify: bool | None = None,
+) -> Reservation:
     """Cancel a reservation if it is currently in RESERVED status.
 
     Raises Reservation.DoesNotExist if the reservation does not exist.
-    Raises ReservationInvalidStateException if the reservation is not in RESERVED status.
+    Raises ReservationInvalidStateException if the reservation is not in RESERVED status
+    or the free-cancellation window has closed (unless bypassed for staff).
+
+    Studio/schedule cancellations refund the credit (if charged) and notify the member.
+    Member cancellations within the free window also refund.
     """
+    from apps.wallets.services import WalletService
+
     reservation = get_reservation_by_id(reservation_id)
     if reservation.status != constants.RESERVATION_STATUS_RESERVED:
         raise ReservationInvalidStateException("Only RESERVED reservations can be cancelled.")
-    reservation.status = constants.RESERVATION_STATUS_CANCELLED
-    reservation.save(update_fields=["status", "modified"])
-    from apps.members.waitlist import promote_waitlist_for_schedule
+    if not bypass_free_cancel_window:
+        hours = StudioSettings.load().free_cancellation_hours
+        deadline = reservation.schedule.start_time - timedelta(hours=hours)
+        if timezone.now() >= deadline:
+            raise ReservationInvalidStateException(
+                f"Cancelación gratuita solo hasta {hours} horas antes de la clase."
+            )
 
-    promote_waitlist_for_schedule(reservation.schedule_id, reservation.spot)
+    should_promote = (
+        promote_waitlist
+        if promote_waitlist is not None
+        else cancellation_source != constants.CANCELLATION_SOURCE_SCHEDULE
+    )
+    should_notify = (
+        notify
+        if notify is not None
+        else cancellation_source in constants.STUDIO_CANCELLATION_SOURCES
+    )
+
+    refunded = False
+    with transaction.atomic():
+        if reservation.credit_charged:
+            WalletService.refund_class_credit(reservation.member.user)
+            reservation.credit_charged = False
+            refunded = True
+        reservation.status = constants.RESERVATION_STATUS_CANCELLED
+        reservation.cancellation_source = cancellation_source
+        reservation.save(
+            update_fields=["status", "cancellation_source", "credit_charged", "modified"]
+        )
+
+    if should_promote:
+        from apps.members.waitlist import promote_waitlist_for_schedule
+
+        promote_waitlist_for_schedule(reservation.schedule_id, reservation.spot)
+
+    if should_notify:
+        from apps.members.notifications import send_class_cancelled_email
+
+        reason = cancellation_reason
+        if not reason and cancellation_source == constants.CANCELLATION_SOURCE_SCHEDULE:
+            reason = getattr(reservation.schedule, "cancellation_reason", "") or ""
+        send_class_cancelled_email(reservation, reason=reason, credit_refunded=refunded)
+
     return reservation
 
 
@@ -241,9 +315,15 @@ def list_reservations_by_date_range(
     if room_id is not None:
         filters["schedule__room_id"] = room_id
 
-    # Exclude cancelled reservations
-    return Reservation.objects.filter(**filters).exclude(
-        status=constants.RESERVATION_STATUS_CANCELLED
+    # Exclude member-cancelled reservations; keep studio/schedule cancellations visible
+    # so Mis reservas can show "clase cancelada / crédito devuelto".
+    return (
+        Reservation.objects.filter(**filters)
+        .exclude(
+            Q(status=constants.RESERVATION_STATUS_CANCELLED)
+            & ~Q(cancellation_source__in=constants.STUDIO_CANCELLATION_SOURCES)
+        )
+        .select_related("schedule")
     )
 
 

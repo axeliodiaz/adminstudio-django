@@ -10,6 +10,7 @@ class Notification(SoftDeletableModel, UUIDModel, TimeStampedModel):
     )
     subject = models.CharField(max_length=255)
     message = models.TextField()
+    html_content = models.TextField(blank=True, default="")
     STATUS = Choices(
         ("sent", "Sent"),
         ("enqueued", "Enqueued"),

@@ -11,6 +11,7 @@ class Notification(BaseModel):
     message: str
     user_id: uuid.UUID
     recipient_list: list[UserSchema]
+    html_content: str | None = None
 
     def get_recipient_mail_list(self):
         return [recipient.email for recipient in self.recipient_list]
