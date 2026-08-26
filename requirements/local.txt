@@ -1,5 +1,7 @@
 -r base.txt
 
+dj-database-url==3.0.1
+psycopg[binary]==3.2.10
 pre-commit==4.3.0
 drf-yasg==1.21.11
 setuptools==80.9.0

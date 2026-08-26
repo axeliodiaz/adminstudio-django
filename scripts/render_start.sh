@@ -2,7 +2,8 @@
 set -e
 
 # Bind HTTP immediately so Render's deploy health check passes. Remote
-# Postgres migrate + fixture/seed can take minutes and must not block port 80.
+# Postgres (DATABASE_URL / Supabase) migrate + fixture/seed can take minutes
+# and must not block port 80.
 (
   python manage.py migrate --noinput
   python manage.py ensure_superuser
