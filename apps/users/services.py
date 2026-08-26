@@ -12,8 +12,11 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from drf_expiring_token.models import ExpiringToken
 
+from apps.members.models import Member
 from apps.users import constants
+from apps.users.clerk import fetch_clerk_user, verify_clerk_session_token
 from apps.users.models import EmailChangeRequest, PasswordResetCode
 from apps.users.schemas import (
     UserSchema,
@@ -85,6 +88,45 @@ def get_or_create_user(data: dict) -> User:
     except User.DoesNotExist:
         user = create_user(data)
     return user
+
+
+def exchange_clerk_session(session_token: str) -> tuple[User, ExpiringToken]:
+    """Verify a Clerk session JWT and return the local user plus a DRF token."""
+    claims = verify_clerk_session_token(session_token)
+    profile = fetch_clerk_user(claims["sub"])
+
+    user = User.objects.filter(email__iexact=profile.email).first()
+    if user is None:
+        user = create_user(
+            {
+                "email": profile.email,
+                "first_name": profile.first_name,
+                "last_name": profile.last_name,
+                "phone_number": profile.phone_number,
+                "is_active": True,
+            }
+        )
+    else:
+        dirty: list[str] = []
+        if not user.is_active:
+            user.is_active = True
+            dirty.append("is_active")
+        if profile.first_name and not user.first_name:
+            user.first_name = profile.first_name
+            dirty.append("first_name")
+        if profile.last_name and not user.last_name:
+            user.last_name = profile.last_name
+            dirty.append("last_name")
+        if profile.phone_number and not user.phone_number:
+            user.phone_number = profile.phone_number
+            dirty.append("phone_number")
+        if dirty:
+            user.save(update_fields=dirty)
+
+    Member.objects.get_or_create(user=user)
+    ExpiringToken.objects.filter(user=user).delete()
+    token = ExpiringToken.objects.create(user=user)
+    return user, token
 
 
 def get_user_profile(user: User) -> UserProfileResponseSchema:

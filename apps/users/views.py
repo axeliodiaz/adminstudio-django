@@ -17,10 +17,12 @@ from apps.users.serializers import (
 from pydantic import ValidationError as PydanticValidationError
 
 from apps.users.schemas import AdminUserUpdateSchema, CurrentUserSchema
+from apps.users.clerk import ClerkAuthError
 from apps.users.services import (
     change_user_password,
     request_password_recovery,
     confirm_password_reset,
+    exchange_clerk_session,
     get_admin_user,
     list_admin_users,
     request_admin_password_recovery,
@@ -85,6 +87,33 @@ class LoginView(APIView):
                 "token": token.key,
                 "user": user_data,
             },
+            status=status.HTTP_200_OK,
+        )
+
+
+class ClerkSessionView(APIView):
+    """Exchange a Clerk session JWT for a Django expiring token."""
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        header = request.META.get("HTTP_AUTHORIZATION") or ""
+        scheme, _, credential = header.partition(" ")
+        if scheme.lower() != "bearer" or not credential.strip():
+            return Response(
+                {"detail": "Missing Clerk session token."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        try:
+            user, token = exchange_clerk_session(credential.strip())
+        except ClerkAuthError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user_data = CurrentUserSchema.model_validate(user).model_dump(mode="json")
+        return Response(
+            {"token": token.key, "user": user_data},
             status=status.HTTP_200_OK,
         )
 
