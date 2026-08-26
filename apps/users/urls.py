@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.users.views import (
     LoginView,
+    ClerkSessionView,
     CurrentUserView,
     AdminUserListView,
     AdminUserDetailView,
@@ -17,6 +18,7 @@ app_name = "users"
 
 urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
+    path("clerk/", ClerkSessionView.as_view(), name="clerk"),
     path("me/", CurrentUserView.as_view(), name="me"),
     path("users/", AdminUserListView.as_view(), name="users"),
     path(
