@@ -117,6 +117,9 @@ class WalletService:
         # 7. Save the Wallet
         wallet.save()
 
+        from apps.wallets.notifications import send_purchase_receipt_email
+
+        send_purchase_receipt_email(purchase)
         return wallet
 
     @staticmethod

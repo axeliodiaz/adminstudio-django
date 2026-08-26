@@ -254,3 +254,40 @@ def render_class_cancelled(
         else "Disculpa el cambio. Puedes reservar otra clase."
     )
     return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)
+
+
+def render_purchase_receipt(
+    *,
+    first_name: str,
+    plan_name: str,
+    amount_label: str,
+    credits_label: str,
+    validity_label: str,
+    payment_method_label: str,
+    folio: str,
+    wallet_url: str,
+    frontend_url: str,
+    preheader: str,
+) -> str:
+    greeting_name = escape(first_name) if first_name else "rider"
+    rows = [
+        ("Plan", plan_name),
+        ("Monto", amount_label),
+        ("Créditos", credits_label),
+        ("Vigencia", validity_label),
+    ]
+    if payment_method_label:
+        rows.append(("Método", payment_method_label))
+    rows.append(("Folio", folio))
+    body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">Pago recibido</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  Gracias, {greeting_name}. Tu compra ya está activa en la billetera.
+</p>
+{_detail_rows(rows)}
+{_cta_button(wallet_url, "Ver mi billetera")}
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{MUTED}">
+  Este correo es tu comprobante. La boleta electrónica se envía por separado si aplica.
+</p>
+"""
+    return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)

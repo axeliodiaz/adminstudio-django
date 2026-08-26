@@ -118,7 +118,8 @@ class TestValidatePromoCode:
 
 @pytest.mark.django_db
 class TestCheckout:
-    def test_checkout_applies_promo_and_quantity(self, member_client, active_plan):
+    def test_checkout_applies_promo_and_quantity(self, member_client, active_plan, mocker):
+        mocker.patch("apps.wallets.notifications.send_purchase_receipt_email")
         _make_promo()
         response = member_client.post(
             reverse("plan-checkout"),
@@ -139,6 +140,7 @@ class TestCheckout:
         assert purchase.payment_method == "webpay"
         assert purchase.promo_code.code == "VERANO10"
         assert purchase.price_paid == Decimal("70200.00")
+        assert purchase.activated_since is not None
 
     def test_checkout_requires_terms(self, member_client, active_plan):
         response = member_client.post(
@@ -152,7 +154,8 @@ class TestCheckout:
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_purchase_accepts_promo_code(self, member_client, active_plan):
+    def test_purchase_accepts_promo_code(self, member_client, active_plan, mocker):
+        mocker.patch("apps.wallets.notifications.send_purchase_receipt_email")
         _make_promo(discount_type=constants.DISCOUNT_TYPE_FIXED, discount_value=Decimal("4000"))
         response = member_client.post(
             reverse("plan-purchase"),
@@ -166,6 +169,46 @@ class TestCheckout:
         assert response.status_code == status.HTTP_201_CREATED
         purchase = PlanPurchase.objects.get()
         assert purchase.price_paid == Decimal("35000.00")
+        assert purchase.activated_since is not None
+
+    def test_checkout_leaves_purchase_pending_when_psp_enabled(
+        self, member_client, active_plan, settings, mocker
+    ):
+        settings.ENABLE_PSP_PAYMENTS = True
+        send_email = mocker.patch("apps.wallets.notifications.send_purchase_receipt_email")
+        response = member_client.post(
+            reverse("plan-checkout"),
+            {
+                "items": [{"plan_id": str(active_plan.id), "quantity": 1}],
+                "payment_method": "webpay",
+                "accept_terms": True,
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        purchase = PlanPurchase.objects.get()
+        assert purchase.activated_since is None
+        send_email.assert_not_called()
+
+    def test_checkout_activates_wallet_and_sends_receipt(self, member_client, active_plan, mocker):
+        send_email = mocker.patch("apps.wallets.notifications.send_purchase_receipt_email")
+        response = member_client.post(
+            reverse("plan-checkout"),
+            {
+                "items": [{"plan_id": str(active_plan.id), "quantity": 1}],
+                "payment_method": "webpay",
+                "accept_terms": True,
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        purchase = PlanPurchase.objects.get()
+        assert purchase.activated_since is not None
+        send_email.assert_called_once()
+        from apps.wallets.models import Wallet
+
+        wallet = Wallet.objects.get(user=member_client.user)
+        assert wallet.class_credits == active_plan.classes_included
 
 
 @pytest.mark.django_db

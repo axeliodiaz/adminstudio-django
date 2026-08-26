@@ -2,11 +2,14 @@
 
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.conf import settings
+
 from apps.plans import constants
 from apps.plans.models import Plan
 from apps.plans.promo_services import compute_discount_amount, get_valid_promo_code
 from apps.wallets.models import PlanPurchase
 from apps.wallets.schemas import PlanPurchaseSchema
+from apps.wallets.services import WalletService
 
 TWOPLACES = Decimal("0.01")
 
@@ -101,6 +104,8 @@ def checkout_plans(
             payment_method=method,
             activated_since=None,
         )
+        if not settings.ENABLE_PSP_PAYMENTS:
+            WalletService.activate_purchase(purchase)
         purchases.append(_serialize_purchase(purchase))
 
     return {
