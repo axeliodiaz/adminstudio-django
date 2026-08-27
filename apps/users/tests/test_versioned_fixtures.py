@@ -35,7 +35,7 @@ def test_seed_demo_catalog_creates_kristina_and_preserves_axelio():
     assert kristina.first_name == "Kristina"
     instructor = Instructor.objects.get(user=kristina)
     assert instructor.tagline
-    assert instructor.instagram_username == "kristinagirod"
+    assert instructor.instagram_username == "thekristinagirod"
     assert instructor.website_url == f"https://{settings.EMAIL_DOMAIN}/coaches/kristina-girod"
     assert kristina.email == f"kristina_girod@{settings.EMAIL_DOMAIN}"
     assert kristina.address

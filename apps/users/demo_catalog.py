@@ -108,7 +108,7 @@ INSTRUCTORS: tuple[Persona, ...] = (
             "Si el puesto 1 está libre, no lo está: lo está guardando el destino."
         ),
         website_path="coaches/kristina-girod",
-        instagram_username="kristinagirod",
+        instagram_username="thekristinagirod",
         tiktok_username="kristina.girod.ride",
         is_verified=True,
         instructor_since=date(2016, 5, 1),
