@@ -54,21 +54,68 @@ class TestScheduleViewSetList:
         assert ids == {str(schedules_sample[0].id), str(schedules_sample[2].id)}
 
     @pytest.mark.django_db
-    def test_list_combined_filters(self, api_client, schedules_sample):
-        threshold = (
-            (schedules_sample[0].start_time + timedelta(minutes=30))
-            .isoformat()
-            .replace("+00:00", "Z")
+    def test_list_filter_by_start_and_end_date(self, api_client, schedules_sample):
+        resp = api_client.get(
+            reverse("schedule-list"),
+            {"start_date": "2025-01-01", "end_date": "2025-01-01"},
         )
-        params = {
-            "start_time": threshold,
-            "instructor_id": str(schedules_sample[0].instructor_id),
-            "room_name": "small",
-        }
+        assert resp.status_code == status.HTTP_200_OK
+        assert len(resp.json()) == 3
+
+        empty = api_client.get(
+            reverse("schedule-list"),
+            {"start_date": "2025-01-02", "end_date": "2025-01-02"},
+        )
+        assert empty.status_code == status.HTTP_200_OK
+        assert empty.json() == []
+
+    @pytest.mark.django_db
+    def test_list_filter_by_end_time(self, api_client, schedules_sample):
+        threshold = schedules_sample[0].start_time.isoformat().replace("+00:00", "Z")
+        resp = api_client.get(reverse("schedule-list"), {"end_time": threshold})
+        assert resp.status_code == status.HTTP_200_OK
+        ids = {item["id"] for item in resp.json()}
+        assert ids == {str(schedules_sample[0].id)}
+
+    @pytest.mark.django_db
+    def test_list_filter_by_room_id(self, api_client, schedules_sample):
+        room_id = str(schedules_sample[1].room_id)
+        resp = api_client.get(reverse("schedule-list"), {"room_id": room_id})
+        assert resp.status_code == status.HTTP_200_OK
+        ids = {item["id"] for item in resp.json()}
+        assert ids == {str(schedules_sample[1].id)}
+
+    @pytest.mark.django_db
+    def test_list_filter_by_multiple_instructor_ids(self, api_client, schedules_sample):
+        params = [
+            ("instructor_id", str(schedules_sample[0].instructor_id)),
+            ("instructor_id", str(schedules_sample[2].instructor_id)),
+        ]
         resp = api_client.get(reverse("schedule-list"), params)
         assert resp.status_code == status.HTTP_200_OK
-        data = resp.json()
-        assert [item["id"] for item in data] == [str(schedules_sample[1].id)]
+        ids = {item["id"] for item in resp.json()}
+        assert ids == {
+            str(schedules_sample[0].id),
+            str(schedules_sample[1].id),
+            str(schedules_sample[2].id),
+        }
+
+    @pytest.mark.django_db
+    def test_list_includes_related_display_fields(self, api_client, schedules_sample):
+        resp = api_client.get(reverse("schedule-list"))
+        assert resp.status_code == status.HTTP_200_OK
+        row = resp.json()[0]
+        assert "instructor_name" in row
+        assert "room_name" in row
+        assert "studio_name" in row
+        assert "booked_count" in row
+        assert "is_full" in row
+
+    @pytest.mark.django_db
+    def test_list_invalid_start_date_returns_400(self, api_client):
+        resp = api_client.get(reverse("schedule-list"), {"start_date": "not-a-date"})
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Invalid start_date format" in resp.json().get("detail", "")
 
 
 class TestScheduleViewSetRetrieve:

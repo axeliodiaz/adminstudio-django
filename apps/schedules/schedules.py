@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Iterable
 from uuid import UUID
+
+from django.db.models import Q
 
 from apps.instructors.services import get_instructor_by_id
 from apps.schedules import constants
@@ -17,25 +20,65 @@ def get_schedule_by_id(schedule_id: UUID | str) -> Schedule:
 def get_schedules_list(
     *,
     start_time: datetime | None = None,
+    end_time: datetime | None = None,
     instructor_id: UUID | str | None = None,
+    instructor_ids: Iterable[UUID | str] | None = None,
     instructor_username: str | None = None,
     room_name: str | None = None,
+    room_id: UUID | str | None = None,
+    room_ids: Iterable[UUID | str] | None = None,
+    title: str | None = None,
+    titles: Iterable[str] | None = None,
 ):
     """Return queryset of schedules ordered by start_time.
 
-    Optionally filter by start_time (>= provided value), by instructor id or instructor username,
-    and/or by room name when provided.
-    This helper replaces direct usages of Schedule.objects.all().order_by("start_time").
+    Filters are combined with AND. ``titles`` matches if the schedule title
+    contains any of the given strings (case-insensitive).
     """
-    qs = Schedule.objects.select_related("room")
+    qs = Schedule.objects.select_related(
+        "instructor__user",
+        "room__studio__address",
+    )
     if start_time is not None:
         qs = qs.filter(start_time__gte=start_time)
+    if end_time is not None:
+        qs = qs.filter(start_time__lte=end_time)
+
+    instructor_keys = [str(value) for value in (instructor_ids or []) if value]
     if instructor_id:
-        qs = qs.filter(instructor_id=instructor_id)
+        instructor_keys.append(str(instructor_id))
+    instructor_keys = list(dict.fromkeys(instructor_keys))
+    if len(instructor_keys) == 1:
+        qs = qs.filter(instructor_id=instructor_keys[0])
+    elif instructor_keys:
+        qs = qs.filter(instructor_id__in=instructor_keys)
+
     if instructor_username:
         qs = qs.filter(instructor__user__username__icontains=instructor_username)
     if room_name:
         qs = qs.filter(room__name__icontains=room_name)
+
+    room_keys = [str(value) for value in (room_ids or []) if value]
+    if room_id:
+        room_keys.append(str(room_id))
+    room_keys = list(dict.fromkeys(room_keys))
+    if len(room_keys) == 1:
+        qs = qs.filter(room_id=room_keys[0])
+    elif room_keys:
+        qs = qs.filter(room_id__in=room_keys)
+
+    title_terms = [str(value).strip() for value in (titles or []) if str(value).strip()]
+    if title and title.strip():
+        title_terms.append(title.strip())
+    title_terms = list(dict.fromkeys(title_terms))
+    if len(title_terms) == 1:
+        qs = qs.filter(title__icontains=title_terms[0])
+    elif title_terms:
+        title_query = Q()
+        for term in title_terms:
+            title_query |= Q(title__icontains=term)
+        qs = qs.filter(title_query)
+
     return qs.order_by("start_time")
 
 

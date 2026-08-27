@@ -42,15 +42,44 @@ class TestGetSchedulesList:
         assert ids == {schedules_sample[0].id, schedules_sample[2].id}
 
     @pytest.mark.django_db
-    def test_combined_filters(self, schedules_sample):
-        threshold = schedules_sample[0].start_time + timedelta(minutes=30)
-        qs = get_schedules_list(
-            start_time=threshold,
-            instructor_id=str(schedules_sample[0].instructor_id),
-            room_name="small",
+    def test_filters_by_end_time_lte(self, schedules_sample):
+        threshold = schedules_sample[1].start_time
+        qs = get_schedules_list(end_time=threshold)
+        ids = set(qs.values_list("id", flat=True))
+        assert ids == {schedules_sample[0].id, schedules_sample[1].id}
+
+    @pytest.mark.django_db
+    def test_filters_by_room_id(self, schedules_sample, room_small):
+        qs = get_schedules_list(room_id=str(room_small.id))
+        ids = set(qs.values_list("id", flat=True))
+        assert ids == {schedules_sample[1].id}
+
+    @pytest.mark.django_db
+    def test_filters_by_multiple_instructor_ids(
+        self, schedules_sample, instructor_alice, instructor_bob
+    ):
+        qs = get_schedules_list(instructor_ids=[str(instructor_alice.id), str(instructor_bob.id)])
+        assert qs.count() == 3
+
+    @pytest.mark.django_db
+    def test_filters_by_title_icontains(self, instructor_alice, room_main):
+        baker.make(
+            "schedules.Schedule",
+            instructor=instructor_alice,
+            room=room_main,
+            title="RIDE 45",
+            start_time=datetime(2025, 2, 1, 10, 0, tzinfo=timezone.utc),
         )
-        ids = list(qs.values_list("id", flat=True))
-        assert ids == [schedules_sample[1].id]
+        baker.make(
+            "schedules.Schedule",
+            instructor=instructor_alice,
+            room=room_main,
+            title="Pilates",
+            start_time=datetime(2025, 2, 1, 11, 0, tzinfo=timezone.utc),
+        )
+        qs = get_schedules_list(titles=["RIDE"])
+        assert qs.count() == 1
+        assert qs.get().title == "RIDE 45"
 
 
 class TestCreateSchedule:

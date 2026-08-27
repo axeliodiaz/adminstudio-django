@@ -53,29 +53,78 @@ def create_schedule(
     return ScheduleSchema.model_validate(schedule)
 
 
+def _annotate_occupancy(queryset):
+    """Attach booked/waitlist counts in two aggregated queries instead of per row."""
+    return queryset.annotate(
+        booked_count=Count(
+            "reservations",
+            filter=Q(
+                reservations__is_removed=False,
+                reservations__status=member_constants.RESERVATION_STATUS_RESERVED,
+            ),
+            distinct=True,
+        ),
+        waitlist_count=Count(
+            "waitlist_entries",
+            filter=Q(
+                waitlist_entries__is_removed=False,
+                waitlist_entries__status__in=member_constants.WAITLIST_ACTIVE_STATUSES,
+            ),
+            distinct=True,
+        ),
+    )
+
+
+def _studio_address(schedule: Schedule) -> str | None:
+    room = getattr(schedule, "room", None)
+    studio = getattr(room, "studio", None) if room else None
+    address = getattr(studio, "address", None) if studio else None
+    value = getattr(address, "address", None) if address else None
+    return value or None
+
+
+def _schedule_display_fields(schedule: Schedule) -> dict:
+    room = getattr(schedule, "room", None)
+    studio = getattr(room, "studio", None) if room else None
+    return {
+        "instructor_name": _instructor_display_name(schedule),
+        "room_name": room.name if room else "",
+        "studio_id": studio.id if studio else None,
+        "studio_name": studio.name if studio else None,
+        "studio_address": _studio_address(schedule),
+    }
+
+
 def _schedule_occupancy(schedule: Schedule) -> dict:
     room = getattr(schedule, "room", None)
     capacity = room.capacity if room else None
-    booked = Reservation.objects.filter(
-        schedule_id=schedule.id,
-        status=member_constants.RESERVATION_STATUS_RESERVED,
-        is_removed=False,
-    ).count()
-    waitlist_count = WaitlistEntry.objects.filter(
-        schedule_id=schedule.id,
-        is_removed=False,
-        status__in=member_constants.WAITLIST_ACTIVE_STATUSES,
-    ).count()
+    booked = getattr(schedule, "booked_count", None)
+    if booked is None:
+        booked = Reservation.objects.filter(
+            schedule_id=schedule.id,
+            status=member_constants.RESERVATION_STATUS_RESERVED,
+            is_removed=False,
+        ).count()
+    waitlist_count = getattr(schedule, "waitlist_count", None)
+    if waitlist_count is None:
+        waitlist_count = WaitlistEntry.objects.filter(
+            schedule_id=schedule.id,
+            is_removed=False,
+            status__in=member_constants.WAITLIST_ACTIVE_STATUSES,
+        ).count()
     return {
         "capacity": capacity,
         "booked_count": booked,
         "waitlist_count": waitlist_count,
         "is_full": bool(capacity is not None and booked >= capacity),
+        **_schedule_display_fields(schedule),
     }
 
 
 def to_schedule_schema_list(items: Iterable) -> List[ScheduleSchema]:
     """Convert iterable of Schedule model instances to a list of ScheduleSchema."""
+    if hasattr(items, "annotate"):
+        items = _annotate_occupancy(items)
     schemas = []
     for obj in items:
         schema = ScheduleSchema.model_validate(obj)
@@ -86,18 +135,27 @@ def to_schedule_schema_list(items: Iterable) -> List[ScheduleSchema]:
 def get_schedule_schema_list(
     *,
     start_time: datetime | None = None,
+    end_time: datetime | None = None,
     instructor_id: UUID | str | None = None,
+    instructor_ids: Iterable[UUID | str] | None = None,
     room_name: str | None = None,
+    room_id: UUID | str | None = None,
+    room_ids: Iterable[UUID | str] | None = None,
+    title: str | None = None,
+    titles: Iterable[str] | None = None,
 ) -> List[ScheduleSchema]:
-    """Fetch schedules ordered by start_time and return as list of ScheduleSchema.
-
-    If start_time is provided, filter schedules by start_time (>= provided). Optionally filter by instructor id and/or room name.
-    """
+    """Fetch schedules ordered by start_time and return as list of ScheduleSchema."""
     return to_schedule_schema_list(
         get_schedules_list(
             start_time=start_time,
+            end_time=end_time,
             instructor_id=instructor_id,
+            instructor_ids=instructor_ids,
             room_name=room_name,
+            room_id=room_id,
+            room_ids=room_ids,
+            title=title,
+            titles=titles,
         )
     )
 
