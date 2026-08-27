@@ -42,15 +42,29 @@ class TestServicesGetScheduleSchemaList:
         assert ids == {schedules_sample[0].id, schedules_sample[2].id}
 
     @pytest.mark.django_db
-    def test_combined_filters(self, schedules_sample):
-        threshold = schedules_sample[0].start_time + timedelta(minutes=30)
-        schemas = get_schedule_schema_list(
-            start_time=threshold,
-            instructor_id=str(schedules_sample[0].instructor_id),
-            room_name="small",
+    def test_filters_by_end_time(self, schedules_sample):
+        threshold = schedules_sample[1].start_time
+        schemas = get_schedule_schema_list(end_time=threshold)
+        ids = {s.id for s in schemas}
+        assert ids == {schedules_sample[0].id, schedules_sample[1].id}
+
+    @pytest.mark.django_db
+    def test_occupancy_uses_annotated_counts(self, schedules_sample):
+        from apps.members import constants as member_constants
+
+        schedule = schedules_sample[0]
+        member = baker.make("members.Member")
+        baker.make(
+            "members.Reservation",
+            member=member,
+            schedule=schedule,
+            status=member_constants.RESERVATION_STATUS_RESERVED,
+            is_removed=False,
+            spot=1,
         )
-        ids = [s.id for s in schemas]
-        assert ids == [schedules_sample[1].id]
+        schemas = {row.id: row for row in get_schedule_schema_list()}
+        assert schemas[schedule.id].booked_count == 1
+        assert schemas[schedules_sample[1].id].booked_count == 0
 
 
 class TestServicesCreateSchedule:

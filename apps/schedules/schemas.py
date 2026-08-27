@@ -11,9 +11,14 @@ class ScheduleSchema(BaseModel):
     created: datetime
     modified: datetime
     instructor_id: uuid.UUID
+    instructor_name: str = ""
     start_time: datetime
     duration_minutes: int
     room_id: uuid.UUID
+    room_name: str = ""
+    studio_id: uuid.UUID | None = None
+    studio_name: str | None = None
+    studio_address: str | None = None
     status: str
     capacity: int | None = None
     booked_count: int = 0

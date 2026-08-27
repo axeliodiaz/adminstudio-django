@@ -68,4 +68,4 @@ def get_instructor_from_id(pk) -> Instructor:
 
 def instructors_queryset():
     """Return a queryset of all instructors."""
-    return Instructor.objects.all()
+    return Instructor.objects.select_related("user").all()
