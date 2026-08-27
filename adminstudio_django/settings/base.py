@@ -147,16 +147,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 DEFAULT_PASSWORD_LENGTH = 13
 
-CLERK_SECRET_KEY = os.environ.get("CLERK_SECRET_KEY", "")
-CLERK_JWKS_URL = os.environ.get("CLERK_JWKS_URL", "")
-_clerk_parties = os.environ.get(
-    "CLERK_AUTHORIZED_PARTIES",
-    "https://studio.axeldiaz.com,http://localhost:5173,http://127.0.0.1:5173",
-)
-CLERK_AUTHORIZED_PARTIES = [
-    origin.strip() for origin in _clerk_parties.split(",") if origin.strip()
-]
-
 # Email configuration
 # For Mailtrap (recommended for development/testing):
 #   EMAIL_HOST=sandbox.smtp.mailtrap.io
