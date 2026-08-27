@@ -26,12 +26,17 @@ def get_instructor_for_user(user: User) -> Instructor:
 
 
 def _profile_image_url(value) -> str | None:
+    """Return a usable image URL. Absolute http(s) names are returned as-is."""
     try:
-        if value and getattr(value, "name", ""):
-            return value.url
+        name = getattr(value, "name", None) or ""
+        if not name:
+            return None
+        name_str = str(name)
+        if name_str.startswith(("http://", "https://")):
+            return name_str
+        return value.url
     except Exception:
         return None
-    return None
 
 
 def _as_list(value) -> list[str]:
