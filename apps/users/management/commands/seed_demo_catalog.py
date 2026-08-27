@@ -206,6 +206,9 @@ class Command(BaseCommand):
                 instructor.save()
             Member.objects.get_or_create(user=user)
             if is_preserved_username(user.username):
+                # Stable real identity for axelio — seeds must not blank these out.
+                user.first_name = "Axel"
+                user.last_name = "Díaz"
                 if not user.phone_number:
                     user.phone_number = "+56900001111"
                 if not user.address:
@@ -221,6 +224,10 @@ class Command(BaseCommand):
                 if user.cycling_shoe_size is None:
                     user.cycling_shoe_size = Decimal("42.0")
                 user.save()
+                instructor.instagram_username = "axeliodiaz"
+                if not instructor.tagline:
+                    instructor.tagline = "Indoor cycling"
+                instructor.save()
 
         return instructors
 

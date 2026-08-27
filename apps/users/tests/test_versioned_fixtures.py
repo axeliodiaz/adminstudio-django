@@ -29,6 +29,8 @@ def test_seed_demo_catalog_creates_kristina_and_preserves_axelio():
     axel.refresh_from_db()
     assert axel.first_name == "Axel"
     assert axel.last_name == "Díaz"
+    axel_instructor = Instructor.objects.get(user=axel)
+    assert axel_instructor.instagram_username == "axeliodiaz"
     kristina = User.objects.get(username="kristina.girod")
     assert kristina.first_name == "Kristina"
     instructor = Instructor.objects.get(user=kristina)
