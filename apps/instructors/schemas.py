@@ -37,12 +37,7 @@ class InstructorSchema(BaseModel):
 
     @field_serializer("profile_image", when_used="always")
     def serialize_profile_image(self, value):
-        try:
-            if value and getattr(value, "name", ""):
-                return value.url
-        except Exception:
-            return None
-        return None
+        return _profile_image_url(value)
 
 
 class InstructorPublicSchema(BaseModel):
@@ -75,21 +70,21 @@ class InstructorPublicSchema(BaseModel):
 
     @field_serializer("profile_image", when_used="always")
     def serialize_profile_image(self, value):
-        try:
-            if value and getattr(value, "name", ""):
-                return value.url
-        except Exception:
-            return None
-        return None
+        return _profile_image_url(value)
 
 
 def _profile_image_url(value) -> str | None:
+    """Return a usable image URL. Absolute http(s) names are returned as-is."""
     try:
-        if value and getattr(value, "name", ""):
-            return value.url
+        name = getattr(value, "name", None) or ""
+        if not name:
+            return None
+        name_str = str(name)
+        if name_str.startswith(("http://", "https://")):
+            return name_str
+        return value.url
     except Exception:
         return None
-    return None
 
 
 class AdminInstructorSchema(BaseModel):
