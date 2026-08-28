@@ -165,22 +165,27 @@ def send_password_recovery_email(user: User, reset_code_uuid: str | UUID, reset_
 
     Args:
         user: The user requesting password recovery.
-        reset_code_uuid: The UUID of the password reset code.
+        reset_code_uuid: Unused by the template; kept for call-site compatibility.
         reset_code: The 6-character reset code.
     """
+    del reset_code_uuid  # call sites still pass the PasswordResetCode id
     # Import here to avoid circular import
+    from apps.notifications.email_templates import render_password_recovery
     from apps.notifications.services import create_notification
 
+    minutes = settings.VERIFICATION_CODE_EXPIRATION_MINUTES
+    frontend_url = _frontend_url()
     subject = "Recuperación de contraseña"
-    message = (
-        f"Tu código de recuperación es: {reset_code} y expira en "
-        f"{settings.VERIFICATION_CODE_EXPIRATION_MINUTES} minutos. "
-        f"UUID: {reset_code_uuid}"
-    )
+    message = f"Tu código de recuperación es: {reset_code} y expira en {minutes} minutos."
     create_notification(
         subject=subject,
         message=message,
         recipient_list=[user],
+        html_content=render_password_recovery(
+            reset_code=reset_code,
+            frontend_url=frontend_url,
+            expiration_minutes=minutes,
+        ),
     )
 
 

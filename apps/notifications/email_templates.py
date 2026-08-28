@@ -291,3 +291,78 @@ def render_purchase_receipt(
 </p>
 """
     return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)
+
+
+def _code_block(code: str) -> str:
+    return f"""
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:8px 0 24px">
+  <tr>
+    <td align="center" style="padding:20px 16px;background-color:{BG};border:1px solid {BORDER};border-radius:8px">
+      <span style="font-family:{FONT};font-size:32px;font-weight:700;letter-spacing:0.28em;color:{DARK}">
+        {escape(code)}
+      </span>
+    </td>
+  </tr>
+</table>
+"""
+
+
+def render_password_recovery(
+    *,
+    reset_code: str,
+    frontend_url: str,
+    expiration_minutes: int = 5,
+) -> str:
+    body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">Recupera tu contraseña</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  Usa este código en PulseFit para elegir una nueva contraseña. No lo compartas con nadie.
+</p>
+{_code_block(reset_code)}
+{_notice_box(f"Caduca en {int(expiration_minutes)} minutos.", tone="info")}
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{MUTED}">
+  Si no pediste recuperar tu cuenta, ignora este mensaje. Tu contraseña no cambia hasta que ingreses el código.
+</p>
+"""
+    return _shell(
+        preheader=f"Tu código es {reset_code}. Caduca en {int(expiration_minutes)} minutos.",
+        body_html=body,
+        frontend_url=frontend_url,
+    )
+
+
+def render_waitlist_offer(
+    *,
+    class_title: str,
+    when_label: str,
+    spot: int,
+    action_url: str,
+    frontend_url: str,
+    auto_confirmed: bool = False,
+    offer_minutes: int = 15,
+) -> str:
+    if auto_confirmed:
+        body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">Spot confirmado</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  Se liberó un cupo en <strong>{escape(class_title)}</strong> ({escape(when_label)}).
+  Como tienes auto-confirmación activa, reservamos el spot {int(spot)} por ti.
+</p>
+{_notice_box(f"Spot {int(spot)} reservado automáticamente.", tone="success")}
+{_cta_button(action_url, "Ver mi reserva")}
+"""
+        preheader = f"Spot {int(spot)} confirmado en {class_title}."
+    else:
+        body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">Se liberó un spot</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  Hay un cupo disponible en <strong>{escape(class_title)}</strong> ({escape(when_label)}).
+  Confirma el spot {int(spot)} desde Lista de espera antes de que expire la oferta.
+</p>
+{_notice_box(f"Tienes {int(offer_minutes)} minutos para confirmar.", tone="info")}
+{_cta_button(action_url, "Ir a lista de espera")}
+"""
+        preheader = (
+            f"Spot {int(spot)} libre en {class_title}. Confirma en {int(offer_minutes)} min."
+        )
+    return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)
