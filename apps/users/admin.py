@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 
-from .models import User
+from .models import LoadedFixturePack, User
 
 
 @admin.register(User)
@@ -77,3 +77,21 @@ class UserAdmin(DjangoUserAdmin):
     )
     search_fields = ("email", "first_name", "last_name", "phone_number")
     ordering = ("id",)
+
+
+@admin.register(LoadedFixturePack)
+class LoadedFixturePackAdmin(admin.ModelAdmin):
+    list_display = ("version", "notes", "created", "modified")
+    search_fields = ("version", "notes")
+    date_hierarchy = "created"
+    readonly_fields = ("id", "version", "notes", "created", "modified")
+    ordering = ("-created",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
