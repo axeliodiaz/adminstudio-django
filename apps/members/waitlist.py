@@ -165,27 +165,47 @@ def confirm_waitlist_offer(*, user_id: str | UUID, waitlist_id: str | UUID) -> W
 
 
 def _notify_waitlist_offer(entry: WaitlistEntry, auto_confirmed: bool) -> None:
+    from django.conf import settings
+
+    from apps.notifications.email_templates import render_waitlist_offer
     from apps.notifications.services import create_notification
 
     user = entry.member.user
     schedule = entry.schedule
     title = schedule.title or "clase"
     start = timezone.localtime(schedule.start_time).strftime("%d/%m/%Y %H:%M")
+    frontend_url = (getattr(settings, "FRONTEND_URL", None) or "http://localhost:5173").rstrip("/")
+    minutes = constants.WAITLIST_OFFER_MINUTES
+    spot = entry.offered_spot
     if auto_confirmed:
         subject = f"Spot confirmado en {title}"
         message = (
             f"Se liberó un cupo en {title} ({start}). "
-            f"Como tienes auto-confirmación activa, reservamos el spot {entry.offered_spot} por ti."
+            f"Como tienes auto-confirmación activa, reservamos el spot {spot} por ti."
         )
+        action_url = f"{frontend_url}/#my-reservations"
     else:
-        minutes = constants.WAITLIST_OFFER_MINUTES
         subject = f"Se liberó un spot en {title}"
         message = (
             f"Se liberó un cupo en {title} ({start}). "
-            f"Tienes {minutes} minutos para confirmar tu spot {entry.offered_spot} "
+            f"Tienes {minutes} minutos para confirmar tu spot {spot} "
             "desde Lista de espera en PulseFit."
         )
-    create_notification(subject, message, [user])
+        action_url = f"{frontend_url}/#waitlist"
+    create_notification(
+        subject,
+        message,
+        [user],
+        html_content=render_waitlist_offer(
+            class_title=title,
+            when_label=start,
+            spot=spot,
+            action_url=action_url,
+            frontend_url=frontend_url,
+            auto_confirmed=auto_confirmed,
+            offer_minutes=minutes,
+        ),
+    )
 
 
 def _convert_waitlist_entry(entry: WaitlistEntry, spot: int) -> WaitlistEntry:

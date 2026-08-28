@@ -1,7 +1,9 @@
 from apps.notifications.email_templates import (
     render_booking_confirmed,
     render_class_cancelled,
+    render_password_recovery,
     render_purchase_receipt,
+    render_waitlist_offer,
 )
 
 
@@ -78,3 +80,51 @@ def test_render_purchase_receipt_matches_sketch_copy():
         in html
     )
     assert "Pago recibido. 10 créditos válidos 90 días desde hoy." in html
+
+
+def test_render_password_recovery_matches_sketch_copy():
+    html = render_password_recovery(
+        reset_code="CLJDOL",
+        frontend_url="http://localhost:5173",
+        expiration_minutes=5,
+    )
+
+    assert "Recupera tu contraseña" in html
+    assert "CLJDOL" in html
+    assert "Caduca en 5 minutos." in html
+    assert "PulseFit Studio" in html
+    assert "UUID" not in html
+
+
+def test_render_waitlist_offer_pending():
+    html = render_waitlist_offer(
+        class_title="Power Ride 45",
+        when_label="27/08/2026 19:00",
+        spot=12,
+        action_url="http://localhost:5173/#waitlist",
+        frontend_url="http://localhost:5173",
+        auto_confirmed=False,
+        offer_minutes=15,
+    )
+
+    assert "Se liberó un spot" in html
+    assert "Power Ride 45" in html
+    assert "Tienes 15 minutos para confirmar." in html
+    assert "Ir a lista de espera" in html
+    assert "#waitlist" in html
+
+
+def test_render_waitlist_offer_auto_confirmed():
+    html = render_waitlist_offer(
+        class_title="Power Ride 45",
+        when_label="27/08/2026 19:00",
+        spot=12,
+        action_url="http://localhost:5173/#my-reservations",
+        frontend_url="http://localhost:5173",
+        auto_confirmed=True,
+    )
+
+    assert "Spot confirmado" in html
+    assert "auto-confirmación activa" in html
+    assert "Ver mi reserva" in html
+    assert "#my-reservations" in html
