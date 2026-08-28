@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 
 from pydantic import ValidationError as PydanticValidationError
@@ -52,6 +53,8 @@ from apps.members.services import (
 )
 from apps.members.models import Member, Reservation, WaitlistEntry
 
+logger = logging.getLogger(__name__)
+
 
 def _pydantic_error_response(exc: PydanticValidationError) -> Response:
     first = exc.errors()[0] if exc.errors() else {}
@@ -79,6 +82,13 @@ class MemberView(ViewSet):
         member_serializer.is_valid(raise_exception=True)
         member_schema, created = get_or_create_member_user(
             member_serializer.validated_data, is_active=False
+        )
+        logger.info(
+            "Member registration processed",
+            extra={
+                "registration_created": created,
+                "user_id": str(getattr(member_schema.user, "id", "")),
+            },
         )
         data = member_schema.user.model_dump()
         if created:
@@ -114,6 +124,10 @@ class ReservationView(ViewSet):
         return Response(reservation.model_dump(), status=status.HTTP_201_CREATED)
 
     def list(self, request, *args, **kwargs):
+        logger.info(
+            "Member opened My Reservations",
+            extra={"user_id": str(request.user.id)},
+        )
         query_params = request.query_params
         has_start_date = "start_date" in query_params
         has_end_date = "end_date" in query_params

@@ -100,13 +100,19 @@ class Email:
         log_base = {
             "notification_id": str(self.notification_id),
             "mailing_client": mailing_client,
+            "recipient_count": len(self.recipient_list),
         }
+        logger.info("Email send started", extra=log_base)
 
         if mailing_client == constants.MAIL_CLIENT_MAILTRAP:
-            self._send_via_mailtrap()
+            try:
+                self._send_via_mailtrap()
+            except Exception:
+                logger.exception("Failed to send email via Mailtrap", extra=log_base)
+                raise
             logger.info(
                 "Email sent successfully via Mailtrap",
-                extra={**log_base, "recipient_count": len(self.recipient_list)},
+                extra=log_base,
             )
             return
         else:
@@ -120,7 +126,6 @@ class Email:
                 "api_key": self._get_api_key_for_provider(mailing_client),
                 "html_content": self.html_content if self.html_content else None,
             }
-            log_base["payload"] = request_payload
 
             try:
                 # Increase timeout for external service to avoid ReadTimeout
