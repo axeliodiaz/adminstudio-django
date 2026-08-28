@@ -55,9 +55,9 @@ class TestInstructorViewSet:
 
     @pytest.mark.django_db
     def test_retrieve_instructor_404(self, api_client):
-        api_client.raise_request_exception = False
         resp = api_client.get(reverse("instructor-detail", args=[uuid.uuid4()]))
-        assert resp.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert resp.json()["detail"] == "Not found."
 
     @pytest.mark.django_db
     def test_update_instructor_put_and_patch(self, api_client, instructor):
@@ -85,3 +85,27 @@ class TestInstructorViewSet:
         assert resp_patch.status_code == status.HTTP_200_OK
         instructor.user.refresh_from_db()
         assert instructor.user.first_name == "Patched"
+
+    @pytest.mark.django_db
+    def test_update_instructor_put_404(self, api_client):
+        put_payload = {
+            "first_name": "NewFirst",
+            "last_name": "NewLast",
+            "birthdate": "1990-12-31",
+            "address": "New Address",
+        }
+        resp = api_client.put(
+            reverse("instructor-detail", args=[uuid.uuid4()]), data=put_payload, format="json"
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert resp.json()["detail"] == "Not found."
+
+    @pytest.mark.django_db
+    def test_update_instructor_patch_404(self, api_client):
+        resp = api_client.patch(
+            reverse("instructor-detail", args=[uuid.uuid4()]),
+            data={"first_name": "Patched"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert resp.json()["detail"] == "Not found."

@@ -1,5 +1,6 @@
 """Instructor views using DRF ViewSet."""
 
+from django.core.exceptions import ObjectDoesNotExist
 from pydantic import ValidationError as PydanticValidationError
 from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
@@ -32,7 +33,10 @@ class InstructorViewSet(viewsets.ViewSet):
         return Response(data, status=status_code)
 
     def retrieve(self, request, pk=None):
-        instructor = get_instructor_by_id(pk)
+        try:
+            instructor = get_instructor_by_id(pk)
+        except ObjectDoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(instructor, status=status.HTTP_200_OK)
 
     def list(self, request):
@@ -42,13 +46,19 @@ class InstructorViewSet(viewsets.ViewSet):
     def update(self, request, pk=None):
         serializer = InstructorUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        data = update_instructor(pk, serializer.validated_data, partial=False)
+        try:
+            data = update_instructor(pk, serializer.validated_data, partial=False)
+        except ObjectDoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(data, status=status.HTTP_200_OK)
 
     def partial_update(self, request, pk=None):
         serializer = InstructorUpdateSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        data = update_instructor(pk, serializer.validated_data, partial=True)
+        try:
+            data = update_instructor(pk, serializer.validated_data, partial=True)
+        except ObjectDoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(data, status=status.HTTP_200_OK)
 
 
