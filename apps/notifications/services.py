@@ -32,6 +32,23 @@ def create_notification(
     send_pending_emails([notification.model_dump() for notification in pending_notifications])
 
 
+def flush_pending_notifications() -> int:
+    """
+    Retries every notification currently stuck in "enqueued" status.
+
+    Used by the periodic Render Cron Job (and the management command it
+    wraps) so notifications get delivered even if no new notification is
+    created afterwards to trigger the opportunistic retry in
+    ``create_notification``.
+
+    Returns:
+        int: the number of pending notifications that were attempted.
+    """
+    pending_notifications = get_pending_notifications()
+    send_pending_emails([notification.model_dump() for notification in pending_notifications])
+    return len(pending_notifications)
+
+
 def get_pending_notifications() -> list[NotificationSchema]:
     """
     Fetch and transform pending notifications.
