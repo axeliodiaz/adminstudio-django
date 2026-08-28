@@ -234,6 +234,58 @@ class TestEmailSendMail:
         assert "Failed to send email via external service" in log_warning.call_args.args[0]
         log_exception.assert_not_called()
 
+    def test_timeout_handled_as_warning_resend(self, mocker, settings):
+        import requests as requests_lib
+
+        settings.RESEND_API_KEY = "RS.TEST"
+        settings.DEFAULT_FROM_EMAIL = "from@example.com"
+        email = Email(
+            notification_id="123",
+            subject="Hello",
+            message="World",
+            recipient_list=["to@example.com"],
+        )
+        mocker.patch.object(Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_RESEND)
+        post_mock = mocker.patch(
+            "apps.notifications.mailing.requests.post",
+            side_effect=requests_lib.exceptions.Timeout("timed out"),
+        )
+        log_warning = mocker.patch("apps.notifications.mailing.logger.warning")
+        log_exception = mocker.patch("apps.notifications.mailing.logger.exception")
+
+        email.send_mail()
+
+        assert post_mock.called
+        log_warning.assert_called_once()
+        assert "Failed to send email via external service" in log_warning.call_args.args[0]
+        log_exception.assert_not_called()
+
+    def test_connection_error_handled_as_warning_resend(self, mocker, settings):
+        import requests as requests_lib
+
+        settings.RESEND_API_KEY = "RS.TEST"
+        settings.DEFAULT_FROM_EMAIL = "from@example.com"
+        email = Email(
+            notification_id="123",
+            subject="Hello",
+            message="World",
+            recipient_list=["to@example.com"],
+        )
+        mocker.patch.object(Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_RESEND)
+        post_mock = mocker.patch(
+            "apps.notifications.mailing.requests.post",
+            side_effect=requests_lib.exceptions.ConnectionError("connection refused"),
+        )
+        log_warning = mocker.patch("apps.notifications.mailing.logger.warning")
+        log_exception = mocker.patch("apps.notifications.mailing.logger.exception")
+
+        email.send_mail()
+
+        assert post_mock.called
+        log_warning.assert_called_once()
+        assert "Failed to send email via external service" in log_warning.call_args.args[0]
+        log_exception.assert_not_called()
+
     def test_sends_via_api_for_mailtrap(self, mocker, settings):
         # Arrange
         settings.DEFAULT_FROM_EMAIL = "from@example.com"
@@ -342,10 +394,13 @@ class TestEmailSendMail:
             Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_MAILTRAP
         )
         post_mock = mocker.patch("apps.notifications.mailing.requests.post")
+        log_warning = mocker.patch("apps.notifications.mailing.logger.warning")
 
         email.send_mail()
 
         post_mock.assert_not_called()
+        log_warning.assert_called_once()
+        assert "from_email is missing" in log_warning.call_args.args[0]
 
     def test_uses_sandbox_url_when_configured(self, mocker, settings):
         settings.DEFAULT_FROM_EMAIL = "from@example.com"
