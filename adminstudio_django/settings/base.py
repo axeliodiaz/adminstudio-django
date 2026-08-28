@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+import sentry_sdk
+
 # Base directories
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -27,6 +29,19 @@ SECRET_KEY = os.environ.get(
 
 # Default: production-safe unless overridden in local.py
 DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in {"1", "true", "yes", "on"}
+
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+SENTRY_SEND_DEFAULT_PII = os.environ.get("SENTRY_SEND_DEFAULT_PII", "True").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        send_default_pii=SENTRY_SEND_DEFAULT_PII,
+    )
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 

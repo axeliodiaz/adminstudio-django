@@ -1,4 +1,5 @@
 Django==5.2.7
+sentry-sdk[django]==2.68.1
 black==25.9.0
 djangorestframework==3.16.1
 drf-expiring-token==1.1.2
