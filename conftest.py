@@ -2,6 +2,8 @@ import os
 
 # Ensure Django settings are configured for pytest even if pytest-django plugin isn't active
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "adminstudio_django.settings")
+# Never send pytest traffic to Sentry (local .env often has SENTRY_DSN set).
+os.environ["SENTRY_DSN"] = ""
 
 try:
     import django  # noqa: F401
@@ -24,6 +26,19 @@ if django and not os.environ.get("_DJANGO_SETUP_DONE"):
 # Shared pytest fixtures
 import pytest
 from rest_framework.test import APIClient
+
+
+@pytest.fixture(autouse=True)
+def _block_live_email_sends(request, mocker):
+    """Keep API/domain tests from hitting python-mailing / Resend / Mailtrap.
+
+    Mailing unit tests exercise Email.send_mail themselves and mock HTTP.
+    """
+    if getattr(request.module, "__name__", "") == "apps.notifications.tests.test_mailing":
+        yield
+        return
+    mocker.patch("apps.notifications.mailing.Email.send_mail", return_value=None)
+    yield
 
 
 @pytest.fixture

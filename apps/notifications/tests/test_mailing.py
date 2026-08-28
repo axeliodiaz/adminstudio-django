@@ -76,6 +76,19 @@ class TestMarkNotificationAsSent:
         assert notification.status == notification.STATUS.sent
 
 
+class TestEmailFromAddress:
+    def test_falls_back_to_noreply_at_email_domain(self, settings):
+        settings.DEFAULT_FROM_EMAIL = None
+        settings.EMAIL_DOMAIN = "pulsefit.com"
+        email = Email(
+            notification_id="nid",
+            subject="subj",
+            message="msg",
+            recipient_list=["a@b.com"],
+        )
+        assert email.from_email == "noreply@pulsefit.com"
+
+
 class TestGetApiKeyForProvider:
     def test_returns_resend_key(self, settings):
         settings.RESEND_API_KEY = "RS.TEST"
@@ -188,6 +201,8 @@ class TestEmailSendMail:
 
     def test_http_error_handled_resend(self, mocker, settings):
         # Arrange
+        import requests as requests_lib
+
         settings.RESEND_API_KEY = "RS.TEST"
         settings.DEFAULT_FROM_EMAIL = "from@example.com"
         email = Email(
@@ -198,17 +213,26 @@ class TestEmailSendMail:
         )
         mocker.patch.object(Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_RESEND)
 
-        # Mock post returns a response but raise_for_status raises HTTPError
+        # Upstream 503 (e.g. Render cold start) must not raise or use logger.exception
         resp = mocker.Mock()
-        resp.text = "bad"
-        resp.raise_for_status.side_effect = Exception("HTTP 500")
+        resp.text = "Service Unavailable"
+        resp.status_code = 503
+        http_error = requests_lib.exceptions.HTTPError(
+            "503 Server Error: Service Unavailable", response=resp
+        )
+        resp.raise_for_status.side_effect = http_error
         post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
+        log_warning = mocker.patch("apps.notifications.mailing.logger.warning")
+        log_exception = mocker.patch("apps.notifications.mailing.logger.exception")
 
         # Act - should not raise
         email.send_mail()
 
-        # Assert: post called and error handled (no exception raised)
+        # Assert: post called, soft-logged as warning (not exception → no Sentry issue)
         assert post_mock.called
+        log_warning.assert_called_once()
+        assert "Failed to send email via external service" in log_warning.call_args.args[0]
+        log_exception.assert_not_called()
 
     def test_sends_via_api_for_mailtrap(self, mocker, settings):
         # Arrange
@@ -301,9 +325,9 @@ class TestEmailSendMail:
             email.send_mail()
         post_mock.assert_called_once()
 
-    def test_raises_error_when_from_email_missing_for_mailtrap(self, mocker, settings):
-        # Arrange
+    def test_skips_mailtrap_send_when_from_email_missing(self, mocker, settings):
         settings.DEFAULT_FROM_EMAIL = None
+        settings.EMAIL_DOMAIN = None
         settings.MAILTRAP_API_KEY = "MT.TEST"
         settings.MAILTRAP_USE_SANDBOX = False
         email = Email(
@@ -313,13 +337,15 @@ class TestEmailSendMail:
             recipient_list=["to@example.com"],
             from_email=None,
         )
+        email.from_email = None
         mocker.patch.object(
             Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_MAILTRAP
         )
+        post_mock = mocker.patch("apps.notifications.mailing.requests.post")
 
-        # Act & Assert: ValueError should be raised
-        with pytest.raises(ValueError, match="from_email is required"):
-            email.send_mail()
+        email.send_mail()
+
+        post_mock.assert_not_called()
 
     def test_uses_sandbox_url_when_configured(self, mocker, settings):
         settings.DEFAULT_FROM_EMAIL = "from@example.com"
