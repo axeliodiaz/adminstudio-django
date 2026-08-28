@@ -4,6 +4,18 @@ import os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "adminstudio_django.settings")
 # Never send pytest traffic to Sentry (local .env often has SENTRY_DSN set).
 os.environ["SENTRY_DSN"] = ""
+# Drop live mailing credentials before Django settings import .env values.
+# Domain tests used to POST to python-mailing / Resend / Mailtrap (e.g. waitlist
+# users like wl_confirm_<uuid>@ex.com) whenever create_notification ran.
+for _mailing_env in (
+    "RESEND_API_KEY",
+    "MAILTRAP_API_KEY",
+    "MAILTRAP_INBOX_ID",
+    "EMAIL_API_KEY",
+    "EMAIL_HOST_USER",
+    "EMAIL_HOST_PASSWORD",
+):
+    os.environ.pop(_mailing_env, None)
 
 try:
     import django  # noqa: F401
@@ -29,7 +41,7 @@ from rest_framework.test import APIClient
 
 
 @pytest.fixture(autouse=True)
-def _block_live_email_sends(request, mocker):
+def _block_live_email_sends(request, mocker, settings):
     """Keep API/domain tests from hitting python-mailing / Resend / Mailtrap.
 
     Mailing unit tests exercise Email.send_mail themselves and mock HTTP.
@@ -37,7 +49,14 @@ def _block_live_email_sends(request, mocker):
     if getattr(request.module, "__name__", "") == "apps.notifications.tests.test_mailing":
         yield
         return
+    settings.RESEND_API_KEY = None
+    settings.MAILTRAP_API_KEY = None
+    settings.MAILTRAP_INBOX_ID = None
+    settings.EMAIL_API_KEY = None
+    settings.EMAIL_HOST_USER = None
+    settings.EMAIL_HOST_PASSWORD = None
     mocker.patch("apps.notifications.mailing.Email.send_mail", return_value=None)
+    mocker.patch("apps.notifications.mailing.requests.post")
     yield
 
 

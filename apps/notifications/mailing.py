@@ -90,12 +90,18 @@ class Email:
             return settings.MAILTRAP_API_KEY
         return None
 
-    def send_mail(self):
+    def send_mail(self) -> bool:
         """
         Send email using the appropriate mailing client.
 
         For Mailtrap, sends via the Mailtrap HTTP API.
         For Resend (and the default client), proxies to the external mailing service API via HTTP POST.
+
+        Returns:
+            bool: True if the email was actually sent (or handed off successfully) to the
+            provider, False if the send was skipped or failed. Callers must not mark the
+            related notification as sent unless this returns True, so failed sends (e.g. a
+            cold-start 429 from the free mailing service) are retried instead of silently lost.
         """
         mailing_client = self.get_mailing_client()
         log_base = {
@@ -111,7 +117,7 @@ class Email:
                     "Skipping Mailtrap send because from_email is missing",
                     extra=log_base,
                 )
-                return
+                return False
             try:
                 self._send_via_mailtrap()
             except Exception:
@@ -121,7 +127,7 @@ class Email:
                 "Email sent successfully via Mailtrap",
                 extra=log_base,
             )
-            return
+            return True
         else:
             # Use external service for Resend or default
             request_payload = {
@@ -150,13 +156,17 @@ class Email:
                     "Failed to send email via external service",
                     extra={**log_base, "error": str(e)},
                 )
-                # Don't raise - allow task to complete
+                # Don't raise - allow task to complete, but report failure so the
+                # notification stays pending and gets retried later.
+                return False
             except Exception as e:
                 logger.exception(
                     "Unexpected error sending email via external service",
                     extra={**log_base, "error": str(e)},
                 )
-                # Don't raise - allow task to complete
+                # Don't raise - allow task to complete, but report failure so the
+                # notification stays pending and gets retried later.
+                return False
             else:
                 logger.info(
                     "Email request sent successfully via external service",
@@ -166,6 +176,7 @@ class Email:
                         "response_text": resp.text[:500],
                     },
                 )
+                return True
 
 
 def send_pending_emails(notifications: list[dict[str, str]]):
@@ -207,8 +218,15 @@ def send_pending_emails(notifications: list[dict[str, str]]):
             recipient_list=recipient_list,
             html_content=notification.html_content or None,
         )
-        email.send_mail()
-        mark_notification_as_sent(str(notification.id))
+        if email.send_mail():
+            mark_notification_as_sent(str(notification.id))
+        else:
+            # Leave the notification as pending so it gets retried on the next call
+            # (e.g. the mailing service was cold-starting and returned a 429/503).
+            logger.info(
+                "Notification left pending for retry after send failure",
+                extra={"notification_id": str(notification.id)},
+            )
 
 
 def mark_notification_as_sent(notification_uuid: str) -> None:

@@ -18,7 +18,7 @@ class TestSendPendingEmails:
             "apps.notifications.mailing.get_user_from_id",
             side_effect=[{"email": emails[0]}, {"email": emails[1]}],
         )
-        email_send = mocker.patch("apps.notifications.mailing.Email.send_mail")
+        email_send = mocker.patch("apps.notifications.mailing.Email.send_mail", return_value=True)
         mark_sent = mocker.patch("apps.notifications.mailing.mark_notification_as_sent")
 
         # Act
@@ -30,6 +30,26 @@ class TestSendPendingEmails:
         for notification in mocked_pending:
             mark_sent.assert_any_call(str(notification["id"]))
         assert mark_sent.call_count == len(mocked_pending)
+
+    def test_does_not_mark_sent_when_send_fails(self, mocker, mocked_pending):
+        """Regression test: a failed send (e.g. 429/503 from the mailing service)
+        must leave the notification pending so it is retried later, instead of
+        being silently marked as sent and lost.
+        """
+        get_user_from_id = mocker.patch(
+            "apps.notifications.mailing.get_user_from_id",
+            side_effect=[{"email": "user1@example.com"}, {"email": "user2@example.com"}],
+        )
+        email_send = mocker.patch("apps.notifications.mailing.Email.send_mail", return_value=False)
+        mark_sent = mocker.patch("apps.notifications.mailing.mark_notification_as_sent")
+
+        # Act
+        send_pending_emails(mocked_pending)
+
+        # Assert: send was attempted for each, but nothing was marked as sent
+        assert get_user_from_id.call_count == len(mocked_pending)
+        assert email_send.call_count == len(mocked_pending)
+        mark_sent.assert_not_called()
 
     def test_skips_when_no_email(self, mocker):
         # Arrange: a single pending notification and user without email
