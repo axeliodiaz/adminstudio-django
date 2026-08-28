@@ -1,7 +1,9 @@
+import logging
 import os
 from pathlib import Path
 
 import sentry_sdk
+from sentry_sdk.integrations.logging import LoggingIntegration
 
 # Base directories
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -41,6 +43,14 @@ if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         send_default_pii=SENTRY_SEND_DEFAULT_PII,
+        integrations=[
+            LoggingIntegration(
+                level=logging.INFO,
+                event_level=logging.ERROR,
+                sentry_logs_level=logging.INFO,
+                capture_sentry_logs=True,
+            )
+        ],
     )
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
