@@ -3,7 +3,12 @@
 import pytest
 from django.contrib.auth import get_user_model
 
-from apps.notifications.services import create_notification, get_pending_notifications
+from apps.notifications.schemas import Notification as NotificationSchema
+from apps.notifications.services import (
+    create_notification,
+    flush_pending_notifications,
+    get_pending_notifications,
+)
 
 User = get_user_model()
 
@@ -64,3 +69,41 @@ class TestGetPendingNotifications:
             assert item.subject == src["subject"]
             assert item.message == src["message"]
             assert item.user_id == src["user_id"]
+
+
+class TestFlushPendingNotifications:
+    """Tests for the flush_pending_notifications function."""
+
+    @pytest.mark.django_db
+    def test_flush_pending_notifications_sends_and_returns_count(self, mocker, mocked_pending):
+        """Test that it sends every pending notification and returns how many."""
+        # Arrange
+        pending_schemas = [NotificationSchema(**item) for item in mocked_pending]
+        mocker.patch(
+            "apps.notifications.services.get_pending_notifications",
+            return_value=pending_schemas,
+        )
+        send_pending_emails_mock = mocker.patch("apps.notifications.services.send_pending_emails")
+
+        # Act
+        result = flush_pending_notifications()
+
+        # Assert
+        assert result == len(mocked_pending)
+        send_pending_emails_mock.assert_called_once_with(
+            [notification.model_dump() for notification in pending_schemas]
+        )
+
+    @pytest.mark.django_db
+    def test_flush_pending_notifications_with_none_pending(self, mocker):
+        """Test that it handles the empty case without error."""
+        mocker.patch(
+            "apps.notifications.services.get_pending_notifications",
+            return_value=[],
+        )
+        send_pending_emails_mock = mocker.patch("apps.notifications.services.send_pending_emails")
+
+        result = flush_pending_notifications()
+
+        assert result == 0
+        send_pending_emails_mock.assert_called_once_with([])
