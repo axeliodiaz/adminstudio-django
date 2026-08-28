@@ -61,3 +61,6 @@ STORAGES = {
 DATABASES = production_databases()
 
 EMAIL_DOMAIN = os.getenv("EMAIL_DOMAIN", "pulsefit.com")
+
+# Links in emails (verify, wallet, reservations). Must not inherit the local Vite default.
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://studio.axeldiaz.com")
