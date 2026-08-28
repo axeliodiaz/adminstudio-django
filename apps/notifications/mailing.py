@@ -27,7 +27,8 @@ class Email:
         self.notification_id = notification_id
         self.subject = subject
         self.message = message
-        self.from_email = from_email or settings.DEFAULT_FROM_EMAIL
+        domain = getattr(settings, "EMAIL_DOMAIN", "pulsefit.com") or "pulsefit.com"
+        self.from_email = from_email or settings.DEFAULT_FROM_EMAIL or f"noreply@{domain}"
         self.recipient_list = recipient_list
         self.html_content = html_content
 
@@ -105,6 +106,12 @@ class Email:
         logger.info("Email send started", extra=log_base)
 
         if mailing_client == constants.MAIL_CLIENT_MAILTRAP:
+            if not (self.from_email or "").strip():
+                logger.warning(
+                    "Skipping Mailtrap send because from_email is missing",
+                    extra=log_base,
+                )
+                return
             try:
                 self._send_via_mailtrap()
             except Exception:
@@ -135,19 +142,18 @@ class Email:
                     timeout=60,  # Increased from 20 to 60 seconds
                 )
                 resp.raise_for_status()
-            except requests.exceptions.Timeout as e:
-                logger.error(
-                    "Timeout sending email via external service - service may be slow or unavailable",
-                    extra={
-                        **log_base,
-                        "error": str(e),
-                        "timeout": 60,
-                    },
+            except requests.exceptions.RequestException as e:
+                # Transient upstream failures (503 cold-start, timeouts, etc.) are expected
+                # for the free Render mailing service. Use warning so LoggingIntegration
+                # (event_level=ERROR) does not open a Sentry issue per outage.
+                logger.warning(
+                    "Failed to send email via external service",
+                    extra={**log_base, "error": str(e)},
                 )
-                # Don't raise - allow task to complete, email will be retried if needed
+                # Don't raise - allow task to complete
             except Exception as e:
                 logger.exception(
-                    "Failed to send email via external service",
+                    "Unexpected error sending email via external service",
                     extra={**log_base, "error": str(e)},
                 )
                 # Don't raise - allow task to complete

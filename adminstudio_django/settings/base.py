@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from pathlib import Path
 
 import sentry_sdk
@@ -39,10 +40,23 @@ SENTRY_SEND_DEFAULT_PII = os.environ.get("SENTRY_SEND_DEFAULT_PII", "True").lowe
     "yes",
     "on",
 }
-if SENTRY_DSN:
+
+
+def _is_running_tests() -> bool:
+    argv0 = Path(sys.argv[0]).name if sys.argv else ""
+    return (
+        bool(os.environ.get("PYTEST_VERSION"))
+        or "pytest" in sys.modules
+        or argv0 in {"pytest", "py.test"}
+        or any(arg == "pytest" or arg.endswith("/pytest") for arg in sys.argv)
+    )
+
+
+if SENTRY_DSN and not _is_running_tests():
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         send_default_pii=SENTRY_SEND_DEFAULT_PII,
+        environment=os.environ.get("SENTRY_ENVIRONMENT") or os.environ.get("DJANGO_ENV", "local"),
         integrations=[
             LoggingIntegration(
                 level=logging.INFO,
@@ -187,10 +201,10 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", 2525))
 # For Mailtrap: set EMAIL_USE_TLS=True (default port 2525 uses STARTTLS)
 EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() in {"1", "true", "yes", "on"}
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 # Product domain for demo identities, ICS UIDs, and similar branding.
 # Override per env (local/prod) or with EMAIL_DOMAIN. Distinct from DEFAULT_FROM_EMAIL.
 EMAIL_DOMAIN = os.getenv("EMAIL_DOMAIN", "pulsefit.com")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL") or f"noreply@{EMAIL_DOMAIN}"
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 MAILTRAP_API_KEY = os.getenv("MAILTRAP_API_KEY")
 MAILTRAP_INBOX_ID = os.getenv("MAILTRAP_INBOX_ID")
