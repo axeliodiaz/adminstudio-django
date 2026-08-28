@@ -56,6 +56,7 @@ if SENTRY_DSN and not _is_running_tests():
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         send_default_pii=SENTRY_SEND_DEFAULT_PII,
+        enable_logs=True,
         environment=os.environ.get("SENTRY_ENVIRONMENT") or os.environ.get("DJANGO_ENV", "local"),
         integrations=[
             LoggingIntegration(
@@ -113,6 +114,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.common.middleware.SentryRequestUrlMiddleware",
 ]
 
 ROOT_URLCONF = "adminstudio_django.urls"
