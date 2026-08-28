@@ -287,6 +287,29 @@ class TestMemberViewSet:
         assert resp.status_code == 200
         assert resp.data["email"] == payload["email"]
 
+    def test_create_logs_registration_without_raising(self, mocker, api_client, payload, caplog):
+        """Regression test: `logger.info(..., extra={...})` must not use a key that
+        collides with a reserved `logging.LogRecord` attribute (e.g. "created"),
+        which raises `KeyError: "Attempt to overwrite 'created' in LogRecord"`.
+        """
+        member_schema = self._make_member_schema_mock(email=payload["email"])
+        mocker.patch(
+            "apps.members.views.get_or_create_member_user",
+            return_value=(member_schema, True),
+        )
+
+        url = reverse("member-register")
+        with caplog.at_level("INFO", logger="apps.members.views"):
+            resp = api_client.post(url, data=payload, format="json")
+
+        assert resp.status_code == 201
+        matching_records = [
+            record for record in caplog.records if record.message == "Member registration processed"
+        ]
+        assert len(matching_records) == 1
+        record = matching_records[0]
+        assert record.registration_created is True
+
 
 @pytest.mark.django_db
 class TestReservationCancelViewSet:
