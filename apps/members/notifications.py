@@ -47,10 +47,16 @@ def _frontend_url() -> str:
 
 
 def _person_name(user) -> str:
+    """Return the user's display name, e.g. 'Axel Díaz'.
+
+    Deliberately does not fall back to username/email: those can be internal
+    identifiers (e.g. "instr_<uuid>") that are not meant to be shown to members.
+    Callers should provide a friendly fallback (e.g. "Coach") for missing names.
+    """
     if not user:
         return ""
     full = f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip()
-    return full or (user.username or user.email or "")
+    return full
 
 
 def _format_when(start_time) -> str:
