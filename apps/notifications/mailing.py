@@ -83,6 +83,48 @@ class Email:
         )
         resp.raise_for_status()
 
+    def _send_via_resend(self) -> requests.Response:
+        payload = {
+            "from": self.from_email,
+            "to": self.recipient_list,
+            "subject": self.subject,
+            "text": self.message,
+        }
+        if self.html_content:
+            payload["html"] = self.html_content
+        headers = {
+            "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        if self.notification_id:
+            headers["Idempotency-Key"] = str(self.notification_id)
+        resp = requests.post(
+            constants.RESEND_API_URL,
+            json=payload,
+            headers=headers,
+            timeout=60,
+        )
+        resp.raise_for_status()
+        return resp
+
+    def _send_via_python_mailing(self, mailing_client: str) -> requests.Response:
+        request_payload = {
+            "provider": mailing_client,
+            "subject": self.subject,
+            "message": self.message,
+            "recipient_list": self.recipient_list,
+            "from_email": self.from_email,
+            "api_key": self._get_api_key_for_provider(mailing_client),
+            "html_content": self.html_content if self.html_content else None,
+        }
+        resp = requests.post(
+            constants.PYTHON_MAILING_URL,
+            json=request_payload,
+            timeout=60,
+        )
+        resp.raise_for_status()
+        return resp
+
     def _get_api_key_for_provider(self, provider: str) -> str | None:
         if provider == constants.MAIL_CLIENT_RESEND:
             return settings.RESEND_API_KEY
@@ -95,13 +137,14 @@ class Email:
         Send email using the appropriate mailing client.
 
         For Mailtrap, sends via the Mailtrap HTTP API.
-        For Resend (and the default client), proxies to the external mailing service API via HTTP POST.
+        For Resend, sends directly to the Resend HTTP API.
+        For the default client, proxies to the external mailing service API via HTTP POST.
 
         Returns:
             bool: True if the email was actually sent (or handed off successfully) to the
             provider, False if the send was skipped or failed. Callers must not mark the
-            related notification as sent unless this returns True, so failed sends (e.g. a
-            cold-start 429 from the free mailing service) are retried instead of silently lost.
+            related notification as sent unless this returns True, so failed sends are
+            retried instead of silently lost.
         """
         mailing_client = self.get_mailing_client()
         log_base = {
@@ -128,55 +171,39 @@ class Email:
                 extra=log_base,
             )
             return True
-        else:
-            # Use external service for Resend or default
-            request_payload = {
-                "provider": mailing_client,
-                "subject": self.subject,
-                "message": self.message,
-                "recipient_list": self.recipient_list,
-                "from_email": self.from_email,
-                "api_key": self._get_api_key_for_provider(mailing_client),
-                "html_content": self.html_content if self.html_content else None,
-            }
 
-            try:
-                # Increase timeout for external service to avoid ReadTimeout
-                resp = requests.post(
-                    constants.PYTHON_MAILING_URL,
-                    json=request_payload,
-                    timeout=60,  # Increased from 20 to 60 seconds
-                )
-                resp.raise_for_status()
-            except requests.exceptions.RequestException as e:
-                # Transient upstream failures (503 cold-start, timeouts, etc.) are expected
-                # for the free Render mailing service. Use warning so LoggingIntegration
-                # (event_level=ERROR) does not open a Sentry issue per outage.
-                logger.warning(
-                    "Failed to send email via external service",
-                    extra={**log_base, "error": str(e)},
-                )
-                # Don't raise - allow task to complete, but report failure so the
-                # notification stays pending and gets retried later.
-                return False
-            except Exception as e:
-                logger.exception(
-                    "Unexpected error sending email via external service",
-                    extra={**log_base, "error": str(e)},
-                )
-                # Don't raise - allow task to complete, but report failure so the
-                # notification stays pending and gets retried later.
-                return False
+        try:
+            if mailing_client == constants.MAIL_CLIENT_RESEND:
+                resp = self._send_via_resend()
             else:
-                logger.info(
-                    "Email request sent successfully via external service",
-                    extra={
-                        **log_base,
-                        "status_code": resp.status_code,
-                        "response_text": resp.text[:500],
-                    },
-                )
-                return True
+                resp = self._send_via_python_mailing(mailing_client)
+        except requests.exceptions.RequestException as e:
+            # Transient upstream failures (timeouts, 429/5xx) should not open a
+            # Sentry issue per attempt (LoggingIntegration event_level=ERROR).
+            logger.warning(
+                "Failed to send email via external service",
+                extra={**log_base, "error": str(e)},
+            )
+            # Don't raise - allow task to complete, but report failure so the
+            # notification stays pending and gets retried later.
+            return False
+        except Exception as e:
+            logger.exception(
+                "Unexpected error sending email via external service",
+                extra={**log_base, "error": str(e)},
+            )
+            # Don't raise - allow task to complete, but report failure so the
+            # notification stays pending and gets retried later.
+            return False
+        logger.info(
+            "Email request sent successfully via external service",
+            extra={
+                **log_base,
+                "status_code": resp.status_code,
+                "response_text": resp.text[:500],
+            },
+        )
+        return True
 
 
 def send_pending_emails(notifications: list[dict[str, str]]):
@@ -221,8 +248,7 @@ def send_pending_emails(notifications: list[dict[str, str]]):
         if email.send_mail():
             mark_notification_as_sent(str(notification.id))
         else:
-            # Leave the notification as pending so it gets retried on the next call
-            # (e.g. the mailing service was cold-starting and returned a 429/503).
+            # Leave the notification as pending so it gets retried on the next call.
             logger.info(
                 "Notification left pending for retry after send failure",
                 extra={"notification_id": str(notification.id)},

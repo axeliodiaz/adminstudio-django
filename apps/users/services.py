@@ -367,14 +367,15 @@ def send_email_change_email(
         message=message,
         html_content=html_content,
     )
-    Email(
+    sent = Email(
         notification_id=str(notification.id),
         subject=subject,
         message=message,
         recipient_list=[new_email],
         html_content=html_content,
     ).send_mail()
-    mark_notification_as_sent(str(notification.id))
+    if sent:
+        mark_notification_as_sent(str(notification.id))
 
 
 def request_admin_email_change(*, user_id: str | UUID, email: str, actor: User) -> str:

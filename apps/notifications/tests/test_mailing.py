@@ -210,18 +210,17 @@ class TestEmailSendMail:
         email.send_mail()
 
         expected_json = {
-            "provider": constants.MAIL_CLIENT_RESEND,
+            "from": "from@example.com",
+            "to": ["to@example.com"],
             "subject": "Hello",
-            "message": "World",
-            "recipient_list": ["to@example.com"],
-            "from_email": "from@example.com",
-            "api_key": "RS.TEST",
-            "html_content": None,
+            "text": "World",
         }
         post_mock.assert_called_once()
         args, kwargs = post_mock.call_args
-        assert args[0] == constants.PYTHON_MAILING_URL
+        assert args[0] == constants.RESEND_API_URL
         assert kwargs["json"] == expected_json
+        assert kwargs["headers"]["Authorization"] == "Bearer RS.TEST"
+        assert kwargs["headers"]["Idempotency-Key"] == "123"
         assert kwargs.get("timeout") == 60
 
     def test_http_error_handled_resend(self, mocker, settings):
@@ -238,7 +237,7 @@ class TestEmailSendMail:
         )
         mocker.patch.object(Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_RESEND)
 
-        # Upstream 503 (e.g. Render cold start) must not raise or use logger.exception
+        # Upstream 503 must not raise or use logger.exception
         resp = mocker.Mock()
         resp.text = "Service Unavailable"
         resp.status_code = 503
@@ -485,3 +484,47 @@ class TestEmailSendMail:
 
         post_mock.assert_called_once()
         assert post_mock.call_args[0][0] == f"{constants.MAILTRAP_SANDBOX_API_URL}/509395"
+
+    def test_sends_html_content_via_resend(self, mocker, settings):
+        settings.RESEND_API_KEY = "RS.TEST"
+        settings.DEFAULT_FROM_EMAIL = "from@example.com"
+        email = Email(
+            notification_id="123",
+            subject="Hello",
+            message="World",
+            recipient_list=["to@example.com"],
+            html_content="<html><body>Hello</body></html>",
+        )
+        mocker.patch.object(Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_RESEND)
+        resp = mocker.Mock()
+        resp.status_code = 200
+        resp.text = '{"id":"abc"}'
+        resp.raise_for_status.return_value = None
+        post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
+
+        email.send_mail()
+
+        assert post_mock.call_args.kwargs["json"]["html"] == "<html><body>Hello</body></html>"
+        assert post_mock.call_args[0][0] == constants.RESEND_API_URL
+
+    def test_posts_payload_via_python_mailing_for_default_client(self, mocker, settings):
+        settings.DEFAULT_FROM_EMAIL = "from@example.com"
+        email = Email(
+            notification_id="123",
+            subject="Hello",
+            message="World",
+            recipient_list=["to@example.com"],
+        )
+        mocker.patch.object(Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_DEFAULT)
+        resp = mocker.Mock()
+        resp.status_code = 200
+        resp.text = "ok"
+        resp.raise_for_status.return_value = None
+        post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
+
+        email.send_mail()
+
+        args, kwargs = post_mock.call_args
+        assert args[0] == constants.PYTHON_MAILING_URL
+        assert kwargs["json"]["provider"] == constants.MAIL_CLIENT_DEFAULT
+        assert kwargs["json"]["api_key"] is None
