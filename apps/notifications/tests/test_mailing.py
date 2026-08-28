@@ -52,6 +52,8 @@ class TestSendPendingEmails:
         )
         email_send = mocker.patch("apps.notifications.mailing.Email.send_mail")
         mark_sent = mocker.patch("apps.notifications.mailing.mark_notification_as_sent")
+        log_warning = mocker.patch("apps.notifications.mailing.logger.warning")
+        log_error = mocker.patch("apps.notifications.mailing.logger.error")
 
         # Act
         send_pending_emails([notification])
@@ -59,6 +61,9 @@ class TestSendPendingEmails:
         # Assert: no email sent and not marked as sent
         email_send.assert_not_called()
         mark_sent.assert_not_called()
+        log_warning.assert_called_once()
+        assert "Skipping notification because user has no email" in log_warning.call_args.args[0]
+        log_error.assert_not_called()
 
 
 class TestMarkNotificationAsSent:

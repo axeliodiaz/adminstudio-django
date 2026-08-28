@@ -188,7 +188,9 @@ def send_pending_emails(notifications: list[dict[str, str]]):
 
         user = get_user_from_id(notification.user_id)
         if not user.get("email"):
-            logger.error(
+            # Expected skip (users without email). Use warning so LoggingIntegration
+            # (event_level=ERROR) does not open a Sentry issue.
+            logger.warning(
                 "Skipping notification because user has no email",
                 extra={
                     "notification_id": str(notification.id),
