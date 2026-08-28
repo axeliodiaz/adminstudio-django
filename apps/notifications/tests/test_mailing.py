@@ -239,6 +239,41 @@ class TestEmailSendMail:
         assert "Failed to send email via external service" in log_warning.call_args.args[0]
         log_exception.assert_not_called()
 
+    def test_generic_exception_handled_as_exception_resend(self, mocker, settings):
+        """Regression test for PULSEFIT-5.
+
+        A non-`requests` exception (e.g. a bug in a third-party client, unlike the
+        `HTTPError` that `raise_for_status()` actually raises) is genuinely
+        unexpected, so it must still be reported via `logger.exception` (and thus
+        surfaced in Sentry) rather than swallowed as a transient warning.
+        """
+        settings.RESEND_API_KEY = "RS.TEST"
+        settings.DEFAULT_FROM_EMAIL = "from@example.com"
+        email = Email(
+            notification_id="123",
+            subject="Hello",
+            message="World",
+            recipient_list=["to@example.com"],
+        )
+        mocker.patch.object(Email, "get_mailing_client", return_value=constants.MAIL_CLIENT_RESEND)
+
+        resp = mocker.Mock()
+        resp.raise_for_status.side_effect = Exception("boom")
+        post_mock = mocker.patch("apps.notifications.mailing.requests.post", return_value=resp)
+        log_warning = mocker.patch("apps.notifications.mailing.logger.warning")
+        log_exception = mocker.patch("apps.notifications.mailing.logger.exception")
+
+        # Act - should not raise
+        email.send_mail()
+
+        # Assert: post called, escalated as exception (genuinely unexpected)
+        assert post_mock.called
+        log_exception.assert_called_once()
+        assert (
+            "Unexpected error sending email via external service" in log_exception.call_args.args[0]
+        )
+        log_warning.assert_not_called()
+
     def test_timeout_handled_as_warning_resend(self, mocker, settings):
         import requests as requests_lib
 
