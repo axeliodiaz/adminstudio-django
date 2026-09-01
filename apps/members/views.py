@@ -17,6 +17,7 @@ from apps.members.exceptions import (
 )
 from apps.wallets.exceptions import InsufficientCreditsException
 from apps.members.schemas import (
+    AdminAttendanceWriteSchema,
     AdminMemberCreateSchema,
     AdminMemberUpdateSchema,
     AdminReservationChangeSpotSchema,
@@ -46,6 +47,10 @@ from apps.members.services import (
     create_admin_reservation,
     cancel_admin_reservation,
     change_admin_reservation_spot,
+    set_admin_reservation_attendance,
+    list_admin_attendance_classes,
+    get_admin_attendance_roster,
+    mark_remaining_attendance_missed,
     join_waitlist,
     list_waitlist,
     leave_waitlist,
@@ -401,5 +406,67 @@ class AdminReservationChangeSpotView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
         except (ReservationInvalidStateException, InvalidSpotException) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(reservation, status=status.HTTP_200_OK)
+
+
+class AdminAttendanceDayView(APIView):
+    """List classes of a day so staff can take attendance, including past classes."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            payload = list_admin_attendance_classes(day=request.query_params.get("date"))
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+class AdminAttendanceRosterView(APIView):
+    """Roster of a class for staff attendance. Works after the class already happened."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, schedule_id, *args, **kwargs):
+        try:
+            payload = get_admin_attendance_roster(schedule_id)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+class AdminAttendanceMarkMissedView(APIView):
+    """Mark remaining reserved bookings on a class as no-show."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, schedule_id, *args, **kwargs):
+        try:
+            payload = mark_remaining_attendance_missed(schedule_id)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        return Response(payload, status=status.HTTP_200_OK)
+
+
+class AdminReservationAttendanceView(APIView):
+    """Set attendance status of a reservation: ATTENDED, MISSED or RESERVED."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def patch(self, request, reservation_id, *args, **kwargs):
+        try:
+            payload = AdminAttendanceWriteSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+
+        try:
+            reservation = set_admin_reservation_attendance(
+                reservation_id=reservation_id,
+                status=payload.status,
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        except ReservationInvalidStateException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation, status=status.HTTP_200_OK)

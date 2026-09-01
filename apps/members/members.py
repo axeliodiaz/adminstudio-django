@@ -23,6 +23,32 @@ ADMIN_RESERVATION_STATUSES = {
     constants.RESERVATION_STATUS_MISSED,
 }
 
+ATTENDANCE_INVALID_STATUS_MESSAGE = "Estado de asistencia inválido."
+ATTENDANCE_CANCELLED_MESSAGE = "No se puede marcar asistencia de una reserva cancelada."
+RESERVATION_NOT_FOUND_MESSAGE = "Reserva no encontrada."
+SCHEDULE_NOT_FOUND_MESSAGE = "Clase no encontrada."
+
+
+def set_reservation_attendance(reservation_id: str, status: str) -> Reservation:
+    """Staff/coach attendance: RESERVED, ATTENDED or MISSED. Not allowed on cancelled bookings."""
+    if status not in constants.ATTENDANCE_STATUSES:
+        raise ReservationInvalidStateException(ATTENDANCE_INVALID_STATUS_MESSAGE)
+    try:
+        reservation = Reservation.objects.select_related(
+            "member__user",
+            "schedule__instructor__user",
+            "schedule__room__studio",
+        ).get(id=reservation_id, is_removed=False)
+    except Reservation.DoesNotExist as exc:
+        raise Reservation.DoesNotExist(RESERVATION_NOT_FOUND_MESSAGE) from exc
+    if reservation.status == constants.RESERVATION_STATUS_CANCELLED:
+        raise ReservationInvalidStateException(ATTENDANCE_CANCELLED_MESSAGE)
+    if reservation.status == status:
+        return reservation
+    reservation.status = status
+    reservation.save(update_fields=["status"])
+    return reservation
+
 
 def get_member_by_id(member_id: str) -> Member:
     """Get a Member by id."""

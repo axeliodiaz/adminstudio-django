@@ -218,3 +218,107 @@ class TestAdminReservationViews:
             )
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+class TestAdminAttendanceViews:
+    def test_day_list_and_roster(self, staff_client, reservation_graph):
+        schedule = reservation_graph["schedule"]
+        reservation = reservation_graph["reservation"]
+
+        day = staff_client.get(reverse("admin-attendance-day"), {"date": "2025-06-02"})
+        assert day.status_code == status.HTTP_200_OK
+        assert day.data["date"] == "2025-06-02"
+        assert len(day.data["classes"]) == 1
+        row = day.data["classes"][0]
+        assert row["id"] == str(schedule.id)
+        assert row["pending"] == 1
+        assert row["attended"] == 0
+        assert row["booked"] == 1
+
+        roster = staff_client.get(
+            reverse("admin-attendance-roster", kwargs={"schedule_id": schedule.id})
+        )
+        assert roster.status_code == status.HTTP_200_OK
+        assert len(roster.data["riders"]) == 1
+        rider = roster.data["riders"][0]
+        assert rider["reservation_id"] == str(reservation.id)
+        assert rider["status"] == member_constants.RESERVATION_STATUS_RESERVED
+        assert rider["member_email"] == "socio@example.com"
+
+    def test_mark_attended_and_missed_after_class(self, staff_client, reservation_graph):
+        reservation = reservation_graph["reservation"]
+        url = reverse(
+            "admin-reservation-attendance",
+            kwargs={"reservation_id": reservation.id},
+        )
+
+        attended = staff_client.patch(url, {"status": "ATTENDED"}, format="json")
+        assert attended.status_code == status.HTTP_200_OK
+        assert attended.data["status"] == member_constants.RESERVATION_STATUS_ATTENDED
+        reservation.refresh_from_db()
+        assert reservation.status == member_constants.RESERVATION_STATUS_ATTENDED
+
+        missed = staff_client.patch(url, {"status": "MISSED"}, format="json")
+        assert missed.status_code == status.HTTP_200_OK
+        reservation.refresh_from_db()
+        assert reservation.status == member_constants.RESERVATION_STATUS_MISSED
+
+        pending = staff_client.patch(url, {"status": "RESERVED"}, format="json")
+        assert pending.status_code == status.HTTP_200_OK
+        reservation.refresh_from_db()
+        assert reservation.status == member_constants.RESERVATION_STATUS_RESERVED
+
+    def test_cannot_mark_cancelled(self, staff_client, reservation_graph):
+        reservation = reservation_graph["reservation"]
+        reservation.status = member_constants.RESERVATION_STATUS_CANCELLED
+        reservation.save(update_fields=["status"])
+
+        response = staff_client.patch(
+            reverse(
+                "admin-reservation-attendance",
+                kwargs={"reservation_id": reservation.id},
+            ),
+            {"status": "ATTENDED"},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_mark_remaining_missed(self, staff_client, reservation_graph):
+        schedule = reservation_graph["schedule"]
+        other_user = User.objects.create_user(
+            username="otro-asis@example.com",
+            email="otro-asis@example.com",
+            password="pass1234",
+            first_name="Luis",
+            last_name="Pérez",
+        )
+        other_member = Member.objects.create(user=other_user)
+        other = Reservation.objects.create(
+            member=other_member,
+            schedule=schedule,
+            spot=4,
+            status=member_constants.RESERVATION_STATUS_ATTENDED,
+        )
+
+        response = staff_client.post(
+            reverse("admin-attendance-mark-missed", kwargs={"schedule_id": schedule.id}),
+            format="json",
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["updated"] == 1
+        reservation_graph["reservation"].refresh_from_db()
+        other.refresh_from_db()
+        assert reservation_graph["reservation"].status == member_constants.RESERVATION_STATUS_MISSED
+        assert other.status == member_constants.RESERVATION_STATUS_ATTENDED
+
+    def test_attendance_requires_staff(self, api_client, reservation_graph):
+        user = User.objects.create_user(
+            username="member-attendance",
+            email="member-attendance@example.com",
+            password="pass1234",
+        )
+        token = ExpiringToken.objects.create(user=user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        response = api_client.get(reverse("admin-attendance-day"))
+        assert response.status_code == status.HTTP_403_FORBIDDEN

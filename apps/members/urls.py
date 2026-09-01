@@ -1,8 +1,12 @@
 from django.urls import path
 
 from apps.members.views import (
+    AdminAttendanceDayView,
+    AdminAttendanceMarkMissedView,
+    AdminAttendanceRosterView,
     AdminMemberDetailView,
     AdminMemberListView,
+    AdminReservationAttendanceView,
     AdminReservationCancelView,
     AdminReservationChangeSpotView,
     AdminReservationDetailView,
@@ -32,6 +36,26 @@ urlpatterns = [
         "admin/reservations/<uuid:reservation_id>/change-spot/",
         AdminReservationChangeSpotView.as_view(),
         name="admin-reservation-change-spot",
+    ),
+    path(
+        "admin/reservations/<uuid:reservation_id>/attendance/",
+        AdminReservationAttendanceView.as_view(),
+        name="admin-reservation-attendance",
+    ),
+    path(
+        "admin/attendance/",
+        AdminAttendanceDayView.as_view(),
+        name="admin-attendance-day",
+    ),
+    path(
+        "admin/attendance/<uuid:schedule_id>/",
+        AdminAttendanceRosterView.as_view(),
+        name="admin-attendance-roster",
+    ),
+    path(
+        "admin/attendance/<uuid:schedule_id>/mark-missed/",
+        AdminAttendanceMarkMissedView.as_view(),
+        name="admin-attendance-mark-missed",
     ),
     path("admin/", AdminMemberListView.as_view(), name="admin-members"),
     path(

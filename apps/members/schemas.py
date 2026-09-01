@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 from apps.users.schemas import UserSchema
 
@@ -144,6 +144,50 @@ class AdminReservationChangeSpotSchema(BaseModel):
     """Change the bike spot of an existing reservation."""
 
     new_spot: int
+
+
+class AdminAttendanceWriteSchema(BaseModel):
+    """Mark whether a booked member attended a class."""
+
+    status: str
+
+    @field_validator("status")
+    @classmethod
+    def validate_attendance_status(cls, value: str) -> str:
+        from apps.members.constants import ATTENDANCE_STATUSES
+
+        normalized = (value or "").strip().upper()
+        if normalized not in ATTENDANCE_STATUSES:
+            raise ValueError("status must be RESERVED, ATTENDED or MISSED.")
+        return normalized
+
+
+class AdminAttendanceClassSchema(BaseModel):
+    id: uuid.UUID
+    title: str = ""
+    start_time: datetime
+    duration_minutes: int
+    status: str = ""
+    instructor_id: uuid.UUID | None = None
+    instructor_name: str = ""
+    room_id: uuid.UUID | None = None
+    room_name: str = ""
+    room_capacity: int | None = None
+    booked: int = 0
+    attended: int = 0
+    missed: int = 0
+    pending: int = 0
+    ended: bool = False
+
+
+class AdminAttendanceRiderSchema(BaseModel):
+    reservation_id: uuid.UUID
+    member_id: uuid.UUID
+    member_name: str = ""
+    member_email: str = ""
+    spot: int | None = None
+    status: str
+    notes: str = ""
 
 
 class WaitlistScheduleSchema(BaseModel):

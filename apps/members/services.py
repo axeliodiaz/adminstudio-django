@@ -1,13 +1,19 @@
-from datetime import date
+from datetime import date, datetime, time, timedelta
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from apps.members import members
 from apps.members.models import Member, Reservation, WaitlistEntry
+from apps.schedules import constants as schedule_constants
+from apps.schedules.models import Schedule
 from apps.members.schemas import (
+    AdminAttendanceClassSchema,
+    AdminAttendanceRiderSchema,
     AdminMemberSchema,
     AdminReservationSchema,
     MemberSchema,
@@ -21,6 +27,7 @@ User = get_user_model()
 
 USER_ADMIN_FIELDS = {"first_name", "last_name", "email", "phone_number", "gender", "is_active"}
 GENDER_VALUES = {"", "female", "male", "other"}
+STUDIO_TZ = ZoneInfo("America/Santiago")
 
 
 def get_or_create_user(validated_data: dict):
@@ -356,6 +363,161 @@ def change_admin_reservation_spot(reservation_id: str | UUID, new_spot: int) -> 
     except Reservation.DoesNotExist as exc:
         raise ValueError("Reservation not found.") from exc
     return get_admin_reservation(reservation_id)
+
+
+def set_admin_reservation_attendance(reservation_id: str | UUID, status: str) -> dict:
+    """Mark attendance for a booked member. Allowed even after the class ended."""
+    try:
+        members.set_reservation_attendance(str(reservation_id), status)
+    except Reservation.DoesNotExist as exc:
+        raise ValueError(members.RESERVATION_NOT_FOUND_MESSAGE) from exc
+    return get_admin_reservation(reservation_id)
+
+
+def _attendance_day_bounds(day: date) -> tuple[datetime, datetime]:
+    start = datetime.combine(day, time.min, tzinfo=STUDIO_TZ)
+    end = datetime.combine(day, time.max, tzinfo=STUDIO_TZ)
+    return start, end
+
+
+def _class_ended(schedule: Schedule, now: datetime | None = None) -> bool:
+    now = now or timezone.now()
+    start = schedule.start_time
+    if timezone.is_naive(start):
+        start = timezone.make_aware(start)
+    return start + timedelta(minutes=schedule.duration_minutes or 0) < now
+
+
+def _attendance_counts_from_qs(qs):
+    from apps.members import constants as member_constants
+
+    return qs.annotate(
+        booked_count=Count(
+            "reservations",
+            filter=Q(
+                reservations__is_removed=False,
+                reservations__status__in=member_constants.ATTENDANCE_ROSTER_STATUSES,
+            ),
+        ),
+        attended_count=Count(
+            "reservations",
+            filter=Q(
+                reservations__is_removed=False,
+                reservations__status=member_constants.RESERVATION_STATUS_ATTENDED,
+            ),
+        ),
+        missed_count=Count(
+            "reservations",
+            filter=Q(
+                reservations__is_removed=False,
+                reservations__status=member_constants.RESERVATION_STATUS_MISSED,
+            ),
+        ),
+        pending_count=Count(
+            "reservations",
+            filter=Q(
+                reservations__is_removed=False,
+                reservations__status=member_constants.RESERVATION_STATUS_RESERVED,
+            ),
+        ),
+    )
+
+
+def _serialize_attendance_class(schedule: Schedule) -> dict:
+    room = getattr(schedule, "room", None)
+    payload = {
+        "id": schedule.id,
+        "title": schedule.title or "",
+        "start_time": schedule.start_time,
+        "duration_minutes": schedule.duration_minutes,
+        "status": schedule.status,
+        "instructor_id": schedule.instructor_id,
+        "instructor_name": _instructor_display_name(schedule),
+        "room_id": schedule.room_id,
+        "room_name": room.name if room else "",
+        "room_capacity": room.capacity if room else None,
+        "booked": int(getattr(schedule, "booked_count", 0) or 0),
+        "attended": int(getattr(schedule, "attended_count", 0) or 0),
+        "missed": int(getattr(schedule, "missed_count", 0) or 0),
+        "pending": int(getattr(schedule, "pending_count", 0) or 0),
+        "ended": _class_ended(schedule),
+    }
+    return AdminAttendanceClassSchema.model_validate(payload).model_dump(mode="json")
+
+
+def list_admin_attendance_classes(*, day: str | date | None = None) -> dict:
+    """List classes for a studio day so staff can take attendance, including past classes."""
+    parsed = day if isinstance(day, date) else _parse_date(day, "date")
+    if parsed is None:
+        parsed = timezone.now().astimezone(STUDIO_TZ).date()
+    start, end = _attendance_day_bounds(parsed)
+    qs = _attendance_counts_from_qs(
+        Schedule.objects.filter(is_removed=False, start_time__gte=start, start_time__lte=end)
+        .exclude(status=schedule_constants.SCHEDULE_STATUS_CANCELED)
+        .exclude(status=schedule_constants.SCHEDULE_STATUS_DRAFT)
+        .select_related("instructor__user", "room")
+        .order_by("start_time")
+    )
+    classes = [_serialize_attendance_class(item) for item in qs]
+    return {"date": parsed.isoformat(), "classes": classes}
+
+
+def get_admin_attendance_roster(schedule_id: str | UUID) -> dict:
+    """Roster of booked members for a class, including after it already happened."""
+    from apps.members import constants as member_constants
+
+    try:
+        schedule = _attendance_counts_from_qs(
+            Schedule.objects.filter(is_removed=False).select_related("instructor__user", "room")
+        ).get(id=schedule_id)
+    except Schedule.DoesNotExist as exc:
+        raise ValueError(members.SCHEDULE_NOT_FOUND_MESSAGE) from exc
+
+    reservations = (
+        Reservation.objects.filter(
+            schedule_id=schedule.id,
+            is_removed=False,
+            status__in=member_constants.ATTENDANCE_ROSTER_STATUSES,
+        )
+        .select_related("member__user")
+        .order_by("spot", "member__user__first_name", "member__user__last_name")
+    )
+    riders = []
+    for reservation in reservations:
+        user = reservation.member.user
+        riders.append(
+            AdminAttendanceRiderSchema.model_validate(
+                {
+                    "reservation_id": reservation.id,
+                    "member_id": reservation.member_id,
+                    "member_name": _member_display_name(user),
+                    "member_email": getattr(user, "email", "") or "",
+                    "spot": reservation.spot,
+                    "status": reservation.status,
+                    "notes": reservation.notes or "",
+                }
+            ).model_dump(mode="json")
+        )
+    return {"class": _serialize_attendance_class(schedule), "riders": riders}
+
+
+def mark_remaining_attendance_missed(schedule_id: str | UUID) -> dict:
+    """Mark every still-RESERVED booking on a class as MISSED (no-show)."""
+    from apps.members import constants as member_constants
+
+    try:
+        schedule = Schedule.objects.get(id=schedule_id, is_removed=False)
+    except Schedule.DoesNotExist as exc:
+        raise ValueError(members.SCHEDULE_NOT_FOUND_MESSAGE) from exc
+
+    updated = Reservation.objects.filter(
+        schedule_id=schedule.id,
+        is_removed=False,
+        status=member_constants.RESERVATION_STATUS_RESERVED,
+    ).update(status=member_constants.RESERVATION_STATUS_MISSED)
+    roster = get_admin_attendance_roster(schedule.id)
+    roster["updated"] = updated
+    return roster
 
 
 def _serialize_waitlist_entry(entry) -> dict:
