@@ -73,6 +73,7 @@ class TestProfileView:
 
         # Check personal_info structure
         personal_info = response.data["personal_info"]
+        assert str(personal_info["id"]) == str(user_with_member.id)
         assert personal_info["username"] == "testuser"
         assert personal_info["email"] == "test@example.com"
         assert personal_info["first_name"] == "Test"

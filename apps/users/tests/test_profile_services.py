@@ -31,6 +31,7 @@ class TestGetUserProfile:
         result = get_user_profile(user)
 
         assert isinstance(result, UserProfileResponseSchema)
+        assert result.personal_info.id == user.id
         assert result.personal_info.first_name == "Test"
         assert result.personal_info.height_cm == 175
         assert result.cycling.seat_height == 17

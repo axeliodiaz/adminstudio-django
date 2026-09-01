@@ -86,6 +86,7 @@ class UserProfileSchema(BaseModel):
 class PersonalInfoSchema(BaseModel):
     """Información personal del usuario."""
 
+    id: UUID | None = None
     username: str | None = None
     email: EmailStr | None = None
     first_name: str | None = None
