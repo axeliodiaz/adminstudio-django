@@ -4,7 +4,9 @@ from django.db.models import Q
 from model_utils.models import SoftDeletableModel, TimeStampedModel, UUIDModel
 
 from apps.members import constants
+from apps.instructors.models import Instructor
 from apps.schedules.models import Schedule
+from apps.studios.models import Room
 
 
 class Member(SoftDeletableModel, UUIDModel, TimeStampedModel):
@@ -14,6 +16,109 @@ class Member(SoftDeletableModel, UUIDModel, TimeStampedModel):
 
     def __str__(self):
         return self.user.username
+
+
+class FavoriteInstructor(UUIDModel, TimeStampedModel):
+    member = models.ForeignKey(
+        Member, on_delete=models.CASCADE, related_name="favorite_instructors"
+    )
+    instructor = models.ForeignKey(
+        Instructor, on_delete=models.CASCADE, related_name="favorited_by_members"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["member", "instructor"], name="uniq_favorite_instructor_per_member"
+            )
+        ]
+
+
+class FavoriteTimeSlot(UUIDModel, TimeStampedModel):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="favorite_time_slots")
+    weekday = models.PositiveSmallIntegerField(help_text="Monday is 0 and Sunday is 6.")
+    start_hour = models.PositiveSmallIntegerField()
+    end_hour = models.PositiveSmallIntegerField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(weekday__gte=0, weekday__lte=6),
+                name="favorite_time_slot_weekday_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(start_hour__gte=0, start_hour__lte=23),
+                name="favorite_time_slot_start_hour_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(end_hour__gte=1, end_hour__lte=24),
+                name="favorite_time_slot_end_hour_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(end_hour__gt=models.F("start_hour")),
+                name="favorite_time_slot_positive_duration",
+            ),
+            models.UniqueConstraint(
+                fields=["member", "weekday", "start_hour", "end_hour"],
+                name="uniq_favorite_time_slot_per_member",
+            ),
+        ]
+
+
+class FavoriteSpot(UUIDModel, TimeStampedModel):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="favorite_spots")
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="favorite_spots")
+    spot = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=Q(spot__gt=0), name="favorite_spot_positive"),
+            models.UniqueConstraint(
+                fields=["member", "room", "spot"], name="uniq_favorite_spot_per_member"
+            ),
+        ]
+
+
+class AlertPreference(UUIDModel, TimeStampedModel):
+    """Email alert choices. Quiet hours use the Django default timezone."""
+
+    member = models.OneToOneField(Member, on_delete=models.CASCADE, related_name="alert_preference")
+    email_enabled = models.BooleanField(default=True)
+    quiet_hours_start = models.PositiveSmallIntegerField(null=True, blank=True)
+    quiet_hours_end = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(quiet_hours_start__isnull=True)
+                | Q(quiet_hours_start__gte=0, quiet_hours_start__lte=23),
+                name="alert_preference_quiet_start_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(quiet_hours_end__isnull=True)
+                | Q(quiet_hours_end__gte=0, quiet_hours_end__lte=23),
+                name="alert_preference_quiet_end_range",
+            ),
+        ]
+
+
+class AlertDelivery(UUIDModel, TimeStampedModel):
+    """Persistent idempotency record for favorite-alert email attempts."""
+
+    KIND_SCHEDULE = "SCHEDULE"
+    KIND_SPOT = "SPOT"
+    KIND_CHOICES = ((KIND_SCHEDULE, "Schedule"), (KIND_SPOT, "Spot"))
+
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name="alert_deliveries")
+    event_key = models.CharField(max_length=255)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["member", "event_key", "kind"], name="uniq_alert_delivery_event_member_kind"
+            )
+        ]
 
 
 class Reservation(SoftDeletableModel, UUIDModel, TimeStampedModel):

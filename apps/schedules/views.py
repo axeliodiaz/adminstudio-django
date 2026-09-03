@@ -150,6 +150,7 @@ class ScheduleViewSet(viewsets.ViewSet):
             room_ids=room_ids or None,
             title=request.query_params.get("title"),
             titles=class_types or None,
+            scheduled_only=True,
         )
         data = [s.model_dump() for s in schemas]
         return Response(data)
@@ -167,6 +168,8 @@ class ScheduleViewSet(viewsets.ViewSet):
         try:
             schedule_schema = get_schedule_schema_by_id(pk)
         except Schedule.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if schedule_schema.status != "scheduled":
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         # Convert schema to dict and adjust field names to match serializer output
         data = schedule_schema.model_dump()
