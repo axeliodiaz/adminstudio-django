@@ -83,6 +83,7 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     "drf_expiring_token",
     "django_extensions",
+    "django_ckeditor_5",
 ]
 OWN_APPS = [
     "apps.healthcheck",
@@ -100,6 +101,7 @@ OWN_APPS = [
     "apps.legal",
     "apps.analytics",
     "apps.coach",
+    "apps.docs",
 ]
 INSTALLED_APPS = CORE_APPS + THIRD_PARTY_APPS + OWN_APPS
 
@@ -281,4 +283,54 @@ ENABLE_PSP_PAYMENTS = os.environ.get("ENABLE_PSP_PAYMENTS", "False").lower() in 
     "true",
     "yes",
     "on",
+}
+
+CKEDITOR_5_CONFIGS = {
+    "default": {
+        "toolbar": [
+            "heading",
+            "|",
+            "bold",
+            "italic",
+            "underline",
+            "link",
+            "bulletedList",
+            "numberedList",
+            "blockQuote",
+            "|",
+            "insertTable",
+            "codeBlock",
+            "|",
+            "undo",
+            "redo",
+        ],
+        "heading": {
+            "options": [
+                {
+                    "model": "paragraph",
+                    "title": "Paragraph",
+                    "class": "ck-heading_paragraph",
+                },
+                {
+                    "model": "heading2",
+                    "view": "h2",
+                    "title": "Heading 2",
+                    "class": "ck-heading_heading2",
+                },
+                {
+                    "model": "heading3",
+                    "view": "h3",
+                    "title": "Heading 3",
+                    "class": "ck-heading_heading3",
+                },
+                {
+                    "model": "heading4",
+                    "view": "h4",
+                    "title": "Heading 4",
+                    "class": "ck-heading_heading4",
+                },
+            ]
+        },
+        "language": "es",
+    }
 }
