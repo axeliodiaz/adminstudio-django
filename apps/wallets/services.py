@@ -133,8 +133,18 @@ class WalletService:
         """
         with transaction.atomic():
             wallet, _ = Wallet.objects.select_for_update().get_or_create(user=user)
+
+            # Check unlimited membership with expiry validation
             if wallet.is_unlimited_membership_active:
-                return False
+                if (
+                    wallet.active_membership_end_date is None
+                    or wallet.active_membership_end_date >= timezone.now().date()
+                ):
+                    return False
+                # Membership has expired — deactivate the flag
+                wallet.is_unlimited_membership_active = False
+                wallet.save(update_fields=["is_unlimited_membership_active", "modified"])
+
             if wallet.class_credits <= 0:
                 raise InsufficientCreditsException(
                     "No te quedan créditos de clase. Compra un plan para reservar."
