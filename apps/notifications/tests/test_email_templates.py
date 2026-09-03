@@ -1,6 +1,7 @@
 from apps.notifications.email_templates import (
     render_booking_confirmed,
     render_class_cancelled,
+    render_coach_substituted,
     render_password_recovery,
     render_purchase_receipt,
     render_waitlist_offer,
@@ -128,3 +129,26 @@ def test_render_waitlist_offer_auto_confirmed():
     assert "auto-confirmación activa" in html
     assert "Ver mi reserva" in html
     assert "#my-reservations" in html
+
+
+def test_render_coach_substituted_matches_copy():
+    html = render_coach_substituted(
+        class_title="Morning Climb",
+        when_label="Jueves 25 ago · 07:00",
+        studio_name="PulseFit Patio Andino",
+        room_name="Sala A",
+        old_coach_name="Camila Rojas",
+        new_coach_name="Tomás Muñoz",
+        reason="lesión",
+        action_url="http://localhost:5173/#my-reservations",
+        frontend_url="http://localhost:5173",
+        audience="reservation",
+    )
+
+    assert "Cambio de coach" in html
+    assert "Morning Climb" in html
+    assert "Camila Rojas" in html
+    assert "Tomás Muñoz" in html
+    assert "lesión" in html
+    assert "Ver mi reserva" in html
+    assert "mismo spot" in html

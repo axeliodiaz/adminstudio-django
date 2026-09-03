@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from apps.schedules.views import (
     AdminScheduleDetailView,
     AdminScheduleListView,
+    AdminSubstituteCoachView,
     ScheduleViewSet,
 )
 
@@ -12,6 +13,11 @@ router.register(r"", ScheduleViewSet, basename="schedule")
 
 urlpatterns = [
     path("admin/schedules/", AdminScheduleListView.as_view(), name="admin-schedule-list"),
+    path(
+        "admin/schedules/<uuid:schedule_id>/substitute-coach/",
+        AdminSubstituteCoachView.as_view(),
+        name="admin-schedule-substitute-coach",
+    ),
     path(
         "admin/schedules/<uuid:schedule_id>/",
         AdminScheduleDetailView.as_view(),
