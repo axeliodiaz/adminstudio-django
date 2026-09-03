@@ -170,7 +170,9 @@ class GiftCard(UUIDModel, TimeStampedModel):
     recipient_email = models.EmailField(blank=True)
     message = models.TextField(blank=True, max_length=1_000)
     send_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField()
+    expiration_reminder_sent_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     redeemed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

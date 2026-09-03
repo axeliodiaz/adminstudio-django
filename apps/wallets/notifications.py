@@ -7,6 +7,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID
 
 from django.conf import settings
+from django.utils import timezone
 
 from apps.notifications.email_templates import render_gift_recipient, render_purchase_receipt
 from apps.notifications.mailing import Email
@@ -164,7 +165,7 @@ def send_gift_recipient_email(gift_card) -> None:
         frontend_url = _frontend_url()
         redeem_url = f"{frontend_url}/#redeem/{gift_card.code}"
         expires_label = _format_until(gift_card.expires_at.date())
-        Email(
+        delivered = Email(
             notification_id=str(gift_card.id),
             subject=f"Te regalaron {plan.name} en PulseFit",
             message=(
@@ -182,9 +183,47 @@ def send_gift_recipient_email(gift_card) -> None:
                 frontend_url=frontend_url,
             ),
         ).send_mail()
+        if delivered:
+            gift_card.delivered_at = timezone.now()
+            gift_card.save(update_fields=["delivered_at", "modified"])
     except Exception:
         logger.exception(
             "Failed to send gift recipient email", extra={"gift_card_id": str(gift_card.id)}
+        )
+
+
+def send_gift_expiration_reminder_email(gift_card) -> None:
+    """Remind an unredeemed recipient before their gift expires."""
+    if not gift_card.recipient_email:
+        return
+    try:
+        frontend_url = _frontend_url()
+        expires_label = _format_until(gift_card.expires_at.date())
+        delivered = Email(
+            notification_id=f"{gift_card.id}-expiry",
+            subject="Tu regalo PulseFit está por vencer",
+            message=(
+                f"Tu regalo {gift_card.plan.name} vence el {expires_label}. "
+                f"Canjéalo aquí: {frontend_url}/#redeem/{gift_card.code}"
+            ),
+            recipient_list=[gift_card.recipient_email],
+            html_content=render_gift_recipient(
+                recipient_name=gift_card.recipient_name,
+                issuer_name=gift_card.issuer.get_full_name() or gift_card.issuer.username,
+                plan_name=gift_card.plan.name,
+                message="",
+                redeem_url=f"{frontend_url}/#redeem/{gift_card.code}",
+                expires_label=expires_label,
+                frontend_url=frontend_url,
+            ),
+        ).send_mail()
+        if delivered:
+            gift_card.expiration_reminder_sent_at = timezone.now()
+            gift_card.save(update_fields=["expiration_reminder_sent_at", "modified"])
+    except Exception:
+        logger.exception(
+            "Failed to send gift expiration reminder",
+            extra={"gift_card_id": str(gift_card.id)},
         )
 
 
