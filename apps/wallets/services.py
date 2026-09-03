@@ -117,8 +117,16 @@ class WalletService:
         # 7. Save the Wallet
         wallet.save()
 
+        from apps.referrals.services import reward_first_purchase
         from apps.wallets.notifications import send_purchase_receipt_email
 
+        has_previous_activated_purchase = (
+            PlanPurchase.objects.filter(user=user, activated_since__isnull=False)
+            .exclude(id=purchase.id)
+            .exists()
+        )
+        if not has_previous_activated_purchase:
+            reward_first_purchase(user=user)
         send_purchase_receipt_email(purchase)
         return wallet
 

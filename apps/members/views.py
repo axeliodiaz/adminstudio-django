@@ -57,6 +57,7 @@ from apps.members.services import (
     confirm_waitlist_offer,
 )
 from apps.members.models import Member, Reservation, WaitlistEntry
+from apps.referrals.services import attribute_signup, get_valid_referral_code
 
 logger = logging.getLogger(__name__)
 
@@ -85,9 +86,17 @@ class MemberView(ViewSet):
     def create(self, request, *args, **kwargs):
         member_serializer = MemberSerializer(data=request.data)
         member_serializer.is_valid(raise_exception=True)
+        referral_code = member_serializer.validated_data.pop("referral_code", "")
+        if referral_code:
+            try:
+                get_valid_referral_code(code=referral_code)
+            except ValueError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         member_schema, created = get_or_create_member_user(
             member_serializer.validated_data, is_active=False
         )
+        if created and referral_code:
+            attribute_signup(referred_user=member_schema.user, code=referral_code)
         logger.info(
             "Member registration processed",
             extra={
