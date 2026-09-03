@@ -55,6 +55,21 @@ class TestSanitizeHtml:
 
 @pytest.mark.django_db
 class TestPublicDocsAPI:
+    def test_seeded_classes_guide_is_public(self, api_client):
+        response = api_client.get(
+            reverse(
+                "docs-detail",
+                kwargs={
+                    "section_slug": "clases-y-horarios",
+                    "page_slug": "como-ver-clases-y-horarios",
+                },
+            )
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["related_app_route"] == "#classes"
+        assert "Reserva tu spot" in response.data["body"]
+
     def test_list_omits_unpublished_pages_and_empty_sections(self, api_client, published_section):
         DocPage.objects.create(
             section=published_section,
@@ -105,10 +120,11 @@ class TestPublicDocsAPI:
         audiences = response.data["audiences"]
         assert [group["id"] for group in audiences] == ["member"]
         sections = audiences[0]["sections"]
-        assert [section["slug"] for section in sections] == ["clases"]
-        slugs = [page["slug"] for page in sections[0]["pages"]]
+        section = next(item for item in sections if item["slug"] == "clases")
+        assert "vacia" not in [item["slug"] for item in sections]
+        slugs = [page["slug"] for page in section["pages"]]
         assert slugs == ["visible"]
-        assert "body" not in sections[0]["pages"][0]
+        assert "body" not in section["pages"][0]
 
     def test_list_can_filter_by_audience(self, api_client, published_page):
         coach_section = DocSection.objects.create(
