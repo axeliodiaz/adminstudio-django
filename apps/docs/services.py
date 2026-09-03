@@ -24,10 +24,18 @@ def _published_pages_qs():
     return DocPage.objects.filter(is_published=True, is_removed=False).order_by("order", "title")
 
 
-def get_published_docs_index(*, audience: str | None = None) -> dict:
+def get_published_docs_index(
+    *,
+    audience: str | None = None,
+    allowed_audiences: frozenset[str],
+) -> dict:
     """Return published docs grouped by audience, then section."""
     sections = (
-        DocSection.objects.filter(is_published=True, is_removed=False)
+        DocSection.objects.filter(
+            is_published=True,
+            is_removed=False,
+            audience__in=allowed_audiences,
+        )
         .prefetch_related("pages")
         .order_by("audience", "order", "title")
     )
@@ -71,7 +79,12 @@ def get_published_docs_index(*, audience: str | None = None) -> dict:
     return DocsIndexSchema.model_validate({"audiences": audiences}).model_dump(mode="json")
 
 
-def get_published_doc_page(*, section_slug: str, page_slug: str) -> dict:
+def get_published_doc_page(
+    *,
+    section_slug: str,
+    page_slug: str,
+    allowed_audiences: frozenset[str],
+) -> dict:
     """Return a published page by section and page slug, or 404."""
     page = get_object_or_404(
         _published_pages_qs().select_related("section"),
@@ -79,6 +92,7 @@ def get_published_doc_page(*, section_slug: str, page_slug: str) -> dict:
         section__slug=section_slug,
         section__is_published=True,
         section__is_removed=False,
+        section__audience__in=allowed_audiences,
     )
     payload = {
         "id": page.id,
