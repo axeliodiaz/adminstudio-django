@@ -145,6 +145,7 @@ def get_schedule_schema_list(
     room_ids: Iterable[UUID | str] | None = None,
     title: str | None = None,
     titles: Iterable[str] | None = None,
+    scheduled_only: bool = False,
 ) -> List[ScheduleSchema]:
     """Fetch schedules ordered by start_time and return as list of ScheduleSchema."""
     return to_schedule_schema_list(
@@ -158,6 +159,7 @@ def get_schedule_schema_list(
             room_ids=room_ids,
             title=title,
             titles=titles,
+            scheduled_only=scheduled_only,
         )
     )
 

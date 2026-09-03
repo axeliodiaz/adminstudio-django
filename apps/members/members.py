@@ -223,6 +223,10 @@ def cancel_reservation(
         from apps.members.waitlist import promote_waitlist_for_schedule
 
         promote_waitlist_for_schedule(reservation.schedule_id, reservation.spot)
+        # A waitlisted member is offered first; alerts only happen when no priority claimant exists.
+        from apps.members.alerts import notify_favorite_spot_available
+
+        notify_favorite_spot_available(reservation.schedule, reservation.spot)
 
     if should_notify:
         from apps.members.notifications import send_class_cancelled_email
@@ -249,6 +253,7 @@ def change_reservation_spot(schedule_id: str, user_id: str, new_spot: int) -> Re
         ReservationInvalidStateException: If reservation is not RESERVED
         InvalidSpotException: If new spot is invalid or unavailable
     """
+    freed_spot = None
     with transaction.atomic():
         # Get member from user_id
         member = get_member_by_user_id(user_id)
@@ -303,10 +308,16 @@ def change_reservation_spot(schedule_id: str, user_id: str, new_spot: int) -> Re
             raise InvalidSpotException(f"Spot {new_spot} is already taken.")
 
         # Update the spot
+        freed_spot = reservation.spot
         reservation.spot = new_spot
         reservation.save(update_fields=["spot", "modified"])
 
-        return reservation
+    from apps.members.waitlist import promote_waitlist_for_schedule
+    from apps.members.alerts import notify_favorite_spot_available
+
+    promote_waitlist_for_schedule(reservation.schedule_id, freed_spot)
+    notify_favorite_spot_available(reservation.schedule, freed_spot)
+    return reservation
 
 
 def list_reservations_by_date_range(

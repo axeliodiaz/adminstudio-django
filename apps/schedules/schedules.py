@@ -29,6 +29,7 @@ def get_schedules_list(
     room_ids: Iterable[UUID | str] | None = None,
     title: str | None = None,
     titles: Iterable[str] | None = None,
+    scheduled_only: bool = False,
 ):
     """Return queryset of schedules ordered by start_time.
 
@@ -38,7 +39,9 @@ def get_schedules_list(
     qs = Schedule.objects.select_related(
         "instructor__user",
         "room__studio__address",
-    )
+    ).filter(is_removed=False)
+    if scheduled_only:
+        qs = qs.filter(status=constants.SCHEDULE_STATUS_SCHEDULED)
     if start_time is not None:
         qs = qs.filter(start_time__gte=start_time)
     if end_time is not None:
@@ -118,6 +121,10 @@ def create_schedule(
         room_id=room_id,
         status=status,
     )
+    if status == constants.SCHEDULE_STATUS_SCHEDULED:
+        from apps.members.alerts import notify_schedule_available
+
+        notify_schedule_available(schedule)
 
     return schedule
 
@@ -131,6 +138,7 @@ def update_schedule(schedule: Schedule, *, data: dict) -> Schedule:
             raise ValueError("duration_minutes must be a positive integer.")
 
     dirty: list[str] = []
+    was_scheduled = schedule.status == constants.SCHEDULE_STATUS_SCHEDULED
 
     if "instructor_id" in data and data["instructor_id"] is not None:
         get_instructor_by_id(data["instructor_id"])
@@ -156,6 +164,10 @@ def update_schedule(schedule: Schedule, *, data: dict) -> Schedule:
 
     if dirty:
         schedule.save(update_fields=[*dirty, "modified"])
+        if not was_scheduled and schedule.status == constants.SCHEDULE_STATUS_SCHEDULED:
+            from apps.members.alerts import notify_schedule_available
+
+            notify_schedule_available(schedule)
     return schedule
 
 
