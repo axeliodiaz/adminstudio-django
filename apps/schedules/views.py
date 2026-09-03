@@ -14,6 +14,8 @@ from apps.schedules.services import (
     get_schedule_schema_by_id,
     get_schedule_schema_list,
     list_admin_schedules,
+    preview_substitute_coach,
+    substitute_coach,
     update_admin_schedule,
 )
 
@@ -26,7 +28,7 @@ from uuid import UUID
 from pydantic import ValidationError as PydanticValidationError
 from rest_framework.views import APIView
 
-from apps.schedules.schemas import AdminScheduleWriteSchema
+from apps.schedules.schemas import AdminScheduleWriteSchema, SubstituteCoachWriteSchema
 
 
 def _pydantic_error_response(exc: PydanticValidationError) -> Response:
@@ -203,6 +205,24 @@ class ScheduleViewSet(viewsets.ViewSet):
         data = [schema.model_dump() for schema in reservation_schemas]
         return Response(data, status=status.HTTP_200_OK)
 
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="substitute-coach",
+        url_name="substitute-coach",
+        permission_classes=[IsAuthenticated, IsAdminUser],
+    )
+    def substitute_coach_action(self, request, pk=None):
+        """Staff: preview or assign a substitute instructor for this class."""
+        try:
+            UUID(str(pk))
+        except (ValueError, TypeError):
+            return Response(
+                {"detail": f'"{pk}" is not a valid UUID.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return _substitute_coach_response(request, pk)
+
 
 class AdminScheduleListView(APIView):
     """List or create class schedules for the PulseFit admin. Staff only."""
@@ -269,3 +289,41 @@ class AdminScheduleDetailView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _substitute_coach_response(request, schedule_id):
+    if request.method == "GET":
+        preview = preview_substitute_coach(
+            schedule_id=schedule_id,
+            new_instructor_id=request.query_params.get("instructor_id") or None,
+        )
+        return Response(preview, status=status.HTTP_200_OK)
+
+    try:
+        payload = SubstituteCoachWriteSchema.model_validate(request.data)
+    except PydanticValidationError as exc:
+        return _pydantic_error_response(exc)
+
+    try:
+        result = substitute_coach(
+            schedule_id=schedule_id,
+            new_instructor_id=payload.new_instructor_id,
+            reason=payload.reason or "",
+            notify=payload.notify,
+            changed_by=request.user,
+        )
+    except ValueError as exc:
+        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(result, status=status.HTTP_200_OK)
+
+
+class AdminSubstituteCoachView(APIView):
+    """Preview or assign a substitute instructor. Staff only."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request, schedule_id, *args, **kwargs):
+        return _substitute_coach_response(request, schedule_id)
+
+    def post(self, request, schedule_id, *args, **kwargs):
+        return _substitute_coach_response(request, schedule_id)

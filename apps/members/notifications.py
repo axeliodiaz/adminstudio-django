@@ -10,6 +10,7 @@ from django.conf import settings
 from apps.notifications.email_templates import (
     render_booking_confirmed,
     render_class_cancelled,
+    render_coach_substituted,
 )
 from apps.notifications.services import create_notification
 from apps.studios.models import StudioSettings
@@ -206,4 +207,64 @@ def send_class_cancelled_email(
         logger.exception(
             "Failed to send class cancelled email",
             extra={"reservation_id": str(getattr(reservation, "pk", ""))},
+        )
+
+
+def send_coach_substituted_email(
+    *,
+    user,
+    schedule,
+    old_coach_name: str,
+    new_coach_name: str,
+    reason: str = "",
+    audience: str = "reservation",
+) -> None:
+    """Notify a reserved or waitlisted rider that the class coach changed."""
+    try:
+        room = getattr(schedule, "room", None)
+        studio = getattr(room, "studio", None) if room else None
+        class_title = (schedule.title or "Clase").strip() or "Clase"
+        studio_name = (studio.name if studio else "PulseFit Studio").strip() or "PulseFit Studio"
+        room_name = (room.name if room else "Sala").strip() or "Sala"
+        when_label = _format_when(schedule.start_time)
+        frontend_url = _frontend_url()
+        action_url = (
+            f"{frontend_url}/#waitlist"
+            if audience == "waitlist"
+            else f"{frontend_url}/#my-reservations"
+        )
+        old_name = (old_coach_name or "").strip() or "Coach"
+        new_name = (new_coach_name or "").strip() or "Coach"
+        reason_text = (reason or "").strip()
+        subject = f"Cambio de coach · {class_title} · {_subject_when(schedule.start_time)}"
+        message = (
+            f"Cambio de coach en {class_title} ({when_label}, {studio_name} · {room_name}): "
+            f"{old_name} → {new_name}. "
+            + (f"Motivo: {reason_text}. " if reason_text else "")
+            + f"Tu lugar no cambia. {action_url}"
+        )
+        create_notification(
+            subject=subject,
+            message=message,
+            recipient_list=[user],
+            html_content=render_coach_substituted(
+                class_title=class_title,
+                when_label=when_label,
+                studio_name=studio_name,
+                room_name=room_name,
+                old_coach_name=old_name,
+                new_coach_name=new_name,
+                reason=reason_text,
+                action_url=action_url,
+                frontend_url=frontend_url,
+                audience=audience,
+            ),
+        )
+    except Exception:
+        logger.exception(
+            "Failed to send coach substituted email",
+            extra={
+                "schedule_id": str(getattr(schedule, "pk", "")),
+                "user_id": str(getattr(user, "pk", "")),
+            },
         )
