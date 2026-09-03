@@ -1,9 +1,15 @@
 import pytest
+from django.contrib.auth import get_user_model
 from django.urls import reverse
+from drf_expiring_token.models import ExpiringToken
 from rest_framework import status
+from rest_framework.test import APIClient
 
 from apps.docs.models import DocAudience, DocPage, DocSection
 from apps.docs.sanitize import sanitize_html
+from apps.instructors.models import Instructor
+
+User = get_user_model()
 
 
 @pytest.fixture
@@ -29,6 +35,34 @@ def published_page(published_section):
         is_published=True,
         related_app_route="#classes",
     )
+
+
+@pytest.fixture
+def staff_client():
+    user = User.objects.create_user(
+        username="docsadmin",
+        email="docsadmin@example.com",
+        password="pass1234",
+        is_staff=True,
+    )
+    token = ExpiringToken.objects.create(user=user)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+    return client
+
+
+@pytest.fixture
+def coach_client():
+    user = User.objects.create_user(
+        username="docscoach",
+        email="docscoach@example.com",
+        password="pass1234",
+    )
+    Instructor.objects.create(user=user)
+    token = ExpiringToken.objects.create(user=user)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+    return client
 
 
 @pytest.mark.django_db
@@ -86,7 +120,7 @@ class TestPublicDocsAPI:
         assert "Confirmar reserva" in response.data["body"]
         assert "lista de espera" in response.data["body"]
 
-    def test_seeded_feature_guides_are_public(self, api_client):
+    def test_public_list_omits_admin_and_coach_guides(self, api_client):
         response = api_client.get(reverse("docs-list"))
 
         assert response.status_code == status.HTTP_200_OK
@@ -114,37 +148,35 @@ class TestPublicDocsAPI:
             "cancelaciones",
             "mis-estadisticas",
         }.issubset(sections["mi-cuenta"])
-        assert {
-            "admin-dashboard",
-            "admin-horarios",
-            "admin-reservas",
-            "asistencia",
-            "admin-socios",
-        }.issubset(sections["operacion-admin"])
-        assert {
-            "billeteras-y-compras",
-            "gestionar-planes-y-beneficios",
-            "gestionar-codigos-promocionales",
-        }.issubset(sections["comercial-admin"])
-        assert {
-            "admin-instructores",
-            "admin-usuarios",
-            "admin-estudios-y-salas",
-            "admin-configuracion",
-        }.issubset(sections["estudio-admin"])
-        assert {"admin-faq"}.issubset(sections["contenido-admin"])
-        assert {"admin-perfil-staff"}.issubset(sections["operacion-admin"])
-        assert {
-            "coach-clases-del-dia",
-            "coach-horario-ical",
-            "coach-roster-check-in",
-            "coach-iniciar-clase",
-            "coach-notas-riders",
-            "coach-playlist",
-            "coach-estadisticas",
-            "coach-perfil",
-        }.issubset(sections["panel-coach"])
         assert {"emails-transaccionales", "cola-de-notificaciones"}.issubset(sections["plataforma"])
+        assert "operacion-admin" not in sections
+        assert "panel-coach" not in sections
+
+    def test_staff_list_includes_admin_guides_but_not_coach_guides(self, staff_client):
+        response = staff_client.get(reverse("docs-list"))
+
+        assert response.status_code == status.HTTP_200_OK
+        sections = {
+            section["slug"]: {page["slug"] for page in section["pages"]}
+            for audience in response.data["audiences"]
+            for section in audience["sections"]
+        }
+        assert {"admin-dashboard", "admin-horarios", "admin-reservas"}.issubset(
+            sections["operacion-admin"]
+        )
+        assert "panel-coach" not in sections
+
+    def test_coach_list_includes_coach_guides_but_not_admin_guides(self, coach_client):
+        response = coach_client.get(reverse("docs-list"))
+
+        assert response.status_code == status.HTTP_200_OK
+        sections = {
+            section["slug"]: {page["slug"] for page in section["pages"]}
+            for audience in response.data["audiences"]
+            for section in audience["sections"]
+        }
+        assert {"coach-clases-del-dia", "coach-roster-check-in"}.issubset(sections["panel-coach"])
+        assert "operacion-admin" not in sections
 
     def test_list_omits_unpublished_pages_and_empty_sections(self, api_client, published_section):
         DocPage.objects.create(
@@ -202,7 +234,7 @@ class TestPublicDocsAPI:
         assert slugs == ["visible"]
         assert "body" not in section["pages"][0]
 
-    def test_list_can_filter_by_audience(self, api_client, published_page):
+    def test_coach_can_filter_by_coach_audience(self, coach_client, published_page):
         coach_section = DocSection.objects.create(
             audience=DocAudience.COACH,
             title="Coach",
@@ -217,10 +249,55 @@ class TestPublicDocsAPI:
             is_published=True,
         )
 
-        response = api_client.get(reverse("docs-list"), {"audience": "coach"})
+        response = coach_client.get(reverse("docs-list"), {"audience": "coach"})
 
         assert response.status_code == status.HTTP_200_OK
         assert [group["id"] for group in response.data["audiences"]] == ["coach"]
+
+    def test_protected_page_is_only_visible_to_matching_audience(
+        self, api_client, staff_client, coach_client
+    ):
+        admin_section = DocSection.objects.create(
+            audience=DocAudience.ADMIN,
+            title="Admin protegido",
+            slug="admin-protegido",
+            is_published=True,
+        )
+        coach_section = DocSection.objects.create(
+            audience=DocAudience.COACH,
+            title="Coach protegido",
+            slug="coach-protegido",
+            is_published=True,
+        )
+        DocPage.objects.create(
+            section=admin_section,
+            title="Admin",
+            slug="admin",
+            body="<p>Solo staff</p>",
+            is_published=True,
+        )
+        DocPage.objects.create(
+            section=coach_section,
+            title="Coach",
+            slug="coach",
+            body="<p>Solo coaches</p>",
+            is_published=True,
+        )
+        admin_url = reverse(
+            "docs-detail",
+            kwargs={"section_slug": "admin-protegido", "page_slug": "admin"},
+        )
+        coach_url = reverse(
+            "docs-detail",
+            kwargs={"section_slug": "coach-protegido", "page_slug": "coach"},
+        )
+
+        assert api_client.get(admin_url).status_code == status.HTTP_404_NOT_FOUND
+        assert api_client.get(coach_url).status_code == status.HTTP_404_NOT_FOUND
+        assert staff_client.get(admin_url).status_code == status.HTTP_200_OK
+        assert staff_client.get(coach_url).status_code == status.HTTP_404_NOT_FOUND
+        assert coach_client.get(admin_url).status_code == status.HTTP_404_NOT_FOUND
+        assert coach_client.get(coach_url).status_code == status.HTTP_200_OK
 
     def test_list_rejects_unknown_audience(self, api_client):
         response = api_client.get(reverse("docs-list"), {"audience": "guest"})
