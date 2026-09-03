@@ -77,6 +77,7 @@ class UserProfileSchema(BaseModel):
     height_cm: int | None = None
     weight_kg: float | None = None
     shoe_size: float | None = None
+    injury_notes: str | None = None
     phone_number: str | None = None
     address: str | None = None
 
@@ -95,6 +96,7 @@ class PersonalInfoSchema(BaseModel):
     birthdate: date | None = None
     height_cm: int | None = None
     weight_kg: float | None = None
+    injury_notes: str | None = None
     phone_number: str | None = None
     address: str | None = None
 

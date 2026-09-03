@@ -482,6 +482,18 @@ def get_admin_attendance_roster(schedule_id: str | UUID) -> dict:
         .select_related("member__user")
         .order_by("spot", "member__user__first_name", "member__user__last_name")
     )
+    member_ids = [reservation.member_id for reservation in reservations]
+    first_reservation_ids = {}
+    if member_ids:
+        first_reservations = (
+            Reservation.objects.filter(member_id__in=member_ids, is_removed=False)
+            .exclude(status=member_constants.RESERVATION_STATUS_CANCELLED)
+            .select_related("schedule")
+            .order_by("member_id", "schedule__start_time", "created")
+        )
+        for first_reservation in first_reservations:
+            first_reservation_ids.setdefault(first_reservation.member_id, first_reservation.id)
+
     riders = []
     for reservation in reservations:
         user = reservation.member.user
@@ -495,6 +507,8 @@ def get_admin_attendance_roster(schedule_id: str | UUID) -> dict:
                     "spot": reservation.spot,
                     "status": reservation.status,
                     "notes": reservation.notes or "",
+                    "is_first_class": first_reservation_ids.get(reservation.member_id)
+                    == reservation.id,
                 }
             ).model_dump(mode="json")
         )

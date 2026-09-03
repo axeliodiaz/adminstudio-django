@@ -28,6 +28,23 @@ class ScheduleSchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SubstitutionHistorySchema(BaseModel):
+    id: uuid.UUID
+    old_instructor_id: uuid.UUID
+    old_instructor_name: str = ""
+    new_instructor_id: uuid.UUID
+    new_instructor_name: str = ""
+    changed_by_id: uuid.UUID | None = None
+    changed_by_name: str = ""
+    changed_at: datetime
+    reason: str = ""
+    notify: bool = True
+    reserved_notified: int = 0
+    waitlist_notified: int = 0
+
+    model_config = {"from_attributes": True}
+
+
 class AdminScheduleSchema(BaseModel):
     """Schedule row for the PulseFit staff admin calendar."""
 
@@ -46,11 +63,19 @@ class AdminScheduleSchema(BaseModel):
     studio_name: str | None = None
     room_capacity: int | None = None
     reservation_count: int = 0
+    waitlist_count: int = 0
     status: str
     cancellation_reason: str = ""
     copies_created: int | None = None
+    substitutions: list[SubstitutionHistorySchema] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
+
+
+class SubstituteCoachWriteSchema(BaseModel):
+    new_instructor_id: uuid.UUID
+    reason: str | None = None
+    notify: bool = True
 
 
 class AdminScheduleWriteSchema(BaseModel):

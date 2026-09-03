@@ -401,3 +401,55 @@ def render_waitlist_offer(
             f"Spot {int(spot)} libre en {class_title}. Confirma en {int(offer_minutes)} min."
         )
     return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)
+
+
+def render_coach_substituted(
+    *,
+    class_title: str,
+    when_label: str,
+    studio_name: str,
+    room_name: str,
+    old_coach_name: str,
+    new_coach_name: str,
+    reason: str,
+    action_url: str,
+    frontend_url: str,
+    audience: str = "reservation",
+) -> str:
+    if audience == "waitlist":
+        cta_label = "Ver lista de espera"
+        intro = (
+            f"Sigue en lista de espera para <strong>{escape(class_title)}</strong>. "
+            "Cambiamos al coach de la clase."
+        )
+    else:
+        cta_label = "Ver mi reserva"
+        intro = (
+            f"Tu reserva en <strong>{escape(class_title)}</strong> se mantiene (mismo spot). "
+            "Cambiamos al coach de la clase."
+        )
+    reason_text = (reason or "").strip()
+    notice = f"Coach anterior: {old_coach_name}. Nuevo coach: {new_coach_name}." + (
+        f" Motivo: {reason_text}." if reason_text else ""
+    )
+    body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">Cambio de coach</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  {intro}
+</p>
+{_notice_box(notice, tone="info")}
+{_detail_rows([
+    ("Clase", class_title),
+    ("Cuando", when_label),
+    ("Sede", studio_name),
+    ("Sala", room_name),
+    ("Coach anterior", old_coach_name),
+    ("Nuevo coach", new_coach_name),
+])}
+{_cta_button(action_url, cta_label)}
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{MUTED}">
+  No tienes que hacer nada: tu lugar en la clase no cambia.
+</p>
+"""
+    preheader = f"Nuevo coach: {new_coach_name} · {class_title}"
+    return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)

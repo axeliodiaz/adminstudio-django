@@ -188,6 +188,7 @@ class AdminAttendanceRiderSchema(BaseModel):
     spot: int | None = None
     status: str
     notes: str = ""
+    is_first_class: bool = False
 
 
 class WaitlistScheduleSchema(BaseModel):

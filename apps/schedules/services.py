@@ -12,11 +12,13 @@ from uuid import UUID
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from apps.members.models import Reservation, WaitlistEntry
 from apps.members import constants as member_constants
 from apps.schedules import constants
-from apps.schedules.models import Schedule
+from apps.instructors.models import Instructor
+from apps.schedules.models import Schedule, ScheduleInstructorSubstitution
 from apps.schedules.schedules import (
     create_schedule as create_schedule_model,
     delete_schedule as delete_schedule_model,
@@ -172,15 +174,46 @@ def get_schedule_schema_by_id(schedule_id: UUID) -> ScheduleSchema:
     return schema.model_copy(update=_schedule_occupancy(schedule))
 
 
-def _instructor_display_name(schedule: Schedule) -> str:
-    user = getattr(schedule.instructor, "user", None)
+def _user_display_name(user) -> str:
     if not user:
         return ""
     name = " ".join(part for part in [user.first_name, user.last_name] if part).strip()
     return name or user.username or user.email or ""
 
 
-def _serialize_admin_schedule(schedule: Schedule, *, copies_created: int | None = None) -> dict:
+def _instructor_display_name(schedule: Schedule) -> str:
+    return _user_display_name(getattr(schedule.instructor, "user", None))
+
+
+def _instructor_name_from_instructor(instructor: Instructor | None) -> str:
+    if not instructor:
+        return ""
+    return _user_display_name(getattr(instructor, "user", None))
+
+
+def _serialize_substitution(row: ScheduleInstructorSubstitution) -> dict:
+    return {
+        "id": row.id,
+        "old_instructor_id": row.old_instructor_id,
+        "old_instructor_name": _instructor_name_from_instructor(row.old_instructor),
+        "new_instructor_id": row.new_instructor_id,
+        "new_instructor_name": _instructor_name_from_instructor(row.new_instructor),
+        "changed_by_id": row.changed_by_id,
+        "changed_by_name": _user_display_name(row.changed_by),
+        "changed_at": row.created,
+        "reason": row.reason or "",
+        "notify": row.notify,
+        "reserved_notified": row.reserved_notified,
+        "waitlist_notified": row.waitlist_notified,
+    }
+
+
+def _serialize_admin_schedule(
+    schedule: Schedule,
+    *,
+    copies_created: int | None = None,
+    include_history: bool = False,
+) -> dict:
     room = schedule.room
     studio = getattr(room, "studio", None)
     payload = {
@@ -206,10 +239,27 @@ def _serialize_admin_schedule(schedule: Schedule, *, copies_created: int | None 
                 status=member_constants.RESERVATION_STATUS_RESERVED,
             ).count()
         ),
+        "waitlist_count": (
+            getattr(schedule, "waitlist_count", None)
+            if getattr(schedule, "waitlist_count", None) is not None
+            else WaitlistEntry.objects.filter(
+                schedule_id=schedule.id,
+                is_removed=False,
+                status__in=member_constants.WAITLIST_ACTIVE_STATUSES,
+            ).count()
+        ),
         "status": schedule.status,
         "cancellation_reason": schedule.cancellation_reason or "",
         "copies_created": copies_created,
+        "substitutions": [],
     }
+    if include_history:
+        history = (
+            ScheduleInstructorSubstitution.objects.filter(schedule_id=schedule.id)
+            .select_related("old_instructor__user", "new_instructor__user", "changed_by")
+            .order_by("-created")
+        )
+        payload["substitutions"] = [_serialize_substitution(row) for row in history]
     return AdminScheduleSchema.model_validate(payload).model_dump(mode="json")
 
 
@@ -223,7 +273,16 @@ def _admin_queryset():
                     reservations__is_removed=False,
                     reservations__status=member_constants.RESERVATION_STATUS_RESERVED,
                 ),
-            )
+                distinct=True,
+            ),
+            waitlist_count=Count(
+                "waitlist_entries",
+                filter=Q(
+                    waitlist_entries__is_removed=False,
+                    waitlist_entries__status__in=member_constants.WAITLIST_ACTIVE_STATUSES,
+                ),
+                distinct=True,
+            ),
         )
         .order_by("start_time")
     )
@@ -269,7 +328,7 @@ def list_admin_schedules(
 
 def get_admin_schedule(*, schedule_id: str | UUID) -> dict:
     schedule = get_object_or_404(_admin_queryset(), id=schedule_id)
-    return _serialize_admin_schedule(schedule)
+    return _serialize_admin_schedule(schedule, include_history=True)
 
 
 def _validate_schedule_write(*, data: dict, require_required_fields: bool) -> None:
@@ -399,3 +458,225 @@ def delete_admin_schedule(*, schedule_id: str | UUID) -> None:
             "Cáncela la clase o reubica a los socios primero."
         )
     delete_schedule_model(schedule)
+
+
+def _schedule_end(start_time: datetime, duration_minutes: int) -> datetime:
+    return start_time + timedelta(minutes=int(duration_minutes or 0))
+
+
+def overlapping_schedules_for_instructor(
+    *,
+    instructor_id: str | UUID,
+    start_time: datetime,
+    duration_minutes: int,
+    exclude_schedule_id: str | UUID | None = None,
+) -> list[Schedule]:
+    """Return non-canceled classes for this instructor that overlap the given window."""
+    window_end = _schedule_end(start_time, duration_minutes)
+    queryset = (
+        Schedule.objects.filter(instructor_id=instructor_id, is_removed=False)
+        .exclude(status=constants.SCHEDULE_STATUS_CANCELED)
+        .filter(start_time__lt=window_end)
+        .select_related("room__studio", "instructor__user")
+        .order_by("start_time")
+    )
+    if exclude_schedule_id is not None:
+        queryset = queryset.exclude(id=exclude_schedule_id)
+
+    overlaps: list[Schedule] = []
+    for other in queryset:
+        if _schedule_end(other.start_time, other.duration_minutes) > start_time:
+            overlaps.append(other)
+    return overlaps
+
+
+def _serialize_conflict(schedule: Schedule) -> dict:
+    room = getattr(schedule, "room", None)
+    studio = getattr(room, "studio", None) if room else None
+    return {
+        "id": str(schedule.id),
+        "title": schedule.title or "",
+        "start_time": schedule.start_time.isoformat() if schedule.start_time else None,
+        "duration_minutes": schedule.duration_minutes,
+        "room_name": room.name if room else "",
+        "studio_name": studio.name if studio else None,
+        "status": schedule.status,
+    }
+
+
+def _load_substitute_instructor(instructor_id: str | UUID) -> Instructor:
+    instructor = (
+        Instructor.objects.select_related("user").filter(id=instructor_id, is_removed=False).first()
+    )
+    if instructor is None:
+        raise ValueError("El instructor suplente no existe.")
+    user = instructor.user
+    if not user or not user.is_active:
+        raise ValueError("El instructor suplente no está activo.")
+    return instructor
+
+
+def preview_substitute_coach(
+    *,
+    schedule_id: str | UUID,
+    new_instructor_id: str | UUID | None = None,
+) -> dict:
+    schedule = get_object_or_404(
+        Schedule.objects.select_related("instructor__user", "room__studio"),
+        id=schedule_id,
+        is_removed=False,
+    )
+    now = timezone.now()
+    minutes_until_start = int((schedule.start_time - now).total_seconds() // 60)
+    reservation_count = Reservation.objects.filter(
+        schedule_id=schedule.id,
+        status=member_constants.RESERVATION_STATUS_RESERVED,
+        is_removed=False,
+    ).count()
+    waitlist_count = WaitlistEntry.objects.filter(
+        schedule_id=schedule.id,
+        is_removed=False,
+        status__in=member_constants.WAITLIST_ACTIVE_STATUSES,
+    ).count()
+
+    payload = {
+        "schedule_id": str(schedule.id),
+        "status": schedule.status,
+        "title": schedule.title or "",
+        "start_time": schedule.start_time.isoformat() if schedule.start_time else None,
+        "minutes_until_start": minutes_until_start,
+        "starts_within_15_minutes": 0 <= minutes_until_start < 15,
+        "old_instructor_id": str(schedule.instructor_id),
+        "old_instructor_name": _instructor_display_name(schedule),
+        "reservation_count": reservation_count,
+        "waitlist_count": waitlist_count,
+        "candidate": None,
+    }
+
+    if not new_instructor_id:
+        return payload
+
+    candidate: dict = {
+        "instructor_id": str(new_instructor_id),
+        "instructor_name": "",
+        "eligible": False,
+        "conflicts": [],
+        "detail": None,
+    }
+    try:
+        instructor = _load_substitute_instructor(new_instructor_id)
+        candidate["instructor_name"] = _instructor_name_from_instructor(instructor)
+        if str(instructor.id) == str(schedule.instructor_id):
+            raise ValueError("El suplente debe ser distinto al instructor actual.")
+        if schedule.status == constants.SCHEDULE_STATUS_CANCELED:
+            raise ValueError("No se puede asignar un suplente a una clase cancelada.")
+        conflicts = overlapping_schedules_for_instructor(
+            instructor_id=instructor.id,
+            start_time=schedule.start_time,
+            duration_minutes=schedule.duration_minutes,
+            exclude_schedule_id=schedule.id,
+        )
+        candidate["conflicts"] = [_serialize_conflict(item) for item in conflicts]
+        if conflicts:
+            raise ValueError("El instructor tiene otra clase en el mismo horario.")
+        candidate["eligible"] = True
+    except ValueError as exc:
+        candidate["detail"] = str(exc)
+    payload["candidate"] = candidate
+    return payload
+
+
+def substitute_coach(
+    *,
+    schedule_id: str | UUID,
+    new_instructor_id: str | UUID,
+    reason: str = "",
+    notify: bool = True,
+    changed_by=None,
+) -> dict:
+    """Replace the class instructor, persist history, and optionally email riders."""
+    from apps.members.notifications import send_coach_substituted_email
+    from apps.members.waitlist import active_waitlist_queryset
+
+    notify = bool(notify)
+    reason_text = (reason or "").strip()
+
+    with transaction.atomic():
+        schedule = get_object_or_404(
+            Schedule.objects.select_for_update().select_related("instructor__user", "room__studio"),
+            id=schedule_id,
+            is_removed=False,
+        )
+        if schedule.status == constants.SCHEDULE_STATUS_CANCELED:
+            raise ValueError("No se puede asignar un suplente a una clase cancelada.")
+
+        new_instructor = _load_substitute_instructor(new_instructor_id)
+        if new_instructor.id == schedule.instructor_id:
+            raise ValueError("El suplente debe ser distinto al instructor actual.")
+
+        conflicts = overlapping_schedules_for_instructor(
+            instructor_id=new_instructor.id,
+            start_time=schedule.start_time,
+            duration_minutes=schedule.duration_minutes,
+            exclude_schedule_id=schedule.id,
+        )
+        if conflicts:
+            raise ValueError("El instructor tiene otra clase en el mismo horario.")
+
+        old_instructor = schedule.instructor
+        old_name = _instructor_name_from_instructor(old_instructor) or "Coach"
+        new_name = _instructor_name_from_instructor(new_instructor) or "Coach"
+
+        schedule.instructor = new_instructor
+        schedule.save(update_fields=["instructor", "modified"])
+
+        from apps.coach.models import ClassPlaylist
+
+        ClassPlaylist.objects.filter(schedule_id=schedule.id).update(instructor=new_instructor)
+
+        reserved = list(
+            Reservation.objects.filter(
+                schedule_id=schedule.id,
+                status=member_constants.RESERVATION_STATUS_RESERVED,
+                is_removed=False,
+            ).select_related("member__user")
+        )
+        waitlisted = list(active_waitlist_queryset(schedule.id).select_related("member__user"))
+
+        reserved_notified = len(reserved) if notify else 0
+        waitlist_notified = len(waitlisted) if notify else 0
+
+        substitution = ScheduleInstructorSubstitution.objects.create(
+            schedule=schedule,
+            old_instructor=old_instructor,
+            new_instructor=new_instructor,
+            changed_by=changed_by if getattr(changed_by, "is_authenticated", False) else None,
+            reason=reason_text,
+            notify=notify,
+            reserved_notified=reserved_notified,
+            waitlist_notified=waitlist_notified,
+        )
+
+    if notify:
+        for reservation in reserved:
+            send_coach_substituted_email(
+                user=reservation.member.user,
+                schedule=schedule,
+                old_coach_name=old_name,
+                new_coach_name=new_name,
+                reason=reason_text,
+                audience="reservation",
+            )
+        for entry in waitlisted:
+            send_coach_substituted_email(
+                user=entry.member.user,
+                schedule=schedule,
+                old_coach_name=old_name,
+                new_coach_name=new_name,
+                reason=reason_text,
+                audience="waitlist",
+            )
+
+    result = get_admin_schedule(schedule_id=schedule.id)
+    result["substitution"] = _serialize_substitution(substitution)
+    return result

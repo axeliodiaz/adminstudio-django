@@ -44,6 +44,7 @@ def _serialize_admin_plan(plan: Plan) -> dict:
         "is_active": plan.is_active,
         "is_popular": plan.is_popular,
         "is_highlighted": plan.is_highlighted,
+        "is_first_timer": plan.is_first_timer,
         "benefits": [BenefitSchema.model_validate(benefit) for benefit in benefits],
         "benefit_ids": [benefit.id for benefit in benefits],
     }
@@ -160,6 +161,7 @@ def create_admin_plan(*, data: dict) -> dict:
         is_active=bool(data.get("is_active", False)),
         is_popular=bool(data.get("is_popular", False)),
         is_highlighted=bool(data.get("is_highlighted", False)),
+        is_first_timer=bool(data.get("is_first_timer", False)),
     )
     if benefit_ids is not None:
         plan.benefits.set(benefits)
@@ -182,6 +184,7 @@ def update_admin_plan(*, plan_id: str | UUID, data: dict) -> dict:
         "is_active",
         "is_popular",
         "is_highlighted",
+        "is_first_timer",
     }
     dirty_fields: list[str] = []
 
