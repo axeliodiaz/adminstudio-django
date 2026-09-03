@@ -70,6 +70,82 @@ class TestPublicDocsAPI:
         assert response.data["related_app_route"] == "#classes"
         assert "Reserva tu spot" in response.data["body"]
 
+    def test_seeded_class_reservation_guide_is_public(self, api_client):
+        response = api_client.get(
+            reverse(
+                "docs-detail",
+                kwargs={
+                    "section_slug": "clases-y-horarios",
+                    "page_slug": "como-reservar-una-clase",
+                },
+            )
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["related_app_route"] == "#classes"
+        assert "Confirmar reserva" in response.data["body"]
+        assert "lista de espera" in response.data["body"]
+
+    def test_seeded_feature_guides_are_public(self, api_client):
+        response = api_client.get(reverse("docs-list"))
+
+        assert response.status_code == status.HTTP_200_OK
+        sections = {
+            section["slug"]: {page["slug"] for page in section["pages"]}
+            for audience in response.data["audiences"]
+            for section in audience["sections"]
+        }
+        assert {
+            "como-explorar-instructores",
+            "preguntas-frecuentes-publicas",
+            "documentos-legales",
+        }.issubset(sections["informacion-publica"])
+        assert {
+            "como-elegir-planes-y-membresias",
+            "carrito-de-compras",
+            "checkout-y-codigos-promocionales",
+            "tu-billetera",
+        }.issubset(sections["planes-y-compras"])
+        assert {
+            "mi-perfil",
+            "cuenta-y-autenticacion",
+            "mis-reservas",
+            "lista-de-espera",
+            "cancelaciones",
+            "mis-estadisticas",
+        }.issubset(sections["mi-cuenta"])
+        assert {
+            "admin-dashboard",
+            "admin-horarios",
+            "admin-reservas",
+            "asistencia",
+            "admin-socios",
+        }.issubset(sections["operacion-admin"])
+        assert {
+            "billeteras-y-compras",
+            "gestionar-planes-y-beneficios",
+            "gestionar-codigos-promocionales",
+        }.issubset(sections["comercial-admin"])
+        assert {
+            "admin-instructores",
+            "admin-usuarios",
+            "admin-estudios-y-salas",
+            "admin-configuracion",
+        }.issubset(sections["estudio-admin"])
+        assert {"admin-faq"}.issubset(sections["contenido-admin"])
+        assert {"admin-perfil-staff"}.issubset(sections["operacion-admin"])
+        assert {
+            "coach-clases-del-dia",
+            "coach-horario-ical",
+            "coach-roster-check-in",
+            "coach-iniciar-clase",
+            "coach-notas-riders",
+            "coach-playlist",
+            "coach-estadisticas",
+            "coach-perfil",
+        }.issubset(sections["panel-coach"])
+        assert {"emails-transaccionales", "cola-de-notificaciones"}.issubset(sections["plataforma"])
+
     def test_list_omits_unpublished_pages_and_empty_sections(self, api_client, published_section):
         DocPage.objects.create(
             section=published_section,
@@ -114,7 +190,7 @@ class TestPublicDocsAPI:
             is_published=False,
         )
 
-        response = api_client.get(reverse("docs-list"))
+        response = api_client.get(reverse("docs-list"), {"audience": "member"})
 
         assert response.status_code == status.HTTP_200_OK
         audiences = response.data["audiences"]
