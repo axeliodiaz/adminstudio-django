@@ -126,6 +126,19 @@ class TestPublicDocsAPI:
             "gestionar-planes-y-beneficios",
             "gestionar-codigos-promocionales",
         }.issubset(sections["comercial-admin"])
+        assert {
+            "admin-instructores",
+            "admin-usuarios",
+            "admin-estudios-y-salas",
+            "admin-configuracion",
+        }.issubset(sections["estudio-admin"])
+        assert {"admin-faq"}.issubset(sections["contenido-admin"])
+        assert {"admin-perfil-staff"}.issubset(sections["operacion-admin"])
+        assert {
+            "coach-clases-del-dia",
+            "coach-horario-ical",
+            "coach-roster-check-in",
+        }.issubset(sections["panel-coach"])
 
     def test_list_omits_unpublished_pages_and_empty_sections(self, api_client, published_section):
         DocPage.objects.create(
