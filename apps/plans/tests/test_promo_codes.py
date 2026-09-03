@@ -12,7 +12,7 @@ from rest_framework import status
 
 from apps.plans import constants
 from apps.plans.models import Plan, PromoCode
-from apps.wallets.models import PlanPurchase
+from apps.wallets.models import GiftCard, PlanPurchase, Wallet
 
 User = get_user_model()
 
@@ -209,6 +209,62 @@ class TestCheckout:
 
         wallet = Wallet.objects.get(user=member_client.user)
         assert wallet.class_credits == active_plan.classes_included
+
+    def test_checkout_issues_one_gift_per_item_and_does_not_credit_issuer(
+        self, member_client, active_plan, mocker
+    ):
+        send_gift = mocker.patch("apps.plans.checkout_services.send_gift_recipient_email")
+        response = member_client.post(
+            reverse("plan-checkout"),
+            {
+                "items": [{"plan_id": str(active_plan.id), "quantity": 2}],
+                "payment_method": "webpay",
+                "accept_terms": True,
+                "gift_recipient": {
+                    "name": "Regalo Rider",
+                    "email": "gift@example.com",
+                    "message": "Disfruta tu ride",
+                },
+            },
+            format="json",
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+        assert len(response.data["gifts"]) == 2
+        assert GiftCard.objects.filter(status=GiftCard.Status.ACTIVE).count() == 2
+        assert not Wallet.objects.filter(user=member_client.user).exists()
+        send_gift.assert_called()
+
+
+@pytest.mark.django_db
+class TestGiftCardRedemption:
+    def test_member_can_redeem_a_gift_only_once(self, member_client, active_plan, mocker):
+        mocker.patch("apps.plans.checkout_services.send_gift_recipient_email")
+        mocker.patch("apps.wallets.notifications.send_purchase_receipt_email")
+        checkout = member_client.post(
+            reverse("plan-checkout"),
+            {
+                "items": [{"plan_id": str(active_plan.id), "quantity": 1}],
+                "accept_terms": True,
+                "gift_recipient": {"email": "gift@example.com"},
+            },
+            format="json",
+        )
+        code = checkout.data["gifts"][0]["code"]
+        recipient = User.objects.create_user(
+            username="recipient", email="recipient@example.com", password="pass1234"
+        )
+        token = ExpiringToken.objects.create(user=recipient)
+        member_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        response = member_client.post(reverse("gift-card-redeem"), {"code": code}, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["status"] == GiftCard.Status.REDEEMED
+        assert Wallet.objects.get(user=recipient).class_credits == active_plan.classes_included
+
+        second_response = member_client.post(
+            reverse("gift-card-redeem"), {"code": code}, format="json"
+        )
+        assert second_response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "ya fue canjeado" in second_response.data["detail"]
 
 
 @pytest.mark.django_db

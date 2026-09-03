@@ -16,8 +16,10 @@ from apps.plans.schemas import AdminPlanWriteSchema, AdminPromoCodeWriteSchema
 from apps.plans.serializers import (
     CheckoutSerializer,
     PlanPurchaseSerializer,
+    RedeemGiftCardSerializer,
     ValidatePromoSerializer,
 )
+from apps.wallets.services import WalletService
 
 
 def _pydantic_error_response(exc: PydanticValidationError) -> Response:
@@ -224,11 +226,38 @@ class CheckoutView(APIView):
                 items=serializer.validated_data["items"],
                 promo_code=serializer.validated_data.get("promo_code") or None,
                 payment_method=serializer.validated_data.get("payment_method") or None,
+                gift_recipient=serializer.validated_data.get("gift_recipient"),
             )
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(result, status=status.HTTP_201_CREATED)
+
+
+class RedeemGiftCardView(APIView):
+    """Redeem one non-transferable, one-time gift code into the member wallet."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = RedeemGiftCardSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            gift_card = WalletService.redeem_gift_card(
+                user=request.user,
+                code=serializer.validated_data["code"],
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "code": gift_card.code,
+                "status": gift_card.status,
+                "plan_name": gift_card.plan.name,
+                "redeemed_at": gift_card.redeemed_at,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class AdminPromoCodeListView(APIView):

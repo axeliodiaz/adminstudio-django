@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.wallets.models import PlanPurchase, Wallet
+from apps.wallets.models import GiftCard, PlanPurchase, Wallet
 
 
 @admin.register(Wallet)
@@ -105,4 +105,29 @@ class PlanPurchaseAdmin(admin.ModelAdmin):
         ),
         ("Metadata", {"fields": ("id", "created", "modified"), "classes": ("collapse",)}),
     )
+    date_hierarchy = "created"
+
+
+@admin.register(GiftCard)
+class GiftCardAdmin(admin.ModelAdmin):
+    list_display = (
+        "code",
+        "plan",
+        "issuer",
+        "recipient_email",
+        "status",
+        "expires_at",
+        "redeemed_by",
+        "redeemed_at",
+    )
+    list_filter = ("status", "expires_at", "created")
+    search_fields = (
+        "code",
+        "recipient_email",
+        "recipient_name",
+        "issuer__email",
+        "redeemed_by__email",
+        "plan__name",
+    )
+    readonly_fields = ("id", "code", "created", "modified", "redeemed_at")
     date_hierarchy = "created"

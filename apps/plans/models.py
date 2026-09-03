@@ -56,6 +56,8 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
     TYPE_CHOICES = (
         (constants.PLAN_TYPE_MEMBERSHIP, "Membership"),
         (constants.PLAN_TYPE_PACKAGE, "Package"),
+        (constants.PLAN_TYPE_GIFT_CARD, "Gift card"),
+        (constants.PLAN_TYPE_GIFT_PACK, "Gift pack"),
     )
 
     name = models.CharField(max_length=100)

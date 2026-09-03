@@ -60,7 +60,7 @@ class AdminPlanWriteSchema(BaseModel):
     """Payload for creating or updating a plan from the staff admin."""
 
     name: str | None = None
-    type: Literal["MEMBERSHIP", "PACKAGE"] | None = None
+    type: Literal["MEMBERSHIP", "PACKAGE", "GIFT_CARD", "GIFT_PACK"] | None = None
     price: float | None = None
     duration_days: int | None = None
     classes_included: int | None = None

@@ -63,7 +63,12 @@ def list_admin_plans(
         "name",
     )
 
-    if plan_type in {constants.PLAN_TYPE_MEMBERSHIP, constants.PLAN_TYPE_PACKAGE}:
+    if plan_type in {
+        constants.PLAN_TYPE_MEMBERSHIP,
+        constants.PLAN_TYPE_PACKAGE,
+        constants.PLAN_TYPE_GIFT_CARD,
+        constants.PLAN_TYPE_GIFT_PACK,
+    }:
         queryset = queryset.filter(type=plan_type)
 
     if status == "active":
@@ -93,6 +98,8 @@ def _validate_plan_write(*, data: dict, require_required_fields: bool) -> None:
         if data.get("type") not in {
             constants.PLAN_TYPE_MEMBERSHIP,
             constants.PLAN_TYPE_PACKAGE,
+            constants.PLAN_TYPE_GIFT_CARD,
+            constants.PLAN_TYPE_GIFT_PACK,
         }:
             raise ValueError("El tipo de plan es inválido.")
         if data.get("price") is None:
@@ -108,6 +115,8 @@ def _validate_plan_write(*, data: dict, require_required_fields: bool) -> None:
         not in {
             constants.PLAN_TYPE_MEMBERSHIP,
             constants.PLAN_TYPE_PACKAGE,
+            constants.PLAN_TYPE_GIFT_CARD,
+            constants.PLAN_TYPE_GIFT_PACK,
         }
     ):
         raise ValueError("El tipo de plan es inválido.")
