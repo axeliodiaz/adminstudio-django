@@ -156,6 +156,10 @@ class TestPublicDocsAPI:
         response = staff_client.get(reverse("docs-list"))
 
         assert response.status_code == status.HTTP_200_OK
+        staff_audience = next(
+            audience for audience in response.data["audiences"] if audience["id"] == "admin"
+        )
+        assert staff_audience["label"] == "Staff"
         sections = {
             section["slug"]: {page["slug"] for page in section["pages"]}
             for audience in response.data["audiences"]

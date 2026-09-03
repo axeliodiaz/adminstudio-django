@@ -6,7 +6,7 @@ from apps.docs.sanitize import sanitize_html
 
 class DocAudience(models.TextChoices):
     MEMBER = "member", "Miembros"
-    ADMIN = "admin", "Admin"
+    ADMIN = "admin", "Staff"
     COACH = "coach", "Coach"
     PLATFORM = "platform", "Plataforma"
 
