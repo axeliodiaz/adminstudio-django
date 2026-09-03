@@ -15,6 +15,7 @@ class ProfileSerializer(serializers.Serializer):
     height_cm = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     weight_kg = serializers.FloatField(required=False, allow_null=True, min_value=0)
     address = serializers.CharField(required=False, allow_blank=True)
+    injury_notes = serializers.CharField(required=False, allow_blank=True, max_length=1_000)
 
     # Cycling
     seat_height = serializers.IntegerField(required=False, allow_null=True, min_value=0)

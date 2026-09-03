@@ -61,6 +61,10 @@ class User(AbstractUser, SoftDeletableModel, UUIDModel, TimeStampedModel):
         blank=True,
         help_text="Cycling shoe size (e.g. 44.0).",
     )
+    injury_notes = models.TextField(
+        blank=True,
+        help_text="Optional information shared with the coach before a first class.",
+    )
     waitlist_auto_confirm = models.BooleanField(
         default=False,
         help_text="Automatically reserve a spot when one opens from the waitlist.",

@@ -4,6 +4,8 @@ from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
 
 from apps.plans import constants
@@ -47,6 +49,28 @@ def checkout_plans(
     if not items:
         raise ValueError("El carrito está vacío.")
 
+    # Lock the account while we evaluate introductory-plan eligibility so two
+    # concurrent checkouts cannot both create a first-timer purchase.
+    user_model = get_user_model()
+    with transaction.atomic():
+        user = user_model.objects.select_for_update().get(pk=user.pk)
+        return _checkout_plans(
+            user=user,
+            items=items,
+            promo_code=promo_code,
+            payment_method=payment_method,
+            gift_recipient=gift_recipient,
+        )
+
+
+def _checkout_plans(
+    *,
+    user,
+    items: list[dict],
+    promo_code: str | None = None,
+    payment_method: str | None = None,
+    gift_recipient: dict | None = None,
+) -> dict:
     method = (payment_method or "").strip().lower()
     if method and method not in {
         constants.PAYMENT_METHOD_MERCADOPAGO,
@@ -75,6 +99,21 @@ def checkout_plans(
                 "line_total": line_total,
             }
         )
+
+    first_timer_items = [item for item in resolved_items if item["plan"].is_first_timer]
+    if first_timer_items:
+        if (
+            len(first_timer_items) != 1
+            or len(resolved_items) != 1
+            or first_timer_items[0]["quantity"] != 1
+        ):
+            raise ValueError("El pack de primera vez debe comprarse solo y en una cantidad de 1.")
+        if gift_recipient:
+            raise ValueError("El pack de primera vez no puede enviarse como regalo.")
+        if PlanPurchase.objects.filter(user=user).exists():
+            raise ValueError(
+                "El pack de primera vez está disponible solo para usuarios sin compras previas."
+            )
 
     promo = None
     has_gift_product = any(
@@ -147,6 +186,7 @@ def checkout_plans(
         "total": float(_quantize(subtotal - discount)),
         "promo_code": promo.code if promo else None,
         "payment_method": method or None,
+        "first_timer_onboarding": bool(first_timer_items),
         "gifts": [
             {
                 "id": gift_card.id,

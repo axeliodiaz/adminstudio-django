@@ -118,6 +118,75 @@ class TestValidatePromoCode:
 
 @pytest.mark.django_db
 class TestCheckout:
+    def test_first_timer_pack_can_be_purchased_once_by_new_user(self, member_client, mocker):
+        mocker.patch("apps.wallets.notifications.send_purchase_receipt_email")
+        plan = Plan.objects.create(
+            name="First-timer pack",
+            type=constants.PLAN_TYPE_PACKAGE,
+            price=19990,
+            duration_days=14,
+            classes_included=3,
+            is_active=True,
+            is_first_timer=True,
+        )
+
+        response = member_client.post(
+            reverse("plan-checkout"),
+            {
+                "items": [{"plan_id": str(plan.id), "quantity": 1}],
+                "payment_method": "webpay",
+                "accept_terms": True,
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["first_timer_onboarding"] is True
+
+        repeat = member_client.post(
+            reverse("plan-checkout"),
+            {
+                "items": [{"plan_id": str(plan.id), "quantity": 1}],
+                "payment_method": "webpay",
+                "accept_terms": True,
+            },
+            format="json",
+        )
+        assert repeat.status_code == status.HTTP_400_BAD_REQUEST
+        assert PlanPurchase.objects.filter(user=member_client.user, plan=plan).count() == 1
+
+    def test_first_timer_pack_rejects_users_with_any_prior_purchase(
+        self, member_client, active_plan, mocker
+    ):
+        mocker.patch("apps.wallets.notifications.send_purchase_receipt_email")
+        PlanPurchase.objects.create(
+            user=member_client.user,
+            plan=active_plan,
+            price_paid=active_plan.price,
+        )
+        plan = Plan.objects.create(
+            name="First-timer pack",
+            type=constants.PLAN_TYPE_PACKAGE,
+            price=19990,
+            duration_days=14,
+            classes_included=3,
+            is_active=True,
+            is_first_timer=True,
+        )
+
+        response = member_client.post(
+            reverse("plan-checkout"),
+            {
+                "items": [{"plan_id": str(plan.id), "quantity": 1}],
+                "payment_method": "webpay",
+                "accept_terms": True,
+            },
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "sin compras previas" in response.data["detail"]
+
     def test_checkout_applies_promo_and_quantity(self, member_client, active_plan, mocker):
         mocker.patch("apps.wallets.notifications.send_purchase_receipt_email")
         _make_promo()
