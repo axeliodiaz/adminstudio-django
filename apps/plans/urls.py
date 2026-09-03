@@ -9,6 +9,7 @@ from apps.plans.views import (
     AdminPromoCodeListView,
     CheckoutView,
     PlanViewSet,
+    RedeemGiftCardView,
     ValidatePromoCodeView,
 )
 
@@ -22,6 +23,7 @@ urlpatterns = [
         name="plan-purchase",
     ),
     path("checkout/", CheckoutView.as_view(), name="plan-checkout"),
+    path("gifts/redeem/", RedeemGiftCardView.as_view(), name="gift-card-redeem"),
     path("validate-promo/", ValidatePromoCodeView.as_view(), name="plan-validate-promo"),
     path("admin/promo-codes/", AdminPromoCodeListView.as_view(), name="admin-promo-list"),
     path(

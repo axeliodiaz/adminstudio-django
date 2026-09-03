@@ -13,7 +13,7 @@ from apps.wallets.exceptions import (
     InsufficientCreditsException,
     PurchaseAlreadyActivatedException,
 )
-from apps.wallets.models import PlanPurchase, Wallet
+from apps.wallets.models import GiftCard, PlanPurchase, Wallet
 
 
 class WalletService:
@@ -162,3 +162,60 @@ class WalletService:
                 return
             wallet.class_credits += 1
             wallet.save(update_fields=["class_credits", "modified"])
+
+    @staticmethod
+    def redeem_gift_card(*, user, code: str) -> GiftCard:
+        """Atomically redeem a gift code into the authenticated user's wallet."""
+        normalized_code = (code or "").strip().upper()
+        if not normalized_code:
+            raise ValueError("Debes ingresar un código de regalo.")
+
+        with transaction.atomic():
+            try:
+                gift_card = (
+                    GiftCard.objects.select_for_update()
+                    .select_related("plan", "purchase")
+                    .get(code=normalized_code)
+                )
+            except GiftCard.DoesNotExist as exc:
+                raise ValueError("El código de regalo no es válido.") from exc
+
+            now = timezone.now()
+            if gift_card.status == GiftCard.Status.REDEEMED:
+                raise ValueError("Este código de regalo ya fue canjeado.")
+            if gift_card.status == GiftCard.Status.CANCELLED:
+                raise ValueError("Este código de regalo fue cancelado.")
+            if gift_card.expires_at <= now:
+                if gift_card.status != GiftCard.Status.EXPIRED:
+                    gift_card.status = GiftCard.Status.EXPIRED
+                    gift_card.save(update_fields=["status", "modified"])
+                raise ValueError("Este código de regalo está vencido.")
+            if gift_card.status != GiftCard.Status.ACTIVE:
+                raise ValueError("Este código de regalo no está disponible.")
+            if gift_card.issuer_id == user.id:
+                raise ValueError("No puedes canjear un regalo que emitiste.")
+
+            redemption_purchase = PlanPurchase.objects.create(
+                user=user,
+                plan=gift_card.plan,
+                quantity=1,
+                price_paid=0,
+                discount_amount=0,
+                payment_method="gift_card",
+                activated_since=None,
+            )
+            WalletService.activate_purchase(redemption_purchase)
+            gift_card.status = GiftCard.Status.REDEEMED
+            gift_card.redeemed_by = user
+            gift_card.redeemed_at = now
+            gift_card.redemption_purchase = redemption_purchase
+            gift_card.save(
+                update_fields=[
+                    "status",
+                    "redeemed_by",
+                    "redeemed_at",
+                    "redemption_purchase",
+                    "modified",
+                ]
+            )
+        return gift_card

@@ -7,8 +7,10 @@ from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID
 
 from django.conf import settings
+from django.utils import timezone
 
-from apps.notifications.email_templates import render_purchase_receipt
+from apps.notifications.email_templates import render_gift_recipient, render_purchase_receipt
+from apps.notifications.mailing import Email
 from apps.notifications.services import create_notification
 from apps.plans import constants
 from apps.wallets.models import PlanPurchase
@@ -149,5 +151,100 @@ def send_purchase_receipt_email(purchase: PlanPurchase) -> None:
     except Exception:
         logger.exception(
             "Failed to send purchase receipt email",
+            extra={"purchase_id": str(getattr(purchase, "pk", ""))},
+        )
+
+
+def send_gift_recipient_email(gift_card) -> None:
+    """Deliver a gift to an arbitrary recipient email address."""
+    if not gift_card.recipient_email:
+        return
+    try:
+        plan = gift_card.plan
+        issuer = gift_card.issuer
+        frontend_url = _frontend_url()
+        redeem_url = f"{frontend_url}/#redeem/{gift_card.code}"
+        expires_label = _format_until(gift_card.expires_at.date())
+        delivered = Email(
+            notification_id=str(gift_card.id),
+            subject=f"Te regalaron {plan.name} en PulseFit",
+            message=(
+                f"{issuer.get_full_name() or issuer.username} te regaló {plan.name}. "
+                f"Canjéalo aquí: {redeem_url}. Vence el {expires_label}."
+            ),
+            recipient_list=[gift_card.recipient_email],
+            html_content=render_gift_recipient(
+                recipient_name=gift_card.recipient_name,
+                issuer_name=issuer.get_full_name() or issuer.username,
+                plan_name=plan.name,
+                message=gift_card.message,
+                redeem_url=redeem_url,
+                expires_label=expires_label,
+                frontend_url=frontend_url,
+            ),
+        ).send_mail()
+        if delivered:
+            gift_card.delivered_at = timezone.now()
+            gift_card.save(update_fields=["delivered_at", "modified"])
+    except Exception:
+        logger.exception(
+            "Failed to send gift recipient email", extra={"gift_card_id": str(gift_card.id)}
+        )
+
+
+def send_gift_expiration_reminder_email(gift_card) -> None:
+    """Remind an unredeemed recipient before their gift expires."""
+    if not gift_card.recipient_email:
+        return
+    try:
+        frontend_url = _frontend_url()
+        expires_label = _format_until(gift_card.expires_at.date())
+        delivered = Email(
+            notification_id=f"{gift_card.id}-expiry",
+            subject="Tu regalo PulseFit está por vencer",
+            message=(
+                f"Tu regalo {gift_card.plan.name} vence el {expires_label}. "
+                f"Canjéalo aquí: {frontend_url}/#redeem/{gift_card.code}"
+            ),
+            recipient_list=[gift_card.recipient_email],
+            html_content=render_gift_recipient(
+                recipient_name=gift_card.recipient_name,
+                issuer_name=gift_card.issuer.get_full_name() or gift_card.issuer.username,
+                plan_name=gift_card.plan.name,
+                message="",
+                redeem_url=f"{frontend_url}/#redeem/{gift_card.code}",
+                expires_label=expires_label,
+                frontend_url=frontend_url,
+            ),
+        ).send_mail()
+        if delivered:
+            gift_card.expiration_reminder_sent_at = timezone.now()
+            gift_card.save(update_fields=["expiration_reminder_sent_at", "modified"])
+    except Exception:
+        logger.exception(
+            "Failed to send gift expiration reminder",
+            extra={"gift_card_id": str(gift_card.id)},
+        )
+
+
+def send_gift_purchase_receipt_email(purchase: PlanPurchase, gift_count: int) -> None:
+    """Queue the buyer receipt without claiming the entitlement is in their wallet."""
+    try:
+        purchase = PlanPurchase.objects.select_related("user", "plan").get(pk=purchase.pk)
+        user = purchase.user
+        plan_name = purchase.plan.name
+        amount_label = format_clp(purchase.price_paid)
+        code_label = "código" if gift_count == 1 else "códigos"
+        create_notification(
+            subject=f"Comprobante de regalo · {plan_name}",
+            message=(
+                f"Pago recibido por {amount_label}. Emitimos {gift_count} {code_label} "
+                f"de regalo para {plan_name}. Folio {purchase_folio(purchase)}."
+            ),
+            recipient_list=[user],
+        )
+    except Exception:
+        logger.exception(
+            "Failed to send gift purchase receipt email",
             extra={"purchase_id": str(getattr(purchase, "pk", ""))},
         )
