@@ -138,7 +138,13 @@ class TestPublicDocsAPI:
             "coach-clases-del-dia",
             "coach-horario-ical",
             "coach-roster-check-in",
+            "coach-iniciar-clase",
+            "coach-notas-riders",
+            "coach-playlist",
+            "coach-estadisticas",
+            "coach-perfil",
         }.issubset(sections["panel-coach"])
+        assert {"emails-transaccionales", "cola-de-notificaciones"}.issubset(sections["plataforma"])
 
     def test_list_omits_unpublished_pages_and_empty_sections(self, api_client, published_section):
         DocPage.objects.create(
