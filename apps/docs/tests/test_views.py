@@ -70,6 +70,22 @@ class TestPublicDocsAPI:
         assert response.data["related_app_route"] == "#classes"
         assert "Reserva tu spot" in response.data["body"]
 
+    def test_seeded_class_reservation_guide_is_public(self, api_client):
+        response = api_client.get(
+            reverse(
+                "docs-detail",
+                kwargs={
+                    "section_slug": "clases-y-horarios",
+                    "page_slug": "como-reservar-una-clase",
+                },
+            )
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["related_app_route"] == "#classes"
+        assert "Confirmar reserva" in response.data["body"]
+        assert "lista de espera" in response.data["body"]
+
     def test_list_omits_unpublished_pages_and_empty_sections(self, api_client, published_section):
         DocPage.objects.create(
             section=published_section,
