@@ -56,6 +56,8 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
     TYPE_CHOICES = (
         (constants.PLAN_TYPE_MEMBERSHIP, "Membership"),
         (constants.PLAN_TYPE_PACKAGE, "Package"),
+        (constants.PLAN_TYPE_GIFT_CARD, "Gift card"),
+        (constants.PLAN_TYPE_GIFT_PACK, "Gift pack"),
     )
 
     name = models.CharField(max_length=100)
@@ -70,6 +72,10 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
     is_active = models.BooleanField(default=False)
     is_popular = models.BooleanField(default=False)
     is_highlighted = models.BooleanField(default=False)
+    is_first_timer = models.BooleanField(
+        default=False,
+        help_text="Available only to users who have never completed a plan purchase.",
+    )
 
     benefits = models.ManyToManyField("Benefit", related_name="plans", blank=True)
 

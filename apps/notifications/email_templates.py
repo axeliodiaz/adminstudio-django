@@ -293,6 +293,41 @@ def render_purchase_receipt(
     return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)
 
 
+def render_gift_recipient(
+    *,
+    recipient_name: str,
+    issuer_name: str,
+    plan_name: str,
+    message: str,
+    redeem_url: str,
+    expires_label: str,
+    frontend_url: str,
+) -> str:
+    greeting = f"Hola {escape(recipient_name)}" if recipient_name else "Tienes un regalo"
+    personal_message = (
+        f'<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">'
+        f"“{escape(message)}”</p>"
+        if message
+        else ""
+    )
+    body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">{greeting}</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  {escape(issuer_name or "Alguien")} te regaló <strong>{escape(plan_name)}</strong> para disfrutar en PulseFit Studio.
+</p>
+{personal_message}
+{_cta_button(redeem_url, "Canjear mi regalo")}
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{MUTED}">
+  Inicia sesión o crea tu cuenta para canjearlo. El regalo vence el {escape(expires_label)}.
+</p>
+"""
+    return _shell(
+        preheader=f"Tienes un regalo: {plan_name}. Canjéalo antes del {expires_label}.",
+        body_html=body,
+        frontend_url=frontend_url,
+    )
+
+
 def _code_block(code: str) -> str:
     return f"""
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;margin:8px 0 24px">

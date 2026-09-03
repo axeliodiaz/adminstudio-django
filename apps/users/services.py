@@ -109,6 +109,7 @@ def update_user_profile(user: User, profile_data: dict[str, Any]) -> UserProfile
         "height_cm",
         "weight_kg",
         "address",
+        "injury_notes",
         # Cycling
         "seat_height",
         "seat_distance",

@@ -31,6 +31,7 @@ class TestProfileView:
             height_cm=175,
             weight_kg=75.5,
             address="Test Address 123",
+            injury_notes="Rodilla derecha sensible",
             seat_height=17,
             seat_distance=13,
             handlebar_distance=5,
@@ -87,6 +88,7 @@ class TestProfileView:
         assert personal_info["height_cm"] == 175
         assert personal_info["weight_kg"] == 75.5
         assert personal_info["address"] == "Test Address 123"
+        assert personal_info["injury_notes"] == "Rodilla derecha sensible"
 
         # Check cycling structure
         cycling = response.data["cycling"]
@@ -148,6 +150,7 @@ class TestProfileView:
             "height_cm": 180,
             "weight_kg": 80.0,
             "address": "New Address",
+            "injury_notes": "Molestia lumbar",
             "seat_height": 20,
             "seat_distance": 15,
             "handlebar_distance": 7,
@@ -161,6 +164,7 @@ class TestProfileView:
         assert response.data["personal_info"]["last_name"] == "Name"
         assert response.data["personal_info"]["gender"] == "female"
         assert response.data["personal_info"]["height_cm"] == 180
+        assert response.data["personal_info"]["injury_notes"] == "Molestia lumbar"
         assert response.data["cycling"]["seat_height"] == 20
         assert response.data["cycling"]["cycling_shoe_size"] == 45.0
 
@@ -168,6 +172,7 @@ class TestProfileView:
         user_with_member.refresh_from_db()
         assert user_with_member.first_name == "Updated"
         assert user_with_member.seat_height == 20
+        assert user_with_member.injury_notes == "Molestia lumbar"
 
     def test_update_profile_with_patch(self, api_client, user_with_member, token):
         """Test that PATCH partially updates profile data."""

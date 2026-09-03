@@ -1,5 +1,6 @@
 # apps/wallet/models.py
 from datetime import datetime, timedelta
+import secrets
 
 from django.conf import settings
 from django.db import models
@@ -142,3 +143,69 @@ class PlanPurchase(UUIDModel, TimeStampedModel, TimeFramedModel):
 
     def __str__(self):
         return f"Purchase of {self.plan.name} by {self.user.username} - ${self.price_paid}"
+
+
+class GiftCard(UUIDModel, TimeStampedModel):
+    """A one-time, transferable entitlement purchased as a digital gift."""
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        REDEEMED = "redeemed", "Redeemed"
+        EXPIRED = "expired", "Expired"
+        CANCELLED = "cancelled", "Cancelled"
+
+    code = models.CharField(max_length=32, unique=True, editable=False)
+    plan = models.ForeignKey("plans.Plan", on_delete=models.PROTECT, related_name="gift_cards")
+    purchase = models.ForeignKey(
+        PlanPurchase,
+        on_delete=models.PROTECT,
+        related_name="gift_cards",
+    )
+    issuer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="issued_gift_cards",
+    )
+    recipient_name = models.CharField(max_length=150, blank=True)
+    recipient_email = models.EmailField(blank=True)
+    message = models.TextField(blank=True, max_length=1_000)
+    send_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField()
+    expiration_reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
+    redeemed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="redeemed_gift_cards",
+    )
+    redeemed_at = models.DateTimeField(null=True, blank=True)
+    redemption_purchase = models.OneToOneField(
+        PlanPurchase,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="gift_redemption",
+    )
+
+    class Meta:
+        ordering = ["-created"]
+        indexes = [
+            models.Index(fields=["status", "expires_at"]),
+            models.Index(fields=["recipient_email", "status"]),
+        ]
+
+    @classmethod
+    def generate_code(cls) -> str:
+        # 144 bits of entropy; suitable for a bearer-style redemption credential.
+        return secrets.token_urlsafe(18).upper()
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = self.generate_code()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Gift {self.code} · {self.plan.name}"

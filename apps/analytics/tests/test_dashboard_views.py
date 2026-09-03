@@ -54,6 +54,13 @@ class TestAdminDashboardView:
         assert "revenue_by_plan" in body
         assert "purchases_30d" in body
         assert "recent_purchases" in body
+        assert body["first_timer_cohort"] == {
+            "purchases": 0,
+            "first_class_attendance": 0,
+            "first_class_attendance_pct": 0,
+            "second_purchase_30d": 0,
+            "second_purchase_30d_pct": 0,
+        }
         assert "purchases_7d" in body["kpis"]
         assert set(body["kpis"]["revenue_7d"]).issuperset(
             {"amount_clp", "amount_usd", "amount_mxn", "fx"}

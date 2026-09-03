@@ -17,7 +17,11 @@ from apps.analytics.constants import (
     EXCLUDED_SCHEDULE_STATUSES,
     OCCUPIED_RESERVATION_STATUSES,
 )
-from apps.members.constants import RESERVATION_STATUS_CANCELLED, RESERVATION_STATUS_MISSED
+from apps.members.constants import (
+    RESERVATION_STATUS_ATTENDED,
+    RESERVATION_STATUS_CANCELLED,
+    RESERVATION_STATUS_MISSED,
+)
 from apps.members.models import Member, Reservation
 from apps.schedules.models import Schedule
 from apps.wallets.models import PlanPurchase, Wallet
@@ -112,6 +116,7 @@ def get_admin_dashboard(*, now=None, days=DASHBOARD_DEFAULT_DAYS) -> dict:
         "revenue_by_plan": wallet_stats["revenue_by_plan"],
         "purchases_30d": wallet_stats["purchases_series"],
         "recent_purchases": wallet_stats["recent_purchases"],
+        "first_timer_cohort": _first_timer_cohort(),
     }
 
 
@@ -456,4 +461,46 @@ def _wallet_commerce(today, period_start) -> dict:
         "revenue_by_plan": revenue_by_plan,
         "purchases_series": {"labels": labels, "counts": counts, "revenue_clp": revenues},
         "recent_purchases": recent,
+    }
+
+
+def _first_timer_cohort() -> dict:
+    """Return all-time first-timer conversion metrics for the admin dashboard."""
+    starter_purchases = list(
+        PlanPurchase.objects.filter(plan__is_first_timer=True)
+        .select_related("user")
+        .order_by("user_id", "created")
+    )
+    first_by_user = {}
+    for purchase in starter_purchases:
+        first_by_user.setdefault(purchase.user_id, purchase)
+
+    first_purchases = list(first_by_user.values())
+    user_ids = list(first_by_user)
+    attended_user_ids = set(
+        Reservation.objects.filter(
+            member__user_id__in=user_ids,
+            is_removed=False,
+            status=RESERVATION_STATUS_ATTENDED,
+        ).values_list("member__user_id", flat=True)
+    )
+    converted = 0
+    for purchase in first_purchases:
+        deadline = purchase.created + timedelta(days=30)
+        if PlanPurchase.objects.filter(
+            user_id=purchase.user_id,
+            created__gt=purchase.created,
+            created__lte=deadline,
+            plan__is_first_timer=False,
+        ).exists():
+            converted += 1
+
+    total = len(first_purchases)
+    attended = len(attended_user_ids)
+    return {
+        "purchases": total,
+        "first_class_attendance": attended,
+        "first_class_attendance_pct": round(100 * attended / total, 1) if total else 0,
+        "second_purchase_30d": converted,
+        "second_purchase_30d_pct": round(100 * converted / total, 1) if total else 0,
     }

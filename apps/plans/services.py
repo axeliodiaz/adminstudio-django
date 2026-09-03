@@ -44,6 +44,7 @@ def _serialize_admin_plan(plan: Plan) -> dict:
         "is_active": plan.is_active,
         "is_popular": plan.is_popular,
         "is_highlighted": plan.is_highlighted,
+        "is_first_timer": plan.is_first_timer,
         "benefits": [BenefitSchema.model_validate(benefit) for benefit in benefits],
         "benefit_ids": [benefit.id for benefit in benefits],
     }
@@ -63,7 +64,12 @@ def list_admin_plans(
         "name",
     )
 
-    if plan_type in {constants.PLAN_TYPE_MEMBERSHIP, constants.PLAN_TYPE_PACKAGE}:
+    if plan_type in {
+        constants.PLAN_TYPE_MEMBERSHIP,
+        constants.PLAN_TYPE_PACKAGE,
+        constants.PLAN_TYPE_GIFT_CARD,
+        constants.PLAN_TYPE_GIFT_PACK,
+    }:
         queryset = queryset.filter(type=plan_type)
 
     if status == "active":
@@ -93,6 +99,8 @@ def _validate_plan_write(*, data: dict, require_required_fields: bool) -> None:
         if data.get("type") not in {
             constants.PLAN_TYPE_MEMBERSHIP,
             constants.PLAN_TYPE_PACKAGE,
+            constants.PLAN_TYPE_GIFT_CARD,
+            constants.PLAN_TYPE_GIFT_PACK,
         }:
             raise ValueError("El tipo de plan es inválido.")
         if data.get("price") is None:
@@ -108,6 +116,8 @@ def _validate_plan_write(*, data: dict, require_required_fields: bool) -> None:
         not in {
             constants.PLAN_TYPE_MEMBERSHIP,
             constants.PLAN_TYPE_PACKAGE,
+            constants.PLAN_TYPE_GIFT_CARD,
+            constants.PLAN_TYPE_GIFT_PACK,
         }
     ):
         raise ValueError("El tipo de plan es inválido.")
@@ -151,6 +161,7 @@ def create_admin_plan(*, data: dict) -> dict:
         is_active=bool(data.get("is_active", False)),
         is_popular=bool(data.get("is_popular", False)),
         is_highlighted=bool(data.get("is_highlighted", False)),
+        is_first_timer=bool(data.get("is_first_timer", False)),
     )
     if benefit_ids is not None:
         plan.benefits.set(benefits)
@@ -173,6 +184,7 @@ def update_admin_plan(*, plan_id: str | UUID, data: dict) -> dict:
         "is_active",
         "is_popular",
         "is_highlighted",
+        "is_first_timer",
     }
     dirty_fields: list[str] = []
 

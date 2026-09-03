@@ -29,6 +29,7 @@ class PlanSchema(BaseModel):
     is_active: bool
     is_popular: bool
     is_highlighted: bool
+    is_first_timer: bool = False
     # Public list exposes only active benefits via the model property
     benefits: list[BenefitSchema] | None = Field(default=None, alias="benefits_list")
 
@@ -50,6 +51,7 @@ class AdminPlanSchema(BaseModel):
     is_active: bool
     is_popular: bool
     is_highlighted: bool
+    is_first_timer: bool = False
     benefits: list[BenefitSchema] = Field(default_factory=list)
     benefit_ids: list[uuid.UUID] = Field(default_factory=list)
 
@@ -60,7 +62,7 @@ class AdminPlanWriteSchema(BaseModel):
     """Payload for creating or updating a plan from the staff admin."""
 
     name: str | None = None
-    type: Literal["MEMBERSHIP", "PACKAGE"] | None = None
+    type: Literal["MEMBERSHIP", "PACKAGE", "GIFT_CARD", "GIFT_PACK"] | None = None
     price: float | None = None
     duration_days: int | None = None
     classes_included: int | None = None
@@ -68,6 +70,7 @@ class AdminPlanWriteSchema(BaseModel):
     is_active: bool | None = None
     is_popular: bool | None = None
     is_highlighted: bool | None = None
+    is_first_timer: bool | None = None
     benefit_ids: list[uuid.UUID] | None = None
 
 
