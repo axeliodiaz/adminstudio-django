@@ -86,7 +86,7 @@ class TestPublicDocsAPI:
         assert "Confirmar reserva" in response.data["body"]
         assert "lista de espera" in response.data["body"]
 
-    def test_seeded_member_guides_are_public(self, api_client):
+    def test_seeded_feature_guides_are_public(self, api_client):
         response = api_client.get(reverse("docs-list"))
 
         assert response.status_code == status.HTTP_200_OK
@@ -114,6 +114,18 @@ class TestPublicDocsAPI:
             "cancelaciones",
             "mis-estadisticas",
         }.issubset(sections["mi-cuenta"])
+        assert {
+            "admin-dashboard",
+            "admin-horarios",
+            "admin-reservas",
+            "asistencia",
+            "admin-socios",
+        }.issubset(sections["operacion-admin"])
+        assert {
+            "billeteras-y-compras",
+            "gestionar-planes-y-beneficios",
+            "gestionar-codigos-promocionales",
+        }.issubset(sections["comercial-admin"])
 
     def test_list_omits_unpublished_pages_and_empty_sections(self, api_client, published_section):
         DocPage.objects.create(
@@ -159,7 +171,7 @@ class TestPublicDocsAPI:
             is_published=False,
         )
 
-        response = api_client.get(reverse("docs-list"))
+        response = api_client.get(reverse("docs-list"), {"audience": "member"})
 
         assert response.status_code == status.HTTP_200_OK
         audiences = response.data["audiences"]
