@@ -245,6 +245,7 @@ class TestAdminAttendanceViews:
         assert rider["reservation_id"] == str(reservation.id)
         assert rider["status"] == member_constants.RESERVATION_STATUS_RESERVED
         assert rider["member_email"] == "socio@example.com"
+        assert rider["is_first_class"] is True
 
     def test_mark_attended_and_missed_after_class(self, staff_client, reservation_graph):
         reservation = reservation_graph["reservation"]
