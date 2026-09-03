@@ -37,6 +37,8 @@ urlpatterns = [
     path("api/analytics/", include("apps.analytics.urls")),
     path("api/coach/", include("apps.coach.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
+    path("api/docs/", include("apps.docs.urls")),
+    path("ckeditor5/", include("django_ckeditor_5.urls")),
 ]
 
 if settings.DEBUG:
