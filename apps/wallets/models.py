@@ -209,3 +209,70 @@ class GiftCard(UUIDModel, TimeStampedModel):
 
     def __str__(self):
         return f"Gift {self.code} · {self.plan.name}"
+
+
+class GuestPassInvitation(UUIDModel, TimeStampedModel):
+    """A trackable guest-pass invitation issued from a member's wallet."""
+
+    class Status(models.TextChoices):
+        ISSUED = "issued", "Issued"
+        CLAIMED = "claimed", "Claimed"
+        BOOKED = "booked", "Booked"
+        ATTENDED = "attended", "Attended"
+        EXPIRED = "expired", "Expired"
+        CANCELLED = "cancelled", "Cancelled"
+
+    issuer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="guest_pass_invitations"
+    )
+    guest_name = models.CharField(max_length=150)
+    guest_email = models.EmailField()
+    schedule = models.ForeignKey(
+        "schedules.Schedule",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="guest_pass_invitations",
+    )
+    message = models.TextField(blank=True, max_length=1_000)
+    token = models.CharField(max_length=64, unique=True, editable=False)
+    expires_at = models.DateTimeField()
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.ISSUED)
+    claimed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="claimed_guest_passes",
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    waiver_accepted_at = models.DateTimeField(null=True, blank=True)
+    waiver_version = models.CharField(max_length=20, blank=True)
+    reservation = models.OneToOneField(
+        "members.Reservation",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="guest_pass_invitation",
+    )
+    credit_consumed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created"]
+        indexes = [
+            models.Index(fields=["status", "expires_at"]),
+            models.Index(fields=["issuer", "status"]),
+            models.Index(fields=["guest_email", "status"]),
+        ]
+
+    @classmethod
+    def generate_token(cls) -> str:
+        return secrets.token_urlsafe(24)
+
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = self.generate_token()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Guest pass for {self.guest_email} ({self.status})"
