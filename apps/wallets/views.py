@@ -1,19 +1,189 @@
 """Views for wallets app."""
 
+from datetime import timedelta
+
 from django.conf import settings
 from django.http import Http404
+from django.utils import timezone
 from rest_framework import status, viewsets
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from django.contrib.auth import get_user_model
 
 from apps.wallets.exceptions import PurchaseAlreadyActivatedException
-from apps.wallets.models import PlanPurchase, Wallet
+from apps.wallets.models import GuestPassInvitation, PlanPurchase, Wallet
 from apps.wallets.schemas import PlanPurchaseSchema, WalletDashboardSchema, WalletSchema
-from apps.wallets.serializers import PlanPurchaseActivateSerializer, WalletListQuerySerializer
+from apps.wallets.serializers import (
+    GuestPassClaimSerializer,
+    GuestPassInviteSerializer,
+    PlanPurchaseActivateSerializer,
+    WalletListQuerySerializer,
+)
 from apps.wallets.services import WalletService
 
 User = get_user_model()
+
+
+def _guest_pass_payload(invitation):
+    schedule = invitation.schedule
+    issuer = invitation.issuer
+    return {
+        "id": str(invitation.id),
+        "guest_name": invitation.guest_name,
+        "guest_email": invitation.guest_email,
+        "message": invitation.message,
+        "token": invitation.token,
+        "status": invitation.status,
+        "expires_at": invitation.expires_at,
+        "schedule_id": str(invitation.schedule_id) if invitation.schedule_id else None,
+        "schedule_title": getattr(schedule, "title", None),
+        "issuer_name": issuer.get_full_name() or issuer.username,
+        "claimed_at": invitation.claimed_at,
+        "reservation_id": str(invitation.reservation_id) if invitation.reservation_id else None,
+    }
+
+
+class GuestPassInviteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = GuestPassInviteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        if data["guest_email"].lower() == request.user.email.lower():
+            return Response(
+                {"detail": "No puedes invitarte a ti mismo."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        schedule_id = data.get("schedule_id")
+        if schedule_id:
+            from apps.schedules.models import Schedule
+
+            if not Schedule.objects.filter(id=schedule_id, is_removed=False).exists():
+                return Response(
+                    {"detail": "La clase no existe."}, status=status.HTTP_400_BAD_REQUEST
+                )
+        invitation = GuestPassInvitation.objects.create(
+            issuer=request.user,
+            guest_name=data["guest_name"],
+            guest_email=data["guest_email"].lower(),
+            schedule_id=schedule_id,
+            message=data.get("message", ""),
+            expires_at=timezone.now() + timedelta(days=14),
+        )
+        payload = _guest_pass_payload(invitation)
+        frontend_url = (getattr(settings, "FRONTEND_URL", None) or "http://localhost:5173").rstrip(
+            "/"
+        )
+        payload["claim_url"] = f"{frontend_url}/#guest-pass/{invitation.token}"
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+
+class GuestPassHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        WalletService.expire_guest_passes()
+        invitations = GuestPassInvitation.objects.filter(issuer=request.user).select_related(
+            "schedule", "issuer"
+        )
+        return Response([_guest_pass_payload(invitation) for invitation in invitations])
+
+
+class GuestPassClaimView(APIView):
+    """Preview a guest pass publicly and claim/book it after authentication."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        WalletService.expire_guest_passes()
+        invitation = (
+            GuestPassInvitation.objects.select_related("schedule", "issuer")
+            .filter(token=token)
+            .first()
+        )
+        if not invitation:
+            raise Http404("Guest pass not found")
+        payload = _guest_pass_payload(invitation)
+        payload.pop("guest_email", None)
+        return Response(payload)
+
+    def post(self, request, token):
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Debes iniciar sesión para reclamar este pase."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        serializer = GuestPassClaimSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        WalletService.expire_guest_passes()
+        try:
+            invitation = GuestPassInvitation.objects.select_related("schedule", "issuer").get(
+                token=token
+            )
+        except GuestPassInvitation.DoesNotExist:
+            raise Http404("Guest pass not found")
+        if invitation.status in {
+            GuestPassInvitation.Status.EXPIRED,
+            GuestPassInvitation.Status.CANCELLED,
+        }:
+            return Response(
+                {"detail": "Este pase de invitado venció."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        if request.user.email.lower() != invitation.guest_email.lower():
+            return Response(
+                {"detail": "Este pase fue enviado a otro correo."}, status=status.HTTP_403_FORBIDDEN
+            )
+        if invitation.claimed_by_id and invitation.claimed_by_id != request.user.id:
+            return Response(
+                {"detail": "Este pase ya fue reclamado."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        if not invitation.claimed_by_id:
+            from apps.legal.models import LegalDocument, LegalDocumentType
+
+            waiver = (
+                LegalDocument.objects.filter(
+                    document_type=LegalDocumentType.WAIVER, is_published=True, is_removed=False
+                )
+                .order_by("-effective_date", "-created")
+                .first()
+            )
+            invitation.claimed_by = request.user
+            invitation.claimed_at = timezone.now()
+            invitation.waiver_accepted_at = timezone.now()
+            invitation.waiver_version = waiver.version if waiver else "basic-consent"
+            invitation.status = GuestPassInvitation.Status.CLAIMED
+            invitation.save(
+                update_fields=[
+                    "claimed_by",
+                    "claimed_at",
+                    "waiver_accepted_at",
+                    "waiver_version",
+                    "status",
+                    "modified",
+                ]
+            )
+        if (
+            invitation.schedule_id
+            and serializer.validated_data.get("spot")
+            and not invitation.reservation_id
+        ):
+            from apps.members.members import create_reservation
+
+            reservation = create_reservation(
+                {
+                    "user_id": request.user.id,
+                    "schedule_id": invitation.schedule_id,
+                    "spot": serializer.validated_data["spot"],
+                    "guest_pass": invitation,
+                }
+            )
+            return Response(
+                {**_guest_pass_payload(invitation), "reservation_id": str(reservation.id)},
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(_guest_pass_payload(invitation))
 
 
 class WalletViewSet(viewsets.ViewSet):

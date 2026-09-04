@@ -189,6 +189,8 @@ class AdminAttendanceRiderSchema(BaseModel):
     status: str
     notes: str = ""
     is_first_class: bool = False
+    is_guest_pass: bool = False
+    guest_host_name: str = ""
 
 
 class WaitlistScheduleSchema(BaseModel):

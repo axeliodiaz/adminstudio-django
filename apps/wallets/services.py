@@ -13,7 +13,7 @@ from apps.wallets.exceptions import (
     InsufficientCreditsException,
     PurchaseAlreadyActivatedException,
 )
-from apps.wallets.models import GiftCard, PlanPurchase, Wallet
+from apps.wallets.models import GiftCard, GuestPassInvitation, PlanPurchase, Wallet
 
 
 class WalletService:
@@ -162,6 +162,32 @@ class WalletService:
                 return
             wallet.class_credits += 1
             wallet.save(update_fields=["class_credits", "modified"])
+
+    @staticmethod
+    def consume_guest_pass_credit(user) -> None:
+        """Atomically debit one guest-pass credit when the guest books."""
+        with transaction.atomic():
+            wallet, _ = Wallet.objects.select_for_update().get_or_create(user=user)
+            if wallet.guest_pass_credits <= 0:
+                raise InsufficientCreditsException("No te quedan pases de invitado.")
+            wallet.guest_pass_credits -= 1
+            wallet.save(update_fields=["guest_pass_credits", "modified"])
+
+    @staticmethod
+    def refund_guest_pass_credit(user) -> None:
+        """Return one previously consumed guest-pass credit to its issuer."""
+        with transaction.atomic():
+            wallet, _ = Wallet.objects.select_for_update().get_or_create(user=user)
+            wallet.guest_pass_credits += 1
+            wallet.save(update_fields=["guest_pass_credits", "modified"])
+
+    @staticmethod
+    def expire_guest_passes() -> int:
+        """Mark unclaimed invitations past their expiry as expired."""
+        return GuestPassInvitation.objects.filter(
+            status__in=[GuestPassInvitation.Status.ISSUED, GuestPassInvitation.Status.CLAIMED],
+            expires_at__lte=timezone.now(),
+        ).update(status=GuestPassInvitation.Status.EXPIRED)
 
     @staticmethod
     def redeem_gift_card(*, user, code: str) -> GiftCard:
