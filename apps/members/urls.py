@@ -85,6 +85,11 @@ urlpatterns = [
         name="reservation-change-spot",
     ),
     path(
+        "reservations/<uuid:reservation_id>/check-in/",
+        ReservationView.as_view({"post": "check_in"}),
+        name="reservation-check-in",
+    ),
+    path(
         "reservations/<uuid:reservation_id>/",
         ReservationView.as_view({"delete": "destroy"}),
         name="reservation-detail",

@@ -11,6 +11,7 @@ from apps.members.members import (
     change_reservation_spot,
     create_reservation,
     cancel_reservation,
+    check_in_member_reservation,
     get_member_by_id,
     get_member_by_user_id,
     get_reservation_by_id,
@@ -557,6 +558,81 @@ class TestMembersDomain:
 
         with pytest.raises(ReservationInvalidStateException):
             cancel_reservation(str(reservation.id))
+
+    def test_member_can_check_in_during_window(self, base_graph):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(minutes=10),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(member=member, schedule=schedule, spot=1)
+
+        checked_in = check_in_member_reservation(str(reservation.id), str(member.user_id))
+
+        assert checked_in.status == constants.RESERVATION_STATUS_ATTENDED
+
+    def test_member_check_in_rejects_another_members_reservation(self, base_graph):
+        member, instructor, room = base_graph
+        other_user = get_user_model().objects.create_user(
+            username=f"other_{uuid.uuid4()}",
+            email=f"other_{uuid.uuid4()}@example.com",
+            password="pass",
+        )
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(minutes=10),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(member=member, schedule=schedule, spot=1)
+
+        with pytest.raises(Reservation.DoesNotExist):
+            check_in_member_reservation(str(reservation.id), str(other_user.id))
+
+    @pytest.mark.parametrize("minutes_until_start", [16, -1])
+    def test_member_check_in_rejects_outside_window(self, base_graph, minutes_until_start):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(minutes=minutes_until_start),
+            duration_minutes=45,
+            room=room,
+        )
+        reservation = Reservation.objects.create(member=member, schedule=schedule, spot=1)
+
+        with pytest.raises(ReservationInvalidStateException, match="asistencia solo"):
+            check_in_member_reservation(str(reservation.id), str(member.user_id))
+
+    @pytest.mark.parametrize(
+        ("reservation_status", "schedule_status"),
+        [
+            (constants.RESERVATION_STATUS_CANCELLED, None),
+            (constants.RESERVATION_STATUS_ATTENDED, None),
+            (constants.RESERVATION_STATUS_RESERVED, "canceled"),
+        ],
+    )
+    def test_member_check_in_rejects_ineligible_reservation(
+        self, base_graph, reservation_status, schedule_status
+    ):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + datetime.timedelta(minutes=10),
+            duration_minutes=45,
+            room=room,
+            **({"status": schedule_status} if schedule_status else {}),
+        )
+        reservation = Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=reservation_status,
+            spot=1,
+        )
+
+        with pytest.raises(ReservationInvalidStateException):
+            check_in_member_reservation(str(reservation.id), str(member.user_id))
 
     def test_get_member_by_id_success(self, base_graph):
         member, _, _ = base_graph

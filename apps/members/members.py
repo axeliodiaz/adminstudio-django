@@ -11,6 +11,7 @@ from apps.members.exceptions import (
     ReservationInvalidStateException,
 )
 from apps.members.models import Member, Reservation
+from apps.schedules import constants as schedule_constants
 from apps.schedules.schedules import get_schedule_by_id
 from apps.studios.models import StudioSettings
 from apps.users.services import get_or_create_user
@@ -27,6 +28,10 @@ ATTENDANCE_INVALID_STATUS_MESSAGE = "Estado de asistencia inválido."
 ATTENDANCE_CANCELLED_MESSAGE = "No se puede marcar asistencia de una reserva cancelada."
 RESERVATION_NOT_FOUND_MESSAGE = "Reserva no encontrada."
 SCHEDULE_NOT_FOUND_MESSAGE = "Clase no encontrada."
+MEMBER_CHECK_IN_WINDOW_MESSAGE = (
+    "La asistencia solo se puede confirmar desde 15 minutos antes hasta el inicio de la clase."
+)
+MEMBER_CHECK_IN_CANCELLED_CLASS_MESSAGE = "No se puede confirmar asistencia a una clase cancelada."
 
 
 def set_reservation_attendance(reservation_id: str, status: str) -> Reservation:
@@ -52,6 +57,36 @@ def set_reservation_attendance(reservation_id: str, status: str) -> Reservation:
         guest_pass.status = guest_pass.Status.ATTENDED
         guest_pass.save(update_fields=["status", "modified"])
     return reservation
+
+
+def check_in_member_reservation(reservation_id: str, user_id: str) -> Reservation:
+    """Confirm attendance for the reservation owner during the pre-class window."""
+    try:
+        reservation = Reservation.objects.select_related("schedule").get(
+            id=reservation_id,
+            member__user_id=user_id,
+            is_removed=False,
+            schedule__is_removed=False,
+        )
+    except Reservation.DoesNotExist as exc:
+        raise Reservation.DoesNotExist(RESERVATION_NOT_FOUND_MESSAGE) from exc
+
+    if reservation.status != constants.RESERVATION_STATUS_RESERVED:
+        raise ReservationInvalidStateException(
+            "Solo las reservas activas pueden confirmar asistencia."
+        )
+    if reservation.schedule.status == schedule_constants.SCHEDULE_STATUS_CANCELED:
+        raise ReservationInvalidStateException(MEMBER_CHECK_IN_CANCELLED_CLASS_MESSAGE)
+
+    now = timezone.now()
+    check_in_opens_at = reservation.schedule.start_time - timedelta(minutes=15)
+    if now < check_in_opens_at or now > reservation.schedule.start_time:
+        raise ReservationInvalidStateException(MEMBER_CHECK_IN_WINDOW_MESSAGE)
+
+    return set_reservation_attendance(
+        str(reservation.id),
+        constants.RESERVATION_STATUS_ATTENDED,
+    )
 
 
 def get_member_by_id(member_id: str) -> Member:
