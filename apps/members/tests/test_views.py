@@ -405,6 +405,60 @@ class TestReservationCancelViewSet:
 
 
 @pytest.mark.django_db
+class TestReservationCheckInViewSet:
+    @pytest.fixture
+    def api_client(self):
+        return APIClient()
+
+    def test_check_in_returns_updated_reservation(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="checkin-user",
+            email="checkin@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
+        reservation_id = uuid.uuid4()
+        updated = mocker.Mock()
+        updated.model_dump.return_value = {
+            "id": str(reservation_id),
+            "status": "ATTENDED",
+        }
+        check_in = mocker.patch(
+            "apps.members.views.check_in_member_reservation",
+            return_value=updated,
+        )
+
+        response = api_client.post(
+            reverse("reservation-check-in", kwargs={"reservation_id": reservation_id}),
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.data["status"] == "ATTENDED"
+        check_in.assert_called_once_with(str(reservation_id), user.id)
+
+    def test_check_in_returns_404_for_non_owned_reservation(self, mocker, api_client):
+        user = User.objects.create_user(
+            username="checkin-other",
+            email="checkin-other@example.com",
+            password="testpass123",
+        )
+        api_client.force_authenticate(user=user)
+        reservation_id = uuid.uuid4()
+        mocker.patch(
+            "apps.members.views.check_in_member_reservation",
+            side_effect=Reservation.DoesNotExist,
+        )
+
+        response = api_client.post(
+            reverse("reservation-check-in", kwargs={"reservation_id": reservation_id}),
+            format="json",
+        )
+
+        assert response.status_code == 404
+
+
+@pytest.mark.django_db
 class TestReservationsList:
 
     def test_list_returns_200_and_payload_forwarded(self, mocker, api_client):

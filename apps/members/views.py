@@ -39,6 +39,7 @@ from apps.members.services import (
     create_reservation,
     cancel_reservation,
     change_reservation_spot,
+    check_in_member_reservation,
     list_admin_members,
     list_reservations,
     update_admin_member,
@@ -187,6 +188,15 @@ class ReservationView(ViewSet):
         except Reservation.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         except (ReservationInvalidStateException, InvalidSpotException) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(reservation.model_dump(), status=status.HTTP_200_OK)
+
+    def check_in(self, request, reservation_id=None, *args, **kwargs):
+        try:
+            reservation = check_in_member_reservation(str(reservation_id), request.user.id)
+        except Reservation.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        except ReservationInvalidStateException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation.model_dump(), status=status.HTTP_200_OK)
 
