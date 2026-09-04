@@ -97,6 +97,7 @@ OWN_APPS = [
     "apps.schedules",
     "apps.plans",
     "apps.wallets",
+    "apps.referrals",
     "apps.faqs",
     "apps.legal",
     "apps.analytics",

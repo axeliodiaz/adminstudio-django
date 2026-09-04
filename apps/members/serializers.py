@@ -9,6 +9,7 @@ class MemberSerializer(serializers.Serializer):
     first_name = serializers.CharField()
     last_name = serializers.CharField()
     phone_number = serializers.CharField()
+    referral_code = serializers.CharField(required=False, allow_blank=True, max_length=16)
     created = serializers.DateTimeField(read_only=True)
 
 
