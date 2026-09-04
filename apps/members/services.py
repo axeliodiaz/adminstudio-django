@@ -479,7 +479,7 @@ def get_admin_attendance_roster(schedule_id: str | UUID) -> dict:
             is_removed=False,
             status__in=member_constants.ATTENDANCE_ROSTER_STATUSES,
         )
-        .select_related("member__user")
+        .select_related("member__user", "guest_pass_invitation__issuer")
         .order_by("spot", "member__user__first_name", "member__user__last_name")
     )
     member_ids = [reservation.member_id for reservation in reservations]
@@ -497,6 +497,8 @@ def get_admin_attendance_roster(schedule_id: str | UUID) -> dict:
     riders = []
     for reservation in reservations:
         user = reservation.member.user
+        guest_pass = getattr(reservation, "guest_pass_invitation", None)
+        host = getattr(guest_pass, "issuer", None) if guest_pass else None
         riders.append(
             AdminAttendanceRiderSchema.model_validate(
                 {
@@ -509,6 +511,8 @@ def get_admin_attendance_roster(schedule_id: str | UUID) -> dict:
                     "notes": reservation.notes or "",
                     "is_first_class": first_reservation_ids.get(reservation.member_id)
                     == reservation.id,
+                    "is_guest_pass": bool(guest_pass),
+                    "guest_host_name": _member_display_name(host),
                 }
             ).model_dump(mode="json")
         )

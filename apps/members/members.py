@@ -47,6 +47,10 @@ def set_reservation_attendance(reservation_id: str, status: str) -> Reservation:
         return reservation
     reservation.status = status
     reservation.save(update_fields=["status"])
+    guest_pass = getattr(reservation, "guest_pass_invitation", None)
+    if guest_pass and status == constants.RESERVATION_STATUS_ATTENDED:
+        guest_pass.status = guest_pass.Status.ATTENDED
+        guest_pass.save(update_fields=["status", "modified"])
     return reservation
 
 
@@ -144,7 +148,16 @@ def create_reservation(validated_data: dict) -> Reservation:
         if taken_spot:
             raise InvalidSpotException(f"Spot {spot} is already taken.")
 
-        credit_charged = WalletService.consume_class_credit(user)
+        guest_pass = validated_data.get("guest_pass")
+        if guest_pass:
+            if guest_pass.claimed_by_id != user.id:
+                raise ReservationInvalidStateException(
+                    "Este pase de invitado no pertenece a tu cuenta."
+                )
+            WalletService.consume_guest_pass_credit(guest_pass.issuer)
+            credit_charged = False
+        else:
+            credit_charged = WalletService.consume_class_credit(user)
 
         reservation = Reservation.objects.create(
             member=member,
@@ -153,6 +166,13 @@ def create_reservation(validated_data: dict) -> Reservation:
             notes=validated_data.get("notes") or "",
             credit_charged=credit_charged,
         )
+        if guest_pass:
+            guest_pass.reservation = reservation
+            guest_pass.status = guest_pass.Status.BOOKED
+            guest_pass.credit_consumed_at = timezone.now()
+            guest_pass.save(
+                update_fields=["reservation", "status", "credit_consumed_at", "modified"]
+            )
 
     from apps.members.notifications import send_reservation_confirmed_email
 
@@ -209,7 +229,14 @@ def cancel_reservation(
 
     refunded = False
     with transaction.atomic():
-        if reservation.credit_charged:
+        guest_pass = getattr(reservation, "guest_pass_invitation", None)
+        if guest_pass and guest_pass.credit_consumed_at:
+            WalletService.refund_guest_pass_credit(guest_pass.issuer)
+            guest_pass.credit_consumed_at = None
+            guest_pass.status = guest_pass.Status.CLAIMED
+            guest_pass.save(update_fields=["credit_consumed_at", "status", "modified"])
+            refunded = True
+        elif reservation.credit_charged:
             WalletService.refund_class_credit(reservation.member.user)
             reservation.credit_charged = False
             refunded = True
