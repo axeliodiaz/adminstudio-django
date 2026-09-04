@@ -178,6 +178,12 @@ def change_reservation_spot(schedule_id: str, user_id: str, new_spot: int) -> Re
     return ReservationSchema.model_validate(reservation)
 
 
+def check_in_member_reservation(reservation_id: str, user_id: str | UUID) -> ReservationSchema:
+    """Confirm a member's own reservation attendance."""
+    reservation = members.check_in_member_reservation(reservation_id, str(user_id))
+    return ReservationSchema.model_validate(reservation)
+
+
 def list_reservations(validated_query: dict) -> list[ReservationSchema]:
     """Application service: list reservations via domain and return schemas."""
     query_params = {}
