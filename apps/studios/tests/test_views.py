@@ -85,15 +85,15 @@ class TestRoomViewSet:
 
 class TestAddressViewSet:
     @pytest.mark.django_db
-    def test_list_addresses(self, api_client, address, empty_address):
+    def test_list_addresses(self, api_client, address, studio, empty_address, empty_studio):
         resp = api_client.get(reverse("address-list"))
         assert resp.status_code == status.HTTP_200_OK
         data = resp.json()
         assert isinstance(data, list)
-        # Should include both addresses
+        # Only addresses linked to active studios are public
         ids = {item["id"] for item in data}
         assert str(address.id) in ids
-        assert str(empty_address.id) in ids
+        assert str(empty_address.id) not in ids
         # Serializer fields check
         sample = data[0]
         assert set(["id", "address", "latitude", "longitude", "created", "modified"]).issubset(
