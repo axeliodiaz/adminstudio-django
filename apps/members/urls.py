@@ -85,6 +85,11 @@ urlpatterns = [
         name="reservation-change-spot",
     ),
     path(
+        "check-in/<uuid:schedule_id>/",
+        ReservationView.as_view({"post": "qr_check_in"}),
+        name="reservation-qr-check-in",
+    ),
+    path(
         "reservations/<uuid:reservation_id>/check-in/",
         ReservationView.as_view({"post": "check_in"}),
         name="reservation-check-in",
