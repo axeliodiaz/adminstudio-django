@@ -138,13 +138,17 @@ class TestGetAddress:
 
 class TestListAddresses:
     @pytest.mark.django_db
-    def test_get_list_addresses_returns_all_address_schemas(self, address, empty_address):
+    def test_get_list_addresses_returns_only_active_studio_addresses(
+        self, address, studio, empty_address, empty_studio
+    ):
         # Act
         result = get_list_addresses()
         # Assert
         assert isinstance(result, list)
         assert all(isinstance(item, AddressSchema) for item in result)
         ids = {str(item.id) for item in result}
+        # Address linked to an active studio is listed
         assert str(address.id) in ids
-        assert str(empty_address.id) in ids
-        assert len(result) == 2
+        # Address linked to an inactive studio is excluded from public output
+        assert str(empty_address.id) not in ids
+        assert len(result) == 1
