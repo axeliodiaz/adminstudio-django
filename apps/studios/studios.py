@@ -29,5 +29,5 @@ def get_address_from_id(id) -> Address:
 
 
 def addresses_queryset():
-    """Return a queryset of all addresses."""
-    return Address.objects.all()
+    """Return a queryset of addresses linked to active studios."""
+    return Address.objects.filter(studios__is_active=True).distinct()
