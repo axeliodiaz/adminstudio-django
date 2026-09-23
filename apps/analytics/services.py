@@ -120,6 +120,142 @@ def get_admin_dashboard(*, now=None, days=DASHBOARD_DEFAULT_DAYS) -> dict:
     }
 
 
+# These identifiers are part of the public admin API.  Keep them stable: the
+# admin client uses one request per rendered card/chart so a slow module never
+# blocks the rest of the dashboard.
+ADMIN_DASHBOARD_MODULES = (
+    "weekly-occupancy",
+    "reservations-today",
+    "active-members",
+    "revenue",
+    "purchases",
+    "unlimited-wallets",
+    "class-credits-outstanding",
+    "guest-passes-outstanding",
+    "reservations-series",
+    "occupancy-by-instructor",
+    "plan-mix",
+    "demand-by-format",
+    "classes-vs-noshows",
+    "schedule-vs-occupancy",
+    "revenue-by-plan",
+    "purchases-series",
+    "recent-purchases",
+    "first-timer-cohort",
+)
+
+
+def get_admin_dashboard_module(module: str, *, now=None, days=DASHBOARD_DEFAULT_DAYS):
+    """Build exactly one admin dashboard module.
+
+    Unlike :func:`get_admin_dashboard`, this deliberately avoids constructing
+    the complete dashboard payload.  It is intended for independently loading
+    UI modules and returns the same value shape used by the legacy endpoint.
+    """
+    now = now or timezone.now()
+    today = timezone.localtime(now).date()
+    days = days if days in DASHBOARD_ALLOWED_DAYS else DASHBOARD_DEFAULT_DAYS
+    period_start = today - timedelta(days=days - 1)
+
+    if module == "weekly-occupancy":
+        schedules = _annotated_schedules()
+        week_start = today - timedelta(days=6)
+        previous_start = today - timedelta(days=13)
+        previous_end = today - timedelta(days=7)
+        value = _mean_occupancy(_in_local_date_range(schedules, week_start, today))
+        previous = _mean_occupancy(_in_local_date_range(schedules, previous_start, previous_end))
+        return {
+            "value": value,
+            "delta_pp": (
+                round(value - previous, 1) if value is not None and previous is not None else None
+            ),
+        }
+
+    if module == "reservations-today":
+        totals = _reservation_counts_by_day(today - timedelta(days=1), today)
+        return {"value": totals.get(today, 0), "previous": totals.get(today - timedelta(days=1), 0)}
+
+    if module == "active-members":
+        previous_week_end = today - timedelta(days=7)
+        value = _active_members_qs(today).count()
+        previous = _active_members_qs(today, created_on_or_before=previous_week_end).count()
+        return {"value": value, "delta_pct": _pct_change(value, previous)}
+
+    if module == "revenue":
+        previous_start = period_start - timedelta(days=days)
+        previous_end = period_start - timedelta(days=1)
+        amount = _revenue_between(period_start, today)
+        return _revenue_module(amount, _revenue_between(previous_start, previous_end))
+
+    if module == "purchases":
+        return {"value": _purchases_between(period_start, today)}
+    if module == "unlimited-wallets":
+        return {"value": Wallet.objects.filter(is_unlimited_membership_active=True).count()}
+    if module == "class-credits-outstanding":
+        return {"value": int(Wallet.objects.aggregate(total=Sum("class_credits"))["total"] or 0)}
+    if module == "guest-passes-outstanding":
+        return {
+            "value": int(Wallet.objects.aggregate(total=Sum("guest_pass_credits"))["total"] or 0)
+        }
+
+    if module == "reservations-series":
+        return _reservations_series(
+            _reservation_counts_by_day(period_start, today), period_start, today
+        )
+
+    if module in {"occupancy-by-instructor", "demand-by-format", "schedule-vs-occupancy"}:
+        schedules = list(_in_local_date_range(_annotated_schedules(), period_start, today))
+        return {
+            "occupancy-by-instructor": _occupancy_by_instructor,
+            "demand-by-format": _demand_by_format,
+            "schedule-vs-occupancy": _schedule_vs_occupancy,
+        }[module](schedules)
+
+    if module == "plan-mix":
+        return _plan_mix(today, _active_members_qs(today))
+    if module == "classes-vs-noshows":
+        return _classes_vs_noshows(period_start, today)
+    if module == "first-timer-cohort":
+        return _first_timer_cohort()
+
+    if module == "revenue-by-plan":
+        return _revenue_by_plan(_period_purchases(period_start, today))
+    if module == "purchases-series":
+        return _purchases_series(_period_purchases(period_start, today), period_start, today)
+    if module == "recent-purchases":
+        return _recent_purchases(_period_purchases(period_start, today))
+    raise ValueError(f"Unknown dashboard module: {module}")
+
+
+def _annotated_schedules():
+    occupied_filter = Q(
+        reservations__is_removed=False,
+        reservations__status__in=OCCUPIED_RESERVATION_STATUSES,
+    )
+    return (
+        Schedule.objects.filter(is_removed=False)
+        .exclude(status__in=EXCLUDED_SCHEDULE_STATUSES)
+        .select_related("instructor__user", "room")
+        .annotate(occupied=Count("reservations", filter=occupied_filter))
+    )
+
+
+def _revenue_module(amount: float, previous: float) -> dict:
+    return {
+        "amount_clp": amount,
+        "amount_usd": _convert_clp(amount, CLP_PER_USD),
+        "amount_mxn": _convert_clp(amount, CLP_PER_MXN),
+        "delta_pct": _pct_change(amount, previous),
+        "fx": {"base": "CLP", "clp_per_usd": CLP_PER_USD, "clp_per_mxn": CLP_PER_MXN},
+    }
+
+
+def _purchases_between(start, end) -> int:
+    start_dt = timezone.make_aware(datetime.combine(start, time.min))
+    end_dt = timezone.make_aware(datetime.combine(end, time.max))
+    return PlanPurchase.objects.filter(created__gte=start_dt, created__lte=end_dt).count()
+
+
 def _in_local_date_range(qs, start, end):
     start_dt = timezone.make_aware(datetime.combine(start, time.min))
     end_dt = timezone.make_aware(datetime.combine(end, time.max))
@@ -395,28 +531,39 @@ def _wallet_commerce(today, period_start) -> dict:
     class_credits = wallets.aggregate(total=Sum("class_credits"))["total"] or 0
     guest_passes = wallets.aggregate(total=Sum("guest_pass_credits"))["total"] or 0
 
-    period_start_dt = timezone.make_aware(datetime.combine(period_start, time.min))
-    period_end_dt = timezone.make_aware(datetime.combine(today, time.max))
-    period_purchases = (
-        PlanPurchase.objects.filter(created__gte=period_start_dt, created__lte=period_end_dt)
+    period_purchases = _period_purchases(period_start, today)
+    purchases_period = period_purchases.count()
+
+    return {
+        "purchases_period": purchases_period,
+        "unlimited_wallets": unlimited,
+        "class_credits_outstanding": int(class_credits),
+        "guest_passes_outstanding": int(guest_passes),
+        "revenue_by_plan": _revenue_by_plan(period_purchases),
+        "purchases_series": _purchases_series(period_purchases, period_start, today),
+        "recent_purchases": _recent_purchases(period_purchases),
+    }
+
+
+def _period_purchases(start, end):
+    start_dt = timezone.make_aware(datetime.combine(start, time.min))
+    end_dt = timezone.make_aware(datetime.combine(end, time.max))
+    return (
+        PlanPurchase.objects.filter(created__gte=start_dt, created__lte=end_dt)
         .select_related("plan", "user")
         .order_by("-created")
     )
-    purchases_period = period_purchases.count()
 
+
+def _revenue_by_plan(purchases) -> list[dict]:
     by_plan = defaultdict(lambda: {"count": 0, "revenue": 0.0})
-    by_day_count = defaultdict(int)
-    by_day_revenue = defaultdict(float)
-    for purchase in period_purchases:
+    for purchase in purchases:
         plan_name = _clean_plan_name(purchase.plan.name)
         price = float(purchase.price_paid or 0)
         by_plan[plan_name]["count"] += 1
         by_plan[plan_name]["revenue"] += price
-        day = timezone.localtime(purchase.created).date()
-        by_day_count[day] += 1
-        by_day_revenue[day] += price
 
-    revenue_by_plan = [
+    return [
         {
             "plan": name,
             "count": totals["count"],
@@ -429,18 +576,31 @@ def _wallet_commerce(today, period_start) -> dict:
         )
     ]
 
+
+def _purchases_series(purchases, start, end) -> dict:
+    by_day_count = defaultdict(int)
+    by_day_revenue = defaultdict(float)
+    for purchase in purchases:
+        price = float(purchase.price_paid or 0)
+        day = timezone.localtime(purchase.created).date()
+        by_day_count[day] += 1
+        by_day_revenue[day] += price
+
     labels = []
     counts = []
     revenues = []
-    cursor = period_start
-    while cursor <= today:
+    cursor = start
+    while cursor <= end:
         labels.append(cursor.isoformat())
         counts.append(by_day_count.get(cursor, 0))
         revenues.append(round(by_day_revenue.get(cursor, 0.0), 2))
         cursor += timedelta(days=1)
+    return {"labels": labels, "counts": counts, "revenue_clp": revenues}
 
+
+def _recent_purchases(purchases) -> list[dict]:
     recent = []
-    for purchase in period_purchases[:8]:
+    for purchase in purchases[:8]:
         user = purchase.user
         name = f"{(user.first_name or '').strip()} {(user.last_name or '').strip()}".strip()
         recent.append(
@@ -452,16 +612,7 @@ def _wallet_commerce(today, period_start) -> dict:
                 "created": purchase.created.isoformat() if purchase.created else None,
             }
         )
-
-    return {
-        "purchases_period": purchases_period,
-        "unlimited_wallets": unlimited,
-        "class_credits_outstanding": int(class_credits),
-        "guest_passes_outstanding": int(guest_passes),
-        "revenue_by_plan": revenue_by_plan,
-        "purchases_series": {"labels": labels, "counts": counts, "revenue_clp": revenues},
-        "recent_purchases": recent,
-    }
+    return recent
 
 
 def _first_timer_cohort() -> dict:
