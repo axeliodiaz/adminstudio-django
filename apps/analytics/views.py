@@ -6,7 +6,11 @@ from rest_framework.views import APIView
 
 from apps.analytics.constants import DASHBOARD_ALLOWED_DAYS, DASHBOARD_DEFAULT_DAYS
 from apps.analytics.member_stats import get_member_stats
-from apps.analytics.services import get_admin_dashboard
+from apps.analytics.services import (
+    ADMIN_DASHBOARD_MODULES,
+    get_admin_dashboard,
+    get_admin_dashboard_module,
+)
 
 User = get_user_model()
 
@@ -37,6 +41,25 @@ class AdminDashboardView(APIView):
 
     def get(self, request, *args, **kwargs):
         return Response(get_admin_dashboard(days=_parse_days(request.query_params.get("days"))))
+
+
+class AdminDashboardModuleView(APIView):
+    """A single independently-loadable card or chart in the staff dashboard."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    module = None
+
+    def get(self, request, *args, **kwargs):
+        # URL patterns are defined from the allow-list below, rather than
+        # accepting an arbitrary path parameter.
+        if self.module not in ADMIN_DASHBOARD_MODULES:
+            return Response({"detail": "Unknown dashboard module."}, status=404)
+        return Response(
+            get_admin_dashboard_module(
+                self.module,
+                days=_parse_days(request.query_params.get("days")),
+            )
+        )
 
 
 def _parse_days(raw) -> int:
