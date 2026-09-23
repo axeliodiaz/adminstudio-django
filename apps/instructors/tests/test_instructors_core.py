@@ -76,12 +76,17 @@ class TestGetInstructorFromId:
 
 @pytest.mark.django_db
 class TestInstructorsQueryset:
-    def test_returns_all_instructors(self):
+    def test_returns_only_verified_instructors(self):
         User = get_user_model()
         u1 = User.objects.create_user(username="a", email="a@example.com", password="x")
         u2 = User.objects.create_user(username="b", email="b@example.com", password="x")
-        i1 = Instructor.objects.create(user=u1)
-        i2 = Instructor.objects.create(user=u2)
+        i1 = Instructor.objects.create(user=u1, is_verified=True)
+        i2 = Instructor.objects.create(user=u2, is_verified=True)
+        unverified_user = User.objects.create_user(
+            username="unverified", email="unverified@example.com", password="x"
+        )
+        unverified = Instructor.objects.create(user=unverified_user, is_verified=False)
         qs = instructors_queryset()
         ids = set(qs.values_list("id", flat=True))
         assert i1.id in ids and i2.id in ids
+        assert unverified.id not in ids

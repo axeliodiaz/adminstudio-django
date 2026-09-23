@@ -12,9 +12,7 @@ def get_plans(*, plan_type: str | None = None) -> List[Plan]:
     if plan_type:
         queryset = queryset.filter(type=plan_type)
     return list(
-        queryset
-        .prefetch_related("benefits")
-        .order_by("-is_highlighted", "-is_popular", "-created")
+        queryset.prefetch_related("benefits").order_by("-is_highlighted", "-is_popular", "-created")
     )
 
 

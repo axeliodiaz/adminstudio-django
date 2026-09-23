@@ -38,6 +38,10 @@ class Schedule(UUIDModel, SoftDeletableModel, TimeStampedModel):
         default="",
         help_text="Optional reason shown to members when the class is cancelled.",
     )
+    check_in_qr_version = models.PositiveIntegerField(
+        default=1,
+        help_text="Incremented to revoke previously generated class check-in QR tokens.",
+    )
 
     class Meta:
         ordering = ["start_time"]
