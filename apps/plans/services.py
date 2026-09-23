@@ -21,10 +21,7 @@ from apps.plans.schemas import (
 
 def get_plans(*, plan_type: str | None = None) -> list[PlanSchema]:
     """Return a list of PlanSchema for all active plans."""
-    return [
-        PlanSchema.model_validate(obj)
-        for obj in get_plan_models(plan_type=plan_type)
-    ]
+    return [PlanSchema.model_validate(obj) for obj in get_plan_models(plan_type=plan_type)]
 
 
 def get_plan_by_id(plan_id: UUID | str) -> PlanSchema:
