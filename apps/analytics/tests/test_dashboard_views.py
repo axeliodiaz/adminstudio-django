@@ -10,7 +10,11 @@ from drf_expiring_token.models import ExpiringToken
 from model_bakery import baker
 
 from apps.analytics.constants import CLP_PER_MXN, CLP_PER_USD
-from apps.analytics.services import get_admin_dashboard
+from apps.analytics.services import (
+    ADMIN_DASHBOARD_MODULES,
+    get_admin_dashboard,
+    get_admin_dashboard_module,
+)
 from apps.members import constants as member_constants
 from apps.members.models import Member
 from apps.schedules import constants as schedule_constants
@@ -81,6 +85,23 @@ class TestAdminDashboardView:
         response = staff_client.get(reverse("admin-dashboard"), {"days": 11})
         assert response.status_code == 200
         assert response.data["range"]["days"] == 30
+
+    def test_module_endpoints_are_independently_available(self, staff_client):
+        response = staff_client.get(reverse("admin-dashboard-weekly-occupancy"))
+
+        assert response.status_code == 200
+        assert set(response.data) == {"value", "delta_pp"}
+
+    def test_every_dashboard_module_has_a_named_endpoint(self, staff_client):
+        for module in ADMIN_DASHBOARD_MODULES:
+            response = staff_client.get(reverse(f"admin-dashboard-{module}"))
+            assert response.status_code == 200, module
+
+    def test_module_endpoints_use_the_selected_period(self, staff_client):
+        response = staff_client.get(reverse("admin-dashboard-reservations-series"), {"days": 7})
+
+        assert response.status_code == 200
+        assert len(response.data["labels"]) == 7
 
 
 @pytest.mark.django_db
@@ -162,3 +183,9 @@ def test_dashboard_aggregates_occupancy_and_fx():
     assert ride["occupancy"] == 80.0
     assert yoga["occupancy"] == 50.0
     assert payload["plan_mix"][0]["plan"] == "Ilimitado"
+    assert (
+        get_admin_dashboard_module("weekly-occupancy", now=now)
+        == payload["kpis"]["weekly_occupancy"]
+    )
+    assert get_admin_dashboard_module("reservations-series", now=now) == payload["reservations_30d"]
+    assert get_admin_dashboard_module("revenue", now=now) == payload["kpis"]["revenue_7d"]
