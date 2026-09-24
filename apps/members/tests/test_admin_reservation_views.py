@@ -323,3 +323,60 @@ class TestAdminAttendanceViews:
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
         response = api_client.get(reverse("admin-attendance-day"))
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+class TestAdminReservationGuestPass:
+    def _book_guest(self, reservation_graph):
+        from apps.wallets.models import GuestPassInvitation
+
+        return GuestPassInvitation.objects.create(
+            issuer=reservation_graph["user"],
+            guest_name="Invitado Uno",
+            guest_email="invitado@example.com",
+            expires_at=datetime(2026, 12, 31, tzinfo=timezone.utc),
+            status=GuestPassInvitation.Status.BOOKED,
+            reservation=reservation_graph["reservation"],
+        )
+
+    def test_guest_pass_filter_and_payload_fields(self, staff_client, reservation_graph):
+        self._book_guest(reservation_graph)
+        response = staff_client.get(
+            reverse("admin-reservation-list"),
+            {
+                "start_date": "2025-06-01",
+                "end_date": "2025-06-07",
+                "guest_pass": "true",
+            },
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 1
+        row = response.data["results"][0]
+        assert row["is_guest_pass"] is True
+        assert row["guest_host_name"] == "Ana Ríos"
+
+    def test_guest_pass_filter_excludes_plain_reservations(self, staff_client, reservation_graph):
+        response = staff_client.get(
+            reverse("admin-reservation-list"),
+            {
+                "start_date": "2025-06-01",
+                "end_date": "2025-06-07",
+                "guest_pass": "true",
+            },
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["count"] == 0
+
+    def test_unfiltered_rows_include_guest_fields(self, staff_client, reservation_graph):
+        self._book_guest(reservation_graph)
+        response = staff_client.get(
+            reverse("admin-reservation-list"),
+            {
+                "start_date": "2025-06-01",
+                "end_date": "2025-06-07",
+            },
+        )
+        assert response.status_code == status.HTTP_200_OK
+        row = response.data["results"][0]
+        assert row["is_guest_pass"] is True
+        assert row["guest_host_name"] == "Ana Ríos"
