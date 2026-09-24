@@ -176,7 +176,16 @@ def test_dashboard_aggregates_occupancy_and_fx():
     assert payload["kpis"]["revenue_7d"]["amount_clp"] == 89000.0
     assert payload["kpis"]["revenue_7d"]["amount_usd"] == round(89000 / CLP_PER_USD, 2)
     assert payload["kpis"]["revenue_7d"]["amount_mxn"] == round(89000 / CLP_PER_MXN, 2)
-    assert payload["occupancy_by_instructor"][0]["name"] == "Camila R."
+    camila = payload["occupancy_by_instructor"][0]
+    assert camila["name"] == "Camila R."
+    assert camila["occupancy"] == 65.0
+    assert {row["title"] for row in camila["classes"]} == {"RIDE 45", "YOGA 45"}
+    ride_class = next(row for row in camila["classes"] if row["title"] == "RIDE 45")
+    assert ride_class["occupancy"] == 80.0
+    assert ride_class["booked"] == 8
+    assert ride_class["capacity"] == 10
+    yoga_class = next(row for row in camila["classes"] if row["title"] == "YOGA 45")
+    assert yoga_class["occupancy"] == 50.0
     assert payload["demand_by_format"][0]["format"] == "RIDE"
     ride = next(row for row in payload["demand_by_format"] if row["format"] == "RIDE")
     yoga = next(row for row in payload["demand_by_format"] if row["format"] == "YOGA")
