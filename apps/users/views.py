@@ -1,3 +1,4 @@
+from django.contrib.auth.models import update_last_login
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
@@ -76,6 +77,9 @@ class LoginView(APIView):
         # eliminamos cualquier token previo y creamos uno nuevo y válido.
         ExpiringToken.objects.filter(user=user).delete()
         token = ExpiringToken.objects.create(user=user)
+        # Token logins bypass django.contrib.auth.login(), so last_login is
+        # never set unless we record it here (CYC-85).
+        update_last_login(None, user)
 
         user_data = CurrentUserSchema.model_validate(user).model_dump(mode="json")
 
