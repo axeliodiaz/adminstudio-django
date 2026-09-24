@@ -364,19 +364,59 @@ def _instructor_label(instructor) -> str:
     return first or last or user.username
 
 
+WEEKDAY_SHORT_ES = ("lun", "mar", "mi\u00e9", "jue", "vie", "s\u00e1b", "dom")
+
+
 def _occupancy_by_instructor(schedules) -> list[dict]:
-    buckets = defaultdict(lambda: {"occupied": 0, "capacity": 0})
+    """Occupancy per instructor with a per-class breakdown.
+
+    Uses the same definition as the weekly occupancy KPI: the mean of the
+    per-class occupancy percentages. Cancelled/draft classes are already
+    excluded by the base queryset; classes with no room capacity are left out
+    (their occupancy is undefined).
+    """
+    by_instructor = defaultdict(list)
     for schedule in schedules:
-        key = _instructor_label(schedule.instructor)
-        buckets[key]["occupied"] += schedule.occupied or 0
-        buckets[key]["capacity"] += schedule.room.capacity or 0
+        by_instructor[_instructor_label(schedule.instructor)].append(schedule)
 
     rows = []
-    for name, totals in buckets.items():
-        pct = _occupancy_pct(totals["occupied"], totals["capacity"])
-        if pct is None:
+    for name, instructor_schedules in by_instructor.items():
+        pcts = []
+        groups = {}
+        for schedule in instructor_schedules:
+            capacity = schedule.room.capacity or 0
+            pct = _occupancy_pct(schedule.occupied or 0, capacity)
+            if pct is None:
+                continue
+            pcts.append(pct)
+            local_start = timezone.localtime(schedule.start_time)
+            key = (schedule.title or "", local_start.weekday(), local_start.strftime("%H:%M"))
+            group = groups.setdefault(key, {"booked": 0, "capacity": 0, "pcts": []})
+            group["booked"] += schedule.occupied or 0
+            group["capacity"] += capacity
+            group["pcts"].append(pct)
+        if not pcts:
             continue
-        rows.append({"name": name, "occupancy": pct})
+        classes = [
+            {
+                "title": title,
+                "day": WEEKDAY_SHORT_ES[weekday],
+                "time": time_str,
+                "occupancy": round(sum(group["pcts"]) / len(group["pcts"]), 1),
+                "booked": group["booked"],
+                "capacity": group["capacity"],
+            }
+            for (title, weekday, time_str), group in sorted(
+                groups.items(), key=lambda item: (item[0][1], item[0][2], item[0][0])
+            )
+        ]
+        rows.append(
+            {
+                "name": name,
+                "occupancy": round(sum(pcts) / len(pcts), 1),
+                "classes": classes,
+            }
+        )
     rows.sort(key=lambda row: row["occupancy"], reverse=True)
     return rows
 
