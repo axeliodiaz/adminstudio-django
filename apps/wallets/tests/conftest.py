@@ -10,7 +10,6 @@ User = get_user_model()
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def user():
     """Create a test user."""
     return User.objects.create_user(
@@ -21,14 +20,12 @@ def user():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def wallet(user):
     """Create a wallet for a user."""
     return Wallet.objects.create(user=user)
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def plan():
     """Create a test plan."""
     return Plan.objects.create(
@@ -43,7 +40,6 @@ def plan():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def plan_purchase(user, plan):
     """Create a plan purchase that is not yet activated."""
     return PlanPurchase.objects.create(
@@ -55,7 +51,6 @@ def plan_purchase(user, plan):
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def activated_plan_purchase(user, plan):
     """Create an already activated plan purchase."""
     from django.utils import timezone
@@ -70,7 +65,6 @@ def activated_plan_purchase(user, plan):
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def benefit_priority_booking():
     """Create a priority booking benefit."""
     return Benefit.objects.create(
@@ -81,7 +75,6 @@ def benefit_priority_booking():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def benefit_freeze_membership():
     """Create a freeze membership benefit."""
     return Benefit.objects.create(
@@ -92,7 +85,6 @@ def benefit_freeze_membership():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def benefit_founders_exclusive():
     """Create a founders exclusive benefit."""
     return Benefit.objects.create(
@@ -103,7 +95,6 @@ def benefit_founders_exclusive():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def benefit_unlimited_membership():
     """Create an unlimited membership benefit."""
     return Benefit.objects.create(
@@ -114,7 +105,6 @@ def benefit_unlimited_membership():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def plan_with_benefits(plan, benefit_priority_booking, benefit_freeze_membership):
     """Create a plan with benefits."""
     plan.benefits.set([benefit_priority_booking, benefit_freeze_membership])
