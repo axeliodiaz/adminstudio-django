@@ -107,6 +107,30 @@ class TestLoginView:
         new_token = ExpiringToken.objects.get(user=user)
         assert new_token.key == response.data["token"]
 
+    def test_login_updates_last_login(self, api_client, user):
+        """A successful login records last_login (CYC-85)."""
+        user.last_login = None
+        user.save(update_fields=["last_login"])
+
+        url = reverse("users:login")
+        response = api_client.post(
+            url, data={"username": "testuser", "password": "testpass123"}, format="json"
+        )
+
+        assert response.status_code == 200
+        user.refresh_from_db()
+        assert user.last_login is not None
+
+    def test_login_failure_does_not_update_last_login(self, api_client, user):
+        user.last_login = None
+        user.save(update_fields=["last_login"])
+
+        url = reverse("users:login")
+        api_client.post(url, data={"username": "testuser", "password": "wrong"}, format="json")
+
+        user.refresh_from_db()
+        assert user.last_login is None
+
     def test_login_fails_with_invalid_username(self, api_client, user):
         """Test login fails with non-existent username."""
         url = reverse("users:login")
