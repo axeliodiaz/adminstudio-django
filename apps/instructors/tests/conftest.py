@@ -3,21 +3,18 @@ from model_bakery import baker
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def instructor():
     """A single instructor with an auto-baked related user and valid email."""
     return baker.make("instructors.Instructor", user__email="instr1@example.com", is_verified=True)
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def another_instructor():
     """Another instructor with its own baked user, for multi-object tests."""
     return baker.make("instructors.Instructor", user__email="instr2@example.com", is_verified=True)
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def two_instructors():
     """Return two baked Instructor instances as a tuple, each with valid user emails."""
     i1 = baker.make("instructors.Instructor", user__email="list1@example.com", is_verified=True)
