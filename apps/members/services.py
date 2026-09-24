@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -585,7 +585,7 @@ def get_admin_attendance_roster(schedule_id: str | UUID) -> dict:
 NO_SHOW_GRACE_HOURS = 2
 # Classes starting before this timestamp keep their historical RESERVED rows:
 # that data is seed/test content the owner asked to leave untouched (CYC-90).
-NO_SHOW_RECONCILE_SINCE = datetime(2026, 9, 24, tzinfo=timezone.utc)
+NO_SHOW_RECONCILE_SINCE = datetime(2026, 9, 24, tzinfo=UTC)
 
 
 def reconcile_no_show_reservations(now=None) -> int:
