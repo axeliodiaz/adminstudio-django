@@ -4,19 +4,16 @@ from model_bakery import baker
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def room_main():
     return baker.make("studios.Room", name="Main Hall")
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def room_small():
     return baker.make("studios.Room", name="Small Studio")
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def instructor_alice():
     # Ensure deterministic username and email
     return baker.make(
@@ -27,7 +24,6 @@ def instructor_alice():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def instructor_bob():
     return baker.make(
         "instructors.Instructor",
@@ -37,7 +33,6 @@ def instructor_bob():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def schedules_sample(instructor_alice, instructor_bob, room_main, room_small):
     # Create a set of schedules spanning different start times, instructors, and rooms
     base = datetime(2025, 1, 1, 10, 0, tzinfo=timezone.utc)
