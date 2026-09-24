@@ -34,12 +34,13 @@ Pagination is **opt-in per request**. Without `page` or `page_size`, an endpoint
 |----------------------------------------|-------|----------------------------------------------|
 | `GET /api/members/admin/`              | 1     | yes (opt-in)                                 |
 | `GET /api/members/admin/reservations/` | 1     | yes (opt-in)                                 |
-| Admin users list                       | 2     | not yet                                      |
-| `GET /api/schedules/`                  | 2     | not yet                                      |
+| `GET /api/auth/users/` (admin users)   | 2     | yes (opt-in)                                 |
+| `GET /api/schedules/admin/schedules/`  | 2     | yes (opt-in)                                 |
+| `GET /api/schedules/`                  | 2     | yes (opt-in)                                 |
 | Public instructors / studios / plans / FAQs | 3 | not planned (small lists)                    |
 
 ## Phases
 
 1. **Backend opt-in** (this change): admin members and admin reservations accept `page`/`page_size`.
-2. **Front adoption**: admin tables request pages and show pager controls. Pickers that currently download the full member list switch to `?search=...&page_size=20`.
+2. **Front adoption + remaining backends** (this change): admin users, admin schedules and public schedules accept `page`/`page_size`; admin tables request pages and show pager controls; the reservation-form member picker switches to `?search=...&page_size=20`.
 3. **Default on**: once no client depends on the plain array, these endpoints paginate by default (`page=1`, `page_size=50`) and the plain-array mode is removed. This step is a breaking change and gets its own PR and note here.
