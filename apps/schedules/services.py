@@ -370,6 +370,15 @@ def create_admin_schedule(*, data: dict) -> dict:
     weeks = int(data.get("repeat_weeks") or 1)
     created: list[Schedule] = []
     start_time = data["start_time"]
+    status = data.get("status") or constants.SCHEDULE_STATUS_SCHEDULED
+
+    if status != constants.SCHEDULE_STATUS_CANCELED:
+        for offset in range(weeks):
+            _ensure_room_free(
+                room_id=data["room_id"],
+                start_time=start_time + timedelta(weeks=offset),
+                duration_minutes=int(data["duration_minutes"]),
+            )
 
     for offset in range(weeks):
         schedule = create_schedule_model(
@@ -377,7 +386,7 @@ def create_admin_schedule(*, data: dict) -> dict:
             start_time=start_time + timedelta(weeks=offset),
             duration_minutes=int(data["duration_minutes"]),
             room_id=data["room_id"],
-            status=data.get("status") or constants.SCHEDULE_STATUS_SCHEDULED,
+            status=status,
             title=title,
             description=data.get("description"),
         )
@@ -406,6 +415,18 @@ def update_admin_schedule(*, schedule_id: str | UUID, data: dict) -> dict:
         if reason is None:
             reason = schedule.cancellation_reason or ""
         return cancel_admin_schedule(schedule_id=schedule.id, reason=str(reason or ""))
+
+    timing_changed = any(
+        data.get(field) is not None for field in ("room_id", "start_time", "duration_minutes")
+    ) or (new_status is not None and new_status != schedule.status)
+    effective_status = new_status or schedule.status
+    if timing_changed and effective_status != constants.SCHEDULE_STATUS_CANCELED:
+        _ensure_room_free(
+            room_id=data.get("room_id") or schedule.room_id,
+            start_time=data.get("start_time") or schedule.start_time,
+            duration_minutes=int(data.get("duration_minutes") or schedule.duration_minutes),
+            exclude_schedule_id=schedule.id,
+        )
 
     update_schedule_model(schedule, data=data)
     return get_admin_schedule(schedule_id=schedule.id)
@@ -488,6 +509,51 @@ def overlapping_schedules_for_instructor(
         if _schedule_end(other.start_time, other.duration_minutes) > start_time:
             overlaps.append(other)
     return overlaps
+
+
+def overlapping_schedules_for_room(
+    *,
+    room_id: str | UUID,
+    start_time: datetime,
+    duration_minutes: int,
+    exclude_schedule_id: str | UUID | None = None,
+) -> list[Schedule]:
+    """Return non-canceled classes in this room that overlap the given window."""
+    window_end = _schedule_end(start_time, duration_minutes)
+    queryset = (
+        Schedule.objects.filter(room_id=room_id, is_removed=False)
+        .exclude(status=constants.SCHEDULE_STATUS_CANCELED)
+        .filter(start_time__lt=window_end)
+        .select_related("room__studio", "instructor__user")
+        .order_by("start_time")
+    )
+    if exclude_schedule_id is not None:
+        queryset = queryset.exclude(id=exclude_schedule_id)
+    return [
+        other
+        for other in queryset
+        if _schedule_end(other.start_time, other.duration_minutes) > start_time
+    ]
+
+
+def _ensure_room_free(
+    *,
+    room_id: str | UUID,
+    start_time: datetime,
+    duration_minutes: int,
+    exclude_schedule_id: str | UUID | None = None,
+) -> None:
+    conflicts = overlapping_schedules_for_room(
+        room_id=room_id,
+        start_time=start_time,
+        duration_minutes=duration_minutes,
+        exclude_schedule_id=exclude_schedule_id,
+    )
+    if conflicts:
+        other = conflicts[0]
+        when = timezone.localtime(other.start_time).strftime("%d/%m %H:%M")
+        title = other.title or "otra clase"
+        raise ValueError(f"La sala ya tiene una clase en ese horario ({title}, {when}).")
 
 
 def _serialize_conflict(schedule: Schedule) -> dict:
