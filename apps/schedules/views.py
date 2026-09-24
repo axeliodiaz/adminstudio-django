@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from apps.members.services import list_reservations
 from apps.schedules.models import Schedule
 from apps.schedules.serializers import ScheduleCreateSerializer
+from apps.common.pagination import PaginationError, paginate, wants_pagination
 from apps.schedules.services import (
     create_admin_schedule,
     create_schedule,
@@ -13,7 +14,11 @@ from apps.schedules.services import (
     get_admin_schedule,
     get_schedule_schema_by_id,
     get_schedule_schema_list,
+    schedules_public_queryset,
+    serialize_schedule_schema,
+    admin_schedules_queryset,
     list_admin_schedules,
+    serialize_admin_schedule,
     preview_substitute_coach,
     substitute_coach,
     update_admin_schedule,
@@ -145,16 +150,27 @@ class ScheduleViewSet(viewsets.ViewSet):
             if part.strip()
         ]
 
-        schemas = get_schedule_schema_list(
-            start_time=start_time,
-            end_time=end_time,
-            instructor_ids=instructor_ids or None,
-            room_name=request.query_params.get("room_name"),
-            room_ids=room_ids or None,
-            title=request.query_params.get("title"),
-            titles=class_types or None,
-            scheduled_only=True,
-        )
+        filters = {
+            "start_time": start_time,
+            "end_time": end_time,
+            "instructor_ids": instructor_ids or None,
+            "room_name": request.query_params.get("room_name"),
+            "room_ids": room_ids or None,
+            "title": request.query_params.get("title"),
+            "titles": class_types or None,
+            "scheduled_only": True,
+        }
+        if wants_pagination(request.query_params):
+            try:
+                page = paginate(
+                    request.query_params,
+                    schedules_public_queryset(**filters),
+                    serialize_schedule_schema,
+                )
+            except PaginationError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(page, status=status.HTTP_200_OK)
+        schemas = get_schedule_schema_list(**filters)
         data = [s.model_dump() for s in schemas]
         return Response(data)
 
@@ -241,14 +257,25 @@ class AdminScheduleListView(APIView):
         if isinstance(end_time, Response):
             return end_time
 
-        schedules = list_admin_schedules(
-            search=request.query_params.get("search"),
-            status=request.query_params.get("status"),
-            instructor_id=request.query_params.get("instructor_id"),
-            room_id=request.query_params.get("room_id"),
-            start_time=start_time,
-            end_time=end_time,
-        )
+        filters = {
+            "search": request.query_params.get("search"),
+            "status": request.query_params.get("status"),
+            "instructor_id": request.query_params.get("instructor_id"),
+            "room_id": request.query_params.get("room_id"),
+            "start_time": start_time,
+            "end_time": end_time,
+        }
+        if wants_pagination(request.query_params):
+            try:
+                page = paginate(
+                    request.query_params,
+                    admin_schedules_queryset(**filters),
+                    serialize_admin_schedule,
+                )
+            except PaginationError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(page, status=status.HTTP_200_OK)
+        schedules = list_admin_schedules(**filters)
         return Response(schedules, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
