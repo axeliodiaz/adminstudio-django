@@ -284,3 +284,30 @@ class TestCoachStatsAndAuthMe:
         response = api_client.get(reverse("users:me"))
         assert response.status_code == 200
         assert response.data["is_coach"] is True
+
+
+@pytest.mark.django_db
+class TestCoachRosterGuestPass:
+    def test_roster_marks_guest_riders(self, coach_client, reservation, member_user, schedule):
+        from apps.wallets.models import GuestPassInvitation
+
+        GuestPassInvitation.objects.create(
+            issuer=member_user,
+            guest_name="Invitado Uno",
+            guest_email="invitado@example.com",
+            expires_at=datetime(2026, 12, 31, tzinfo=SANTIAGO),
+            status=GuestPassInvitation.Status.BOOKED,
+            reservation=reservation,
+        )
+        response = coach_client.get(reverse("coach:class-roster", args=[schedule.id]))
+        assert response.status_code == 200
+        rider = response.data["riders"][0]
+        assert rider["is_guest_pass"] is True
+        assert rider["guest_host_name"] == "Mia Rider"
+
+    def test_roster_plain_rider_has_no_guest_badge(self, coach_client, reservation, schedule):
+        response = coach_client.get(reverse("coach:class-roster", args=[schedule.id]))
+        assert response.status_code == 200
+        rider = response.data["riders"][0]
+        assert rider["is_guest_pass"] is False
+        assert rider["guest_host_name"] == ""
