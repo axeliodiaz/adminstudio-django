@@ -1,6 +1,6 @@
 -r base.txt
 
-gunicorn==23.0.0
+gunicorn==26.2.0
 whitenoise==6.12.0
 dj-database-url==3.1.2
 psycopg[binary]==3.3.6
