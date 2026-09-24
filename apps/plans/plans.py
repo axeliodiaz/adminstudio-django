@@ -4,14 +4,15 @@ from uuid import UUID
 from apps.plans.models import Plan
 
 
-def get_plans() -> List[Plan]:
+def get_plans(*, plan_type: str | None = None) -> List[Plan]:
     """
     Return all active plans.
     """
+    queryset = Plan.objects.filter(is_active=True)
+    if plan_type:
+        queryset = queryset.filter(type=plan_type)
     return list(
-        Plan.objects.filter(is_active=True)
-        .prefetch_related("benefits")
-        .order_by("-is_highlighted", "-is_popular", "-created")
+        queryset.prefetch_related("benefits").order_by("-is_highlighted", "-is_popular", "-created")
     )
 
 

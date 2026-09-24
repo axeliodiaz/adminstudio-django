@@ -34,8 +34,13 @@ MEMBER_CHECK_IN_WINDOW_MESSAGE = (
 MEMBER_CHECK_IN_CANCELLED_CLASS_MESSAGE = "No se puede confirmar asistencia a una clase cancelada."
 
 
-def set_reservation_attendance(reservation_id: str, status: str) -> Reservation:
-    """Staff/coach attendance: RESERVED, ATTENDED or MISSED. Not allowed on cancelled bookings."""
+def set_reservation_attendance(
+    reservation_id: str,
+    status: str,
+    *,
+    method: str = "manual",
+) -> Reservation:
+    """Set attendance and retain when and how an attended check-in happened."""
     if status not in constants.ATTENDANCE_STATUSES:
         raise ReservationInvalidStateException(ATTENDANCE_INVALID_STATUS_MESSAGE)
     try:
@@ -51,7 +56,12 @@ def set_reservation_attendance(reservation_id: str, status: str) -> Reservation:
     if reservation.status == status:
         return reservation
     reservation.status = status
-    reservation.save(update_fields=["status"])
+    update_fields = ["status"]
+    if status == constants.RESERVATION_STATUS_ATTENDED:
+        reservation.attended_at = timezone.now()
+        reservation.attendance_method = method
+        update_fields.extend(["attended_at", "attendance_method"])
+    reservation.save(update_fields=update_fields)
     guest_pass = getattr(reservation, "guest_pass_invitation", None)
     if guest_pass and status == constants.RESERVATION_STATUS_ATTENDED:
         guest_pass.status = guest_pass.Status.ATTENDED
@@ -86,6 +96,7 @@ def check_in_member_reservation(reservation_id: str, user_id: str) -> Reservatio
     return set_reservation_attendance(
         str(reservation.id),
         constants.RESERVATION_STATUS_ATTENDED,
+        method="self",
     )
 
 

@@ -165,6 +165,13 @@ class Reservation(SoftDeletableModel, UUIDModel, TimeStampedModel):
         default="",
         help_text="Who cancelled: member, studio (staff), or schedule (class cancelled).",
     )
+    attended_at = models.DateTimeField(null=True, blank=True)
+    attendance_method = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="How attendance was recorded, for example manual, self, or qr.",
+    )
 
     def __str__(self):
         return f"{self.member} → {self.schedule} ({self.status})"

@@ -29,6 +29,7 @@ from pydantic import ValidationError as PydanticValidationError
 from rest_framework.views import APIView
 
 from apps.schedules.schemas import AdminScheduleWriteSchema, SubstituteCoachWriteSchema
+from apps.members.qr_check_in import generate_schedule_qr, regenerate_schedule_qr
 
 
 def _pydantic_error_response(exc: PydanticValidationError) -> Response:
@@ -261,6 +262,25 @@ class AdminScheduleListView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(schedule, status=status.HTTP_201_CREATED)
+
+
+class AdminScheduleQrView(APIView):
+    """Generate or rotate the signed member check-in URL for a class."""
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def _schedule(self, schedule_id):
+        return Schedule.objects.get(id=schedule_id, is_removed=False)
+
+    def get(self, request, schedule_id, *args, **kwargs):
+        return Response(
+            generate_schedule_qr(self._schedule(schedule_id)), status=status.HTTP_200_OK
+        )
+
+    def post(self, request, schedule_id, *args, **kwargs):
+        return Response(
+            regenerate_schedule_qr(self._schedule(schedule_id)), status=status.HTTP_200_OK
+        )
 
 
 class AdminScheduleDetailView(APIView):

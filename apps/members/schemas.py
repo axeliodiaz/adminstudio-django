@@ -96,6 +96,8 @@ class ReservationSchema(BaseModel):
     spot: int | None = None
     credit_charged: bool = False
     cancellation_source: str = ""
+    attended_at: datetime | None = None
+    attendance_method: str = ""
 
     model_config = {"from_attributes": True}
 
