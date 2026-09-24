@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -587,6 +587,44 @@ def get_admin_attendance_roster(schedule_id: str | UUID) -> dict:
             ).model_dump(mode="json")
         )
     return {"class": _serialize_attendance_class(schedule), "riders": riders}
+
+
+NO_SHOW_GRACE_HOURS = 2
+# Classes starting before this timestamp keep their historical RESERVED rows:
+# that data is seed/test content the owner asked to leave untouched (CYC-90).
+NO_SHOW_RECONCILE_SINCE = datetime(2026, 9, 24, tzinfo=UTC)
+
+
+def reconcile_no_show_reservations(now=None) -> int:
+    """Mark still-RESERVED bookings as MISSED once their class ended past the grace window.
+
+    Lazy, request-time reconciliation (the host has no scheduler). Coach-marked
+    ATTENDED rows are never touched, and no penalty is applied (CYC-90 owner
+    decision: mark only, measure, tighten later if there is abuse).
+    Returns the number of reservations marked.
+    """
+    from apps.members import constants as member_constants
+
+    now = now or timezone.now()
+    cutoff = now - timedelta(hours=NO_SHOW_GRACE_HOURS)
+    candidates = Reservation.objects.filter(
+        is_removed=False,
+        status=member_constants.RESERVATION_STATUS_RESERVED,
+        schedule__start_time__gte=NO_SHOW_RECONCILE_SINCE,
+        schedule__start_time__lte=cutoff,
+    ).select_related("schedule")
+    due_ids = [
+        reservation.id
+        for reservation in candidates
+        if reservation.schedule.start_time
+        + timedelta(minutes=reservation.schedule.duration_minutes)
+        <= cutoff
+    ]
+    if not due_ids:
+        return 0
+    return Reservation.objects.filter(id__in=due_ids).update(
+        status=member_constants.RESERVATION_STATUS_MISSED
+    )
 
 
 def mark_remaining_attendance_missed(schedule_id: str | UUID) -> dict:
