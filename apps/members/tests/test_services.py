@@ -5,9 +5,11 @@ from apps.members import constants
 from apps.members.models import Reservation, Member
 from apps.members.exceptions import ReservationInvalidStateException, InvalidSpotException
 from apps.members.services import (
+    NO_SHOW_RECONCILE_SINCE,
     cancel_reservation as service_cancel_reservation,
     list_reservations as service_list_reservations,
     change_reservation_spot as service_change_reservation_spot,
+    reconcile_no_show_reservations,
 )
 
 from django.contrib.auth import get_user_model
@@ -325,3 +327,76 @@ class TestMembersServices:
         # Test spot out of range
         with pytest.raises(InvalidSpotException):
             service_change_reservation_spot(str(schedule.id), str(member.user.id), 11)
+
+
+@pytest.mark.django_db
+class TestNoShowReconciliation:
+    def _graph(self):
+        User = get_user_model()
+        member = Member.objects.create(
+            user=User.objects.create_user(
+                username=f"m_{uuid.uuid4()}", email=f"m_{uuid.uuid4()}@ex.com", password="pass"
+            )
+        )
+        instructor = Instructor.objects.create(
+            user=User.objects.create_user(
+                username=f"i_{uuid.uuid4()}", email=f"i_{uuid.uuid4()}@ex.com", password="pass"
+            )
+        )
+        address = Address.objects.create(address="Addr")
+        studio = Studio.objects.create(name="S1", address=address, is_active=True)
+        room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+        return member, instructor, room
+
+    def _reservation(self, member, instructor, room, start, status=None, duration=45):
+        schedule = Schedule.objects.create(
+            instructor=instructor, start_time=start, duration_minutes=duration, room=room
+        )
+        return Reservation.objects.create(
+            member=member,
+            schedule=schedule,
+            status=status or constants.RESERVATION_STATUS_RESERVED,
+        )
+
+    def test_marks_ended_class_past_grace_as_missed(self):
+        member, instructor, room = self._graph()
+        reservation = self._reservation(
+            member, instructor, room, timezone.now() - datetime.timedelta(hours=4)
+        )
+        assert reconcile_no_show_reservations() == 1
+        reservation.refresh_from_db()
+        assert reservation.status == constants.RESERVATION_STATUS_MISSED
+
+    def test_keeps_reserved_within_grace_window(self):
+        member, instructor, room = self._graph()
+        reservation = self._reservation(
+            member, instructor, room, timezone.now() - datetime.timedelta(minutes=100)
+        )
+        assert reconcile_no_show_reservations() == 0
+        reservation.refresh_from_db()
+        assert reservation.status == constants.RESERVATION_STATUS_RESERVED
+
+    def test_leaves_legacy_data_before_cutoff_untouched(self):
+        member, instructor, room = self._graph()
+        reservation = self._reservation(
+            member,
+            instructor,
+            room,
+            NO_SHOW_RECONCILE_SINCE - datetime.timedelta(days=1),
+        )
+        assert reconcile_no_show_reservations() == 0
+        reservation.refresh_from_db()
+        assert reservation.status == constants.RESERVATION_STATUS_RESERVED
+
+    def test_never_touches_attended_rows(self):
+        member, instructor, room = self._graph()
+        reservation = self._reservation(
+            member,
+            instructor,
+            room,
+            timezone.now() - datetime.timedelta(hours=4),
+            status=constants.RESERVATION_STATUS_ATTENDED,
+        )
+        assert reconcile_no_show_reservations() == 0
+        reservation.refresh_from_db()
+        assert reservation.status == constants.RESERVATION_STATUS_ATTENDED
