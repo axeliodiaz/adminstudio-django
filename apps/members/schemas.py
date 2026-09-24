@@ -102,6 +102,30 @@ class ReservationSchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ReservationScheduleSummarySchema(BaseModel):
+    """Class details embedded in the member's own reservation list (CYC-81)."""
+
+    id: uuid.UUID
+    title: str = ""
+    start_time: datetime
+    duration_minutes: int
+    status: str
+    cancellation_reason: str = ""
+    instructor_id: uuid.UUID | None = None
+    instructor_name: str = ""
+    room_id: uuid.UUID | None = None
+    room_name: str = ""
+    room_capacity: int | None = None
+    studio_id: uuid.UUID | None = None
+    studio_name: str = ""
+
+
+class MemberReservationSchema(ReservationSchema):
+    """Reservation row plus its class, so Mis reservas needs a single request."""
+
+    schedule: ReservationScheduleSummarySchema | None = None
+
+
 class AdminReservationSchema(BaseModel):
     """Enriched reservation row for the PulseFit staff admin."""
 
