@@ -273,8 +273,8 @@ def confirm_password_reset(code: str, new_password: str) -> None:
     reset_code.delete()
 
 
-def list_admin_users(*, search: str | None = None, role: str | None = None) -> list[dict]:
-    """Return non-deleted users for the staff admin list."""
+def admin_users_queryset(*, search: str | None = None, role: str | None = None):
+    """Filtered, ordered queryset behind the staff users list."""
     queryset = User.objects.filter(is_removed=False).order_by("first_name", "last_name", "email")
 
     if role == "staff":
@@ -292,7 +292,16 @@ def list_admin_users(*, search: str | None = None, role: str | None = None) -> l
             | Q(phone_number__icontains=term)
         )
 
-    return [AdminUserSchema.model_validate(user).model_dump(mode="json") for user in queryset]
+    return queryset
+
+
+def serialize_admin_user(user) -> dict:
+    return AdminUserSchema.model_validate(user).model_dump(mode="json")
+
+
+def list_admin_users(*, search: str | None = None, role: str | None = None) -> list[dict]:
+    """Return non-deleted users for the staff admin list."""
+    return [serialize_admin_user(user) for user in admin_users_queryset(search=search, role=role)]
 
 
 def pending_email_for(user: User) -> str | None:
