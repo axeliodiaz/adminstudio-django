@@ -26,24 +26,20 @@ def new_user_data():
 
 # DB objects
 @pytest.fixture
-@pytest.mark.django_db
 def existing_user(existing_user_email):
     return baker.make("users.User", email=existing_user_email)
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def member_user(member_existing_email):
     return baker.make("users.User", email=member_existing_email)
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def existing_member(member_user):
     return baker.make("members.Member", user=member_user)
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def user_without_member(member_missing_email):
     return baker.make("users.User", email=member_missing_email)

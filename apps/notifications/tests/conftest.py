@@ -5,7 +5,6 @@ from model_bakery import baker
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def notification():
     notification = baker.make(
         "notifications.Notification",
@@ -51,13 +50,11 @@ def mocked_pending():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def recipients():
     return baker.make("users.User", _quantity=3)
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def enqueued_notifications():
     return baker.make(
         "notifications.Notification",
@@ -67,7 +64,6 @@ def enqueued_notifications():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def sent_notifications():
     return baker.make(
         "notifications.Notification",
