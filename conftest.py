@@ -66,7 +66,6 @@ def api_client():
 
 
 @pytest.fixture
-@pytest.mark.django_db
 def base_graph():
     """Builds a minimal graph used by multiple tests: member, instructor, room.
 
@@ -105,3 +104,9 @@ def base_graph():
     instructor = Instructor.objects.create(user=user_instr)
 
     return member, instructor, room
+
+
+@pytest.fixture(autouse=True)
+def _enable_db_for_all_tests(db):
+    """Grant DB access to every test (replaces fixture-applied django_db marks)."""
+    return
