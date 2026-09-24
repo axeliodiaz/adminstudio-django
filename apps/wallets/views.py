@@ -3,6 +3,7 @@
 from datetime import timedelta
 
 from django.conf import settings
+from django.db.models import Prefetch
 from django.http import Http404
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -12,9 +13,10 @@ from rest_framework.views import APIView
 
 from django.contrib.auth import get_user_model
 
+from apps.plans.models import Benefit
 from apps.wallets.exceptions import PurchaseAlreadyActivatedException
 from apps.wallets.models import GuestPassInvitation, PlanPurchase, Wallet
-from apps.wallets.schemas import PlanPurchaseSchema, WalletDashboardSchema, WalletSchema
+from apps.wallets.schemas import WalletDashboardSchema, WalletPurchaseSchema, WalletSchema
 from apps.wallets.serializers import (
     GuestPassClaimSerializer,
     GuestPassInviteSerializer,
@@ -298,8 +300,19 @@ class WalletViewSet(viewsets.ViewSet):
         wallet, _ = Wallet.objects.get_or_create(user=user)
 
         # Get all purchases for the user, ordered by most recent first
+        # Active benefits are prefetched in one query so the wallet page doesn't
+        # fetch each plan and benefit separately (CYC-82).
         purchases = (
-            PlanPurchase.objects.filter(user=user).select_related("plan").order_by("-created")
+            PlanPurchase.objects.filter(user=user)
+            .select_related("plan")
+            .prefetch_related(
+                Prefetch(
+                    "plan__benefits",
+                    queryset=Benefit.objects.filter(is_active=True).order_by("name"),
+                    to_attr="active_benefits",
+                )
+            )
+            .order_by("-created")
         )
 
         # Serialize purchases with plan name
@@ -315,8 +328,16 @@ class WalletViewSet(viewsets.ViewSet):
                 "end": purchase.end,
                 "plan_id": purchase.plan.id,
                 "plan_name": purchase.plan.name,
+                "plan": {
+                    "id": purchase.plan.id,
+                    "name": purchase.plan.name,
+                    "benefits_list": [
+                        {"id": b.id, "name": b.name, "description": b.description or ""}
+                        for b in purchase.plan.active_benefits
+                    ],
+                },
             }
-            purchase_schemas.append(PlanPurchaseSchema(**purchase_data))
+            purchase_schemas.append(WalletPurchaseSchema(**purchase_data))
 
         # Create dashboard schema
         wallet_schema = WalletSchema.model_validate(wallet)
