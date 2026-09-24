@@ -146,4 +146,4 @@ def test_public_schedule_query_hides_non_scheduled_classes(base_graph):
     )
     response = APIClient().get("/api/schedules/")
     assert response.status_code == 200
-    assert [str(row["id"]) for row in response.data] == [str(scheduled.id)]
+    assert [str(row["id"]) for row in response.data["results"]] == [str(scheduled.id)]

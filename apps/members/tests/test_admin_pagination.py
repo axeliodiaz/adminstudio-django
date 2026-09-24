@@ -1,4 +1,4 @@
-"""Opt-in pagination on staff members/reservations lists (CYC-80)."""
+"""Default pagination on staff members/reservations lists (CYC-80 phase 3)."""
 
 from datetime import timedelta
 
@@ -39,11 +39,13 @@ def members(db):
 
 @pytest.mark.django_db
 class TestAdminMembersPagination:
-    def test_without_page_params_returns_plain_list(self, staff_client, members):
+    def test_without_page_params_returns_first_page(self, staff_client, members):
         resp = staff_client.get(reverse("admin-members"))
         assert resp.status_code == 200
-        assert isinstance(resp.data, list)
-        assert len(resp.data) == 7
+        assert resp.data["count"] == 7
+        assert resp.data["page"] == 1
+        assert resp.data["page_size"] == 50
+        assert len(resp.data["results"]) == 7
 
     def test_page_envelope(self, staff_client, members):
         resp = staff_client.get(reverse("admin-members"), {"page": 2, "page_size": 3})
@@ -96,7 +98,8 @@ class TestAdminReservationsPagination:
 
         url = reverse("admin-reservation-list")
         plain = staff_client.get(url, {"schedule_id": str(schedule.id)})
-        assert isinstance(plain.data, list) and len(plain.data) == 7
+        assert plain.data["count"] == 7
+        assert len(plain.data["results"]) == 7
 
         resp = staff_client.get(url, {"schedule_id": str(schedule.id), "page": 3, "page_size": 3})
         assert resp.status_code == 200
