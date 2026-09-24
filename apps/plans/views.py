@@ -50,7 +50,7 @@ class PlanViewSet(viewsets.ViewSet):
         return [AllowAny()]
 
     def list(self, request, *args: Any, **kwargs: Any) -> Response:
-        schemas = services.get_plans()
+        schemas = services.get_plans(plan_type=request.query_params.get("type"))
         data = [s.model_dump(by_alias=True) for s in schemas]
         return Response(data, status=status.HTTP_200_OK)
 
