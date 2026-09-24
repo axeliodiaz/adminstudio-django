@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from markdown import markdown
 
 from apps.legal.models import LegalDocument
@@ -73,6 +74,6 @@ class LegalDocumentAdmin(admin.ModelAdmin):
                 '<div style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background: #f9f9f9;">{}</div>',
                 html,
             )
-        return format_html("<em>No hay contenido aún</em>")
+        return mark_safe("<em>No hay contenido aún</em>")
 
     content_preview.short_description = "Vista previa renderizada"
