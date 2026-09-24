@@ -453,3 +453,47 @@ def render_coach_substituted(
 """
     preheader = f"Nuevo coach: {new_coach_name} · {class_title}"
     return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)
+
+
+def render_class_reminder(
+    *,
+    class_title: str,
+    time_label: str,
+    instructor_name: str,
+    studio_name: str,
+    room_name: str,
+    spot: int | None,
+    action_url: str,
+    frontend_url: str,
+) -> str:
+    separator = " \u00b7 "
+    location = separator.join(escape(bit) for bit in (studio_name, room_name) if bit)
+    spot_label = f"{separator}Spot {int(spot)}" if spot else ""
+    notice = _notice_box(
+        "Lleva zapatillas de ciclismo (o avisa en recepci\u00f3n si necesitas pares de "
+        "pr\u00e9stamo) y una toalla. Hidrataci\u00f3n en la sala.",
+        tone="info",
+    )
+    cta = _cta_button(action_url, "Ver detalle de la clase")
+    preheader = (
+        f"Tu spot {int(spot)} te espera. Recuerda calzado de ciclismo y toalla."
+        if spot
+        else "Recuerda calzado de ciclismo y toalla."
+    )
+    heading = f"Nos vemos ma\u00f1ana a las {escape(time_label)}"
+    cancel_note = (
+        "\u00bfNo puedes ir? Cancela desde Mis reservas para liberar el spot "
+        "a la lista de espera."
+    )
+    body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">{heading}</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  Recordatorio de tu clase <strong>{escape(class_title)}</strong> con {escape(instructor_name)} en {location}{spot_label}.
+</p>
+{notice}
+{cta}
+<p style="margin:16px 0 0;font-family:{FONT};font-size:13px;line-height:20px;color:{TEXT}">
+  {cancel_note}
+</p>
+"""
+    return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)
