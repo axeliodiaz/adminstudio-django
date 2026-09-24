@@ -100,8 +100,8 @@ class TestAdminReservationViews:
             },
         )
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
-        row = response.data[0]
+        assert response.data["count"] == 1
+        row = response.data["results"][0]
         assert row["id"] == str(reservation.id)
         assert row["member_email"] == "socio@example.com"
         assert row["member_name"] == "Ana Ríos"
@@ -120,7 +120,7 @@ class TestAdminReservationViews:
             {"start_date": "2025-06-01", "end_date": "2025-06-07"},
         )
         assert all_response.status_code == status.HTTP_200_OK
-        assert len(all_response.data) == 1
+        assert all_response.data["count"] == 1
 
         reserved_response = staff_client.get(
             reverse("admin-reservation-list"),
@@ -131,7 +131,7 @@ class TestAdminReservationViews:
             },
         )
         assert reserved_response.status_code == status.HTTP_200_OK
-        assert reserved_response.data == []
+        assert reserved_response.data["results"] == []
 
         cancelled_response = staff_client.get(
             reverse("admin-reservation-list"),
@@ -142,7 +142,7 @@ class TestAdminReservationViews:
             },
         )
         assert cancelled_response.status_code == status.HTTP_200_OK
-        assert len(cancelled_response.data) == 1
+        assert cancelled_response.data["count"] == 1
 
     def test_list_search_by_email(self, staff_client, reservation_graph):
         response = staff_client.get(
@@ -154,7 +154,7 @@ class TestAdminReservationViews:
             },
         )
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 1
+        assert response.data["count"] == 1
 
         miss = staff_client.get(
             reverse("admin-reservation-list"),
@@ -165,7 +165,7 @@ class TestAdminReservationViews:
             },
         )
         assert miss.status_code == status.HTTP_200_OK
-        assert miss.data == []
+        assert miss.data["results"] == []
 
     def test_create_cancel_and_change_spot(self, staff_client, reservation_graph):
         from apps.wallets.models import Wallet
