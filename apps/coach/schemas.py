@@ -78,6 +78,8 @@ class RiderSchema(BaseModel):
     spot_number: int | None = None
     checked_in: bool = False
     is_first_class: bool = False
+    is_guest_pass: bool = False
+    guest_host_name: str = ""
 
 
 class RosterSchema(BaseModel):
