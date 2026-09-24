@@ -173,6 +173,17 @@ class Reservation(SoftDeletableModel, UUIDModel, TimeStampedModel):
         help_text="How attendance was recorded, for example manual, self, or qr.",
     )
 
+    class Meta:
+        indexes = [
+            # CYC-79: occupancy counts filter (schedule, is_removed, status).
+            models.Index(
+                fields=["schedule", "is_removed", "status"],
+                name="reservation_sched_occ_idx",
+            ),
+            # CYC-79: member history filters (member, is_removed).
+            models.Index(fields=["member", "is_removed"], name="reservation_member_idx"),
+        ]
+
     def __str__(self):
         return f"{self.member} → {self.schedule} ({self.status})"
 
