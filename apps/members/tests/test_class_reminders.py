@@ -11,7 +11,14 @@ from apps.schedules import constants as schedule_constants
 from apps.schedules.models import Schedule
 
 
-def _make_schedule(instructor, room, *, start_time, status=schedule_constants.SCHEDULE_STATUS_SCHEDULED, title="RIDE 45"):
+def _make_schedule(
+    instructor,
+    room,
+    *,
+    start_time,
+    status=schedule_constants.SCHEDULE_STATUS_SCHEDULED,
+    title="RIDE 45",
+):
     return Schedule.objects.create(
         title=title,
         instructor=instructor,
@@ -71,9 +78,7 @@ def test_command_is_idempotent(base_graph):
 def test_other_days_and_states_are_skipped(base_graph):
     member, instructor, room = base_graph
     today = timezone.localdate()
-    start_today = timezone.make_aware(
-        timezone.datetime(today.year, today.month, today.day, 23, 30)
-    )
+    start_today = timezone.make_aware(timezone.datetime(today.year, today.month, today.day, 23, 30))
     today_schedule = _make_schedule(instructor, room, start_time=start_today)
     Reservation.objects.create(
         member=member,
