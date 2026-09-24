@@ -375,6 +375,7 @@ class AdminReservationListView(APIView):
                 "room_id",
                 "status",
                 "search",
+                "guest_pass",
             )
         }
         try:
