@@ -312,13 +312,22 @@ def _roster_reservations(schedule: Schedule):
             is_removed=False,
             status__in=constants.ROSTER_STATUSES,
         )
-        .select_related("member__user")
+        .select_related("member__user", "guest_pass_invitation__issuer")
         .order_by("spot", "member__user__first_name", "member__user__last_name")
     )
 
 
+def _display_name(user) -> str:
+    if not user:
+        return ""
+    name = " ".join(part for part in [user.first_name, user.last_name] if part).strip()
+    return name or user.username or user.email or ""
+
+
 def _rider_payload(reservation: Reservation, first_ids: dict) -> dict:
     user = reservation.member.user
+    guest_pass = getattr(reservation, "guest_pass_invitation", None)
+    host = getattr(guest_pass, "issuer", None) if guest_pass else None
     return {
         "reservation_id": reservation.id,
         "first_name": user.first_name,
@@ -326,6 +335,8 @@ def _rider_payload(reservation: Reservation, first_ids: dict) -> dict:
         "spot_number": reservation.spot,
         "checked_in": reservation.status == member_constants.RESERVATION_STATUS_ATTENDED,
         "is_first_class": first_ids.get(reservation.member_id) == reservation.id,
+        "is_guest_pass": bool(guest_pass),
+        "guest_host_name": _display_name(host),
     }
 
 
