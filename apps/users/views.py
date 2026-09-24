@@ -17,7 +17,7 @@ from apps.users.serializers import (
 from pydantic import ValidationError as PydanticValidationError
 
 from apps.users.schemas import AdminUserUpdateSchema, CurrentUserSchema
-from apps.common.pagination import PaginationError, paginate, wants_pagination
+from apps.common.pagination import PaginationError, paginate
 from apps.users.services import (
     change_user_password,
     request_password_recovery,
@@ -115,18 +115,15 @@ class AdminUserListView(APIView):
             "search": request.query_params.get("search"),
             "role": request.query_params.get("role"),
         }
-        if wants_pagination(request.query_params):
-            try:
-                page = paginate(
-                    request.query_params,
-                    admin_users_queryset(**filters),
-                    serialize_admin_user,
-                )
-            except PaginationError as exc:
-                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-            return Response(page, status=status.HTTP_200_OK)
-        users = list_admin_users(**filters)
-        return Response(users, status=status.HTTP_200_OK)
+        try:
+            page = paginate(
+                request.query_params,
+                admin_users_queryset(**filters),
+                serialize_admin_user,
+            )
+        except PaginationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(page, status=status.HTTP_200_OK)
 
 
 class AdminUserDetailView(APIView):
