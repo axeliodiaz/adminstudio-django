@@ -59,12 +59,8 @@ def _admin_member_dict(member: Member, *, include_pending_email: bool = False) -
     return payload
 
 
-def list_admin_members(
-    *,
-    search: str | None = None,
-    status: str | None = None,
-) -> list[dict]:
-    """Return members for the staff admin list."""
+def admin_members_queryset(*, search: str | None = None, status: str | None = None):
+    """Filtered, ordered queryset behind the staff members list."""
     queryset = (
         Member.objects.select_related("user", "user__wallet")
         .annotate(reservation_count=Count("reservations"))
@@ -85,8 +81,23 @@ def list_admin_members(
             | Q(user__username__icontains=term)
             | Q(user__phone_number__icontains=term)
         )
+    return queryset
 
-    return [_admin_member_dict(member) for member in queryset]
+
+def serialize_admin_member(member: Member) -> dict:
+    return _admin_member_dict(member)
+
+
+def list_admin_members(
+    *,
+    search: str | None = None,
+    status: str | None = None,
+) -> list[dict]:
+    """Return members for the staff admin list."""
+    return [
+        _admin_member_dict(member)
+        for member in admin_members_queryset(search=search, status=status)
+    ]
 
 
 def get_admin_member(*, member_id: str | UUID) -> dict:
@@ -298,7 +309,7 @@ def _parse_date(value: str | None, field_name: str) -> date | None:
         raise ValueError(f"{field_name} must be YYYY-MM-DD.") from exc
 
 
-def list_admin_reservations(
+def admin_reservations_queryset(
     *,
     start_date: str | date | None = None,
     end_date: str | date | None = None,
@@ -308,8 +319,8 @@ def list_admin_reservations(
     room_id: str | UUID | None = None,
     status: str | None = None,
     search: str | None = None,
-) -> list[dict]:
-    """Return enriched reservations for the staff admin list."""
+):
+    """Filtered queryset behind the staff reservations list."""
     parsed_start = (
         start_date if isinstance(start_date, date) else _parse_date(start_date, "start_date")
     )
@@ -320,7 +331,7 @@ def list_admin_reservations(
         parsed_start = today.fromordinal(today.toordinal() - today.weekday())
         parsed_end = parsed_start.fromordinal(parsed_start.toordinal() + 6)
 
-    qs = members.list_admin_reservations(
+    return members.list_admin_reservations(
         start_date=parsed_start,
         end_date=parsed_end,
         member_id=member_id,
@@ -330,7 +341,15 @@ def list_admin_reservations(
         status=status,
         search=search,
     )
-    return [_serialize_admin_reservation(obj) for obj in qs]
+
+
+def serialize_admin_reservation(reservation: Reservation) -> dict:
+    return _serialize_admin_reservation(reservation)
+
+
+def list_admin_reservations(**filters) -> list[dict]:
+    """Return enriched reservations for the staff admin list."""
+    return [_serialize_admin_reservation(obj) for obj in admin_reservations_queryset(**filters)]
 
 
 def get_admin_reservation(reservation_id: str | UUID) -> dict:
