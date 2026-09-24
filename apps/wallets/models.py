@@ -99,6 +99,12 @@ class PlanPurchase(UUIDModel, TimeStampedModel, TimeFramedModel):
         verbose_name = "Plan Purchase"
         verbose_name_plural = "Plan Purchases"
         ordering = ["-created"]
+        indexes = [
+            # CYC-79: revenue/purchase analytics filter created ranges.
+            models.Index(fields=["created"], name="planpurchase_created_idx"),
+            # CYC-79: wallet history filters by user ordered by -created.
+            models.Index(fields=["user", "created"], name="planpurchase_user_created_idx"),
+        ]
 
     def save(self, *args, **kwargs):
         """
