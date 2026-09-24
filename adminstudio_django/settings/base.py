@@ -226,6 +226,9 @@ EMAIL_VERIFICATION_EXPIRATION_HOURS = int(
 )
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
 
+# CYC-6: days before membership/pack expiry to email the renewal reminder.
+MEMBERSHIP_EXPIRY_REMINDER_DAYS = int(os.environ.get("MEMBERSHIP_EXPIRY_REMINDER_DAYS", "7"))
+
 # Token expiration settings for drf-expiring-token
 # Tokens will expire after this time period (default: 24 hours)
 from datetime import timedelta
