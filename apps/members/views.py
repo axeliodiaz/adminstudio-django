@@ -56,6 +56,7 @@ from apps.members.services import (
     list_admin_attendance_classes,
     get_admin_attendance_roster,
     mark_remaining_attendance_missed,
+    reconcile_no_show_reservations,
     join_waitlist,
     list_waitlist,
     leave_waitlist,
@@ -146,6 +147,7 @@ class ReservationView(ViewSet):
         return Response(reservation.model_dump(), status=status.HTTP_201_CREATED)
 
     def list(self, request, *args, **kwargs):
+        reconcile_no_show_reservations()
         logger.info(
             "Member opened My Reservations",
             extra={"user_id": str(request.user.id)},
@@ -375,9 +377,9 @@ class AdminReservationListView(APIView):
                 "room_id",
                 "status",
                 "search",
-                "guest_pass",
             )
         }
+        reconcile_no_show_reservations()
         try:
             page = paginate(
                 request.query_params,
@@ -472,6 +474,7 @@ class AdminAttendanceDayView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request, *args, **kwargs):
+        reconcile_no_show_reservations()
         try:
             payload = list_admin_attendance_classes(day=request.query_params.get("date"))
         except ValueError as exc:
