@@ -366,6 +366,7 @@ class AdminReservationListView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request, *args, **kwargs):
+        reconcile_no_show_reservations()
         filters = {
             key: request.query_params.get(key)
             for key in (
@@ -377,9 +378,9 @@ class AdminReservationListView(APIView):
                 "room_id",
                 "status",
                 "search",
+                "guest_pass",
             )
         }
-        reconcile_no_show_reservations()
         try:
             page = paginate(
                 request.query_params,
