@@ -164,6 +164,17 @@ def get_schedule_schema_list(
     )
 
 
+def schedules_public_queryset(**filters):
+    """Occupancy-annotated queryset behind the public schedules list."""
+    return _annotate_occupancy(get_schedules_list(**filters))
+
+
+def serialize_schedule_schema(schedule) -> dict:
+    """Public schedule row: ScheduleSchema plus occupancy and display fields."""
+    schema = ScheduleSchema.model_validate(schedule)
+    return schema.model_copy(update=_schedule_occupancy(schedule)).model_dump()
+
+
 def get_schedule_schema_by_id(schedule_id: UUID) -> ScheduleSchema:
     """Fetch schedule by id and return as ScheduleSchema.
 
@@ -288,7 +299,7 @@ def _admin_queryset():
     )
 
 
-def list_admin_schedules(
+def admin_schedules_queryset(
     *,
     search: str | None = None,
     status: str | None = None,
@@ -296,8 +307,8 @@ def list_admin_schedules(
     room_id: str | UUID | None = None,
     start_time: datetime | None = None,
     end_time: datetime | None = None,
-) -> list[dict]:
-    """Return non-deleted schedules for the staff admin calendar."""
+):
+    """Filtered queryset behind the staff admin calendar."""
     queryset = _admin_queryset()
 
     if status in constants.SCHEDULE_STATUSES:
@@ -323,7 +334,34 @@ def list_admin_schedules(
             | Q(instructor__user__username__icontains=term)
         ).distinct()
 
-    return [_serialize_admin_schedule(schedule) for schedule in queryset]
+    return queryset
+
+
+def serialize_admin_schedule(schedule) -> dict:
+    return _serialize_admin_schedule(schedule)
+
+
+def list_admin_schedules(
+    *,
+    search: str | None = None,
+    status: str | None = None,
+    instructor_id: str | UUID | None = None,
+    room_id: str | UUID | None = None,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
+) -> list[dict]:
+    """Return non-deleted schedules for the staff admin calendar."""
+    return [
+        _serialize_admin_schedule(schedule)
+        for schedule in admin_schedules_queryset(
+            search=search,
+            status=status,
+            instructor_id=instructor_id,
+            room_id=room_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+    ]
 
 
 def get_admin_schedule(*, schedule_id: str | UUID) -> dict:
