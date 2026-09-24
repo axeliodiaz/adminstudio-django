@@ -40,7 +40,11 @@ from apps.members.services import (
     cancel_reservation,
     change_reservation_spot,
     check_in_member_reservation,
+    admin_members_queryset,
+    admin_reservations_queryset,
     list_admin_members,
+    serialize_admin_member,
+    serialize_admin_reservation,
     list_reservations,
     update_admin_member,
     list_admin_reservations,
@@ -60,6 +64,8 @@ from apps.members.services import (
 from apps.members.models import Member, Reservation, WaitlistEntry
 from apps.referrals.services import attribute_signup, get_valid_referral_code
 from apps.members.qr_check_in import check_in_member_by_qr
+
+from apps.common.pagination import PaginationError, paginate, wants_pagination
 
 logger = logging.getLogger(__name__)
 
@@ -297,10 +303,21 @@ class AdminMemberListView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request, *args, **kwargs):
-        members_list = list_admin_members(
-            search=request.query_params.get("search"),
-            status=request.query_params.get("status"),
-        )
+        filters = {
+            "search": request.query_params.get("search"),
+            "status": request.query_params.get("status"),
+        }
+        if wants_pagination(request.query_params):
+            try:
+                page = paginate(
+                    request.query_params,
+                    admin_members_queryset(**filters),
+                    serialize_admin_member,
+                )
+            except PaginationError as exc:
+                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(page, status=status.HTTP_200_OK)
+        members_list = list_admin_members(**filters)
         return Response(members_list, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
@@ -350,17 +367,28 @@ class AdminReservationListView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request, *args, **kwargs):
-        try:
-            reservations = list_admin_reservations(
-                start_date=request.query_params.get("start_date"),
-                end_date=request.query_params.get("end_date"),
-                member_id=request.query_params.get("member_id"),
-                schedule_id=request.query_params.get("schedule_id"),
-                instructor_id=request.query_params.get("instructor_id"),
-                room_id=request.query_params.get("room_id"),
-                status=request.query_params.get("status"),
-                search=request.query_params.get("search"),
+        filters = {
+            key: request.query_params.get(key)
+            for key in (
+                "start_date",
+                "end_date",
+                "member_id",
+                "schedule_id",
+                "instructor_id",
+                "room_id",
+                "status",
+                "search",
             )
+        }
+        try:
+            if wants_pagination(request.query_params):
+                page = paginate(
+                    request.query_params,
+                    admin_reservations_queryset(**filters),
+                    serialize_admin_reservation,
+                )
+                return Response(page, status=status.HTTP_200_OK)
+            reservations = list_admin_reservations(**filters)
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservations, status=status.HTTP_200_OK)

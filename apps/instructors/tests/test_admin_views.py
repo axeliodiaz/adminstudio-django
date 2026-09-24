@@ -63,7 +63,12 @@ class TestAdminInstructorListView:
         baker.make(
             "instructors.Instructor",
             user__email="other@example.com",
+            user__username="other",
             user__first_name="Bob",
+            user__last_name="Smith",
+            location="",
+            instagram_username="",
+            tagline="",
             is_verified=False,
         )
 
