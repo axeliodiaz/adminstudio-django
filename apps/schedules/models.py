@@ -45,6 +45,10 @@ class Schedule(UUIDModel, SoftDeletableModel, TimeStampedModel):
 
     class Meta:
         ordering = ["start_time"]
+        indexes = [
+            # CYC-79: nearly every schedule query filters a range on start_time.
+            models.Index(fields=["start_time"], name="schedule_start_time_idx"),
+        ]
 
     def __str__(self):
         return f"{self.title} - {self.start_time})"
