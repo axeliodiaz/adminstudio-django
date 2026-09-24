@@ -50,8 +50,8 @@ class TestAdminScheduleViews:
     def test_list_returns_nested_labels(self, staff_client, schedules_sample):
         response = staff_client.get(reverse("admin-schedule-list"))
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.data) == 3
-        row = response.data[0]
+        assert response.data["count"] == 3
+        row = response.data["results"][0]
         assert row["instructor_name"]
         assert row["room_name"]
         assert "reservation_count" in row
@@ -72,7 +72,7 @@ class TestAdminScheduleViews:
             },
         )
         assert response.status_code == status.HTTP_200_OK
-        assert [row["id"] for row in response.data] == [str(sample.id)]
+        assert [row["id"] for row in response.data["results"]] == [str(sample.id)]
 
     def test_create_repeat_weeks_and_update_and_delete(
         self, staff_client, instructor_alice, room_main
