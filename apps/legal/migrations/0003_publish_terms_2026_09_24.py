@@ -36,5 +36,5 @@ def rollback_terms(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("legal", "0001_initial")]
+    dependencies = [("legal", "0002_chilean_privacy_policy")]
     operations = [migrations.RunPython(publish_terms, rollback_terms)]
