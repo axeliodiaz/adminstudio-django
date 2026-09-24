@@ -330,11 +330,12 @@ class TestAdminUserListView:
         response = api_client.get(url)
 
         assert response.status_code == 200
-        emails = {row["email"] for row in response.data}
+        rows = response.data["results"]
+        emails = {row["email"] for row in rows}
         assert "test@example.com" in emails
         assert "admin@example.com" in emails
-        assert "is_staff" in response.data[0]
-        assert "last_login" in response.data[0]
+        assert "is_staff" in rows[0]
+        assert "last_login" in rows[0]
 
     def test_users_filters_by_role_and_search(self, api_client, user):
         staff_user = User.objects.create_user(
@@ -351,12 +352,12 @@ class TestAdminUserListView:
 
         staff_response = api_client.get(url, {"role": "staff"})
         assert staff_response.status_code == 200
-        assert all(row["is_staff"] is True for row in staff_response.data)
-        assert len(staff_response.data) == 1
+        assert all(row["is_staff"] is True for row in staff_response.data["results"])
+        assert staff_response.data["count"] == 1
 
         search_response = api_client.get(url, {"search": "testuser"})
         assert search_response.status_code == 200
-        assert [row["email"] for row in search_response.data] == ["test@example.com"]
+        assert [row["email"] for row in search_response.data["results"]] == ["test@example.com"]
 
 
 @pytest.mark.django_db

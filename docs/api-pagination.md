@@ -1,10 +1,10 @@
 # API pagination (CYC-80)
 
-List endpoints are moving from "return every row" to page-number pagination. The rollout goes in phases, so existing clients don't break.
+List endpoints use page-number pagination. Rolled out in phases so existing clients didn't break; **phase 3 (current) makes pagination always on** and removes the legacy plain-array mode.
 
 ## Contract
 
-Pagination is **opt-in per request**. Without `page` or `page_size`, an endpoint keeps returning a plain JSON array, exactly as before. With either parameter it returns an envelope:
+Pagination is **always on**. Without `page` or `page_size`, the endpoint returns page 1 with the default page size. The response is always an envelope:
 
 ```json
 {
@@ -43,4 +43,4 @@ Pagination is **opt-in per request**. Without `page` or `page_size`, an endpoint
 
 1. **Backend opt-in** (this change): admin members and admin reservations accept `page`/`page_size`.
 2. **Front adoption + remaining backends** (this change): admin users, admin schedules and public schedules accept `page`/`page_size`; admin tables request pages and show pager controls; the reservation-form member picker switches to `?search=...&page_size=20`.
-3. **Default on**: once no client depends on the plain array, these endpoints paginate by default (`page=1`, `page_size=50`) and the plain-array mode is removed. This step is a breaking change and gets its own PR and note here.
+3. **Default on** (this change): the five endpoints below paginate by default (`page=1`, `page_size=50`) and the plain-array mode is removed. Front callers were made pagination-safe first (adminstudio-front #87/#88: full-list callers pin `page_size=200`; tables and pickers were already paged).

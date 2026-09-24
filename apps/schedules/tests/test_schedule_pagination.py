@@ -1,4 +1,4 @@
-"""Opt-in pagination on schedules lists (CYC-80 phase 2)."""
+"""Default pagination on schedules lists (CYC-80 phase 3)."""
 
 from datetime import timedelta
 
@@ -52,11 +52,11 @@ def schedules(db):
 
 @pytest.mark.django_db
 class TestAdminSchedulesPagination:
-    def test_without_page_params_returns_plain_list(self, staff_client, schedules):
+    def test_without_page_params_returns_first_page(self, staff_client, schedules):
         resp = staff_client.get(reverse("admin-schedule-list"))
         assert resp.status_code == 200
-        assert isinstance(resp.data, list)
-        assert len(resp.data) == 7
+        assert resp.data["count"] == 7
+        assert len(resp.data["results"]) == 7
 
     def test_page_envelope(self, staff_client, schedules):
         resp = staff_client.get(reverse("admin-schedule-list"), {"page": 2, "page_size": 3})
@@ -76,11 +76,11 @@ class TestAdminSchedulesPagination:
 
 @pytest.mark.django_db
 class TestPublicSchedulesPagination:
-    def test_without_page_params_returns_plain_list(self, api_client, schedules):
+    def test_without_page_params_returns_first_page(self, api_client, schedules):
         resp = api_client.get(reverse("schedule-list"))
         assert resp.status_code == 200
-        assert isinstance(resp.data, list)
-        assert len(resp.data) == 7
+        assert resp.data["count"] == 7
+        assert len(resp.data["results"]) == 7
 
     def test_page_envelope_keeps_row_shape(self, api_client, schedules):
         resp = api_client.get(reverse("schedule-list"), {"page": 1, "page_size": 5})

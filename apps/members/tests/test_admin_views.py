@@ -58,9 +58,10 @@ class TestAdminMemberListView:
         response = client.get(reverse("admin-members"))
 
         assert response.status_code == 200
-        ids = {row["id"] for row in response.data}
+        rows = response.data["results"]
+        ids = {row["id"] for row in rows}
         assert str(member_user.id) in ids
-        match = next(row for row in response.data if row["id"] == str(member_user.id))
+        match = next(row for row in rows if row["id"] == str(member_user.id))
         assert match["email"] == "socio@example.com"
         assert match["class_credits"] == 5
         assert match["first_name"] == "Ana"
@@ -78,12 +79,12 @@ class TestAdminMemberListView:
 
         active_response = client.get(reverse("admin-members"), {"status": "active"})
         assert active_response.status_code == 200
-        assert all(row["is_active"] is True for row in active_response.data)
-        assert str(member_user.id) in {row["id"] for row in active_response.data}
+        assert all(row["is_active"] is True for row in active_response.data["results"])
+        assert str(member_user.id) in {row["id"] for row in active_response.data["results"]}
 
         search_response = client.get(reverse("admin-members"), {"search": "Ana"})
         assert search_response.status_code == 200
-        assert [row["email"] for row in search_response.data] == ["socio@example.com"]
+        assert [row["email"] for row in search_response.data["results"]] == ["socio@example.com"]
 
     def test_create_member(self, staff_client):
         client, _ = staff_client

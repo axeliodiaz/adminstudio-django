@@ -1,4 +1,4 @@
-"""Opt-in pagination on the staff users list (CYC-80 phase 2)."""
+"""Default pagination on the staff users list (CYC-80 phase 3)."""
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -35,10 +35,12 @@ def users(db):
 
 @pytest.mark.django_db
 class TestAdminUsersPagination:
-    def test_without_page_params_returns_plain_list(self, staff_client, users):
+    def test_without_page_params_returns_first_page(self, staff_client, users):
         resp = staff_client.get(reverse("users:users"))
         assert resp.status_code == 200
-        assert isinstance(resp.data, list)
+        assert resp.data["count"] == User.objects.count()
+        assert resp.data["page"] == 1
+        assert resp.data["page_size"] == 50
 
     def test_page_envelope(self, staff_client, users):
         resp = staff_client.get(reverse("users:users"), {"page": 2, "page_size": 3})

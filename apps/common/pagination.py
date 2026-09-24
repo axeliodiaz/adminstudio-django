@@ -1,7 +1,7 @@
-"""Opt-in page-number pagination for list endpoints (CYC-80).
+"""Page-number pagination for list endpoints (CYC-80).
 
-A list endpoint keeps returning a plain JSON array unless the client sends
-``page`` or ``page_size``. Then it returns an envelope::
+List endpoints return an envelope (phase 3: always on, ``page=1`` and
+``page_size=50`` by default)::
 
     {"count": 123, "page": 2, "page_size": 50, "total_pages": 3,
      "next_page": 3, "previous_page": 1, "results": [...]}
