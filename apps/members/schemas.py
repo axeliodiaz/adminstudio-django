@@ -152,6 +152,8 @@ class AdminReservationSchema(BaseModel):
     notes: str = ""
     credit_charged: bool = False
     cancellation_source: str = ""
+    is_guest_pass: bool = False
+    guest_host_name: str = ""
 
     model_config = {"from_attributes": True}
 
