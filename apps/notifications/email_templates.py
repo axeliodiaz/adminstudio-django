@@ -497,3 +497,44 @@ def render_class_reminder(
 </p>
 """
     return _shell(preheader=preheader, body_html=body, frontend_url=frontend_url)
+
+
+def render_membership_expiry(
+    *,
+    plan_name: str,
+    days_left: int,
+    end_date_label: str,
+    remaining_classes: int | None,
+    total_classes: int | None,
+    action_url: str,
+    frontend_url: str,
+) -> str:
+    if days_left == 0:
+        cadence = "vence hoy"
+    elif days_left == 1:
+        cadence = "caduca ma\u00f1ana"
+    else:
+        cadence = f"caduca en {days_left} d\u00edas"
+    credits_line = ""
+    if total_classes:
+        credits_line = f" Te quedan {remaining_classes or 0} clases este ciclo."
+    rows = [("Plan actual", plan_name), ("Vence", end_date_label)]
+    if total_classes:
+        rows.append(("Clases restantes", f"{remaining_classes or 0} de {total_classes}"))
+    body = f"""
+<h1 style="margin:0 0 12px;font-family:{FONT};font-size:24px;font-weight:700;line-height:32px;color:{DARK}">Tu plan vence el {escape(end_date_label)}</h1>
+<p style="margin:0 0 16px;font-family:{FONT};font-size:15px;line-height:24px;color:{TEXT}">
+  Tu plan <strong>{escape(plan_name)}</strong> {cadence}.{credits_line}
+  Si renuevas ahora, los cr\u00e9ditos no usados no se arrastran: revisa condiciones en tu billetera.
+</p>
+{_detail_rows(rows)}
+{_cta_button(action_url, "Renovar plan")}
+<p style="margin:0 0 16px;font-family:{FONT};font-size:13px;line-height:20px;color:{MUTED}">
+  Puedes cambiar a Unlimited o a un pack suelto desde Planes y Membres\u00edas.
+</p>
+"""
+    return _shell(
+        preheader="Renueva para no perder prioridad en lista de espera ni tus cr\u00e9ditos restantes.",
+        body_html=body,
+        frontend_url=frontend_url,
+    )
