@@ -458,6 +458,7 @@ def list_admin_reservations(
     room_id=None,
     status=None,
     search=None,
+    guest_pass=None,
 ) -> QuerySet[Reservation]:
     """
     Return reservations for the staff admin, including cancelled rows.
@@ -485,7 +486,18 @@ def list_admin_reservations(
         "member__user",
         "schedule__instructor__user",
         "schedule__room__studio",
+        "guest_pass_invitation__issuer",
     )
+
+    if str(guest_pass).lower() in ("1", "true", "yes"):
+        from apps.wallets.models import GuestPassInvitation
+
+        queryset = queryset.filter(
+            guest_pass_invitation__status__in=[
+                GuestPassInvitation.Status.BOOKED,
+                GuestPassInvitation.Status.ATTENDED,
+            ]
+        )
 
     if search:
         term = search.strip()
