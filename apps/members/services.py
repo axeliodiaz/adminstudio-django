@@ -341,6 +341,7 @@ def create_admin_reservation(data: dict) -> dict:
             "schedule_id": data["schedule_id"],
             "spot": data["spot"],
             "notes": data.get("notes") or "Admin reservation",
+            "allow_past": True,
         }
     )
     return get_admin_reservation(reservation.id)
