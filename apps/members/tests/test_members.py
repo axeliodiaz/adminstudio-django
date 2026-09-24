@@ -442,6 +442,38 @@ class TestMembersDomain:
         member = Member.objects.get(user=user)
         assert reservation.member == member
 
+    @pytest.mark.parametrize(
+        "offset",
+        [
+            datetime.timedelta(minutes=-1),
+            datetime.timedelta(hours=-16),
+            datetime.timedelta(days=-1),
+        ],
+    )
+    def test_create_reservation_rejects_past_schedule(self, base_graph, offset):
+        member, instructor, room = base_graph
+        schedule = Schedule.objects.create(
+            instructor=instructor,
+            start_time=timezone.now() + offset,
+            duration_minutes=45,
+            room=room,
+        )
+
+        validated_data = {
+            "user_id": member.user.id,
+            "schedule_id": schedule.id,
+            "spot": 1,
+        }
+
+        with pytest.raises(ReservationInvalidStateException):
+            create_reservation(validated_data)
+
+        assert not Reservation.objects.filter(schedule=schedule).exists()
+        from apps.wallets.models import Wallet
+
+        wallet = Wallet.objects.filter(user=member.user).first()
+        assert wallet is None or wallet.class_credits == 10
+
     def test_create_reservation_invalid_spot_less_than_one_raises_exception(self, base_graph):
         member, instructor, room = base_graph
         schedule = Schedule.objects.create(
