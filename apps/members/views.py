@@ -59,6 +59,7 @@ from apps.members.services import (
 )
 from apps.members.models import Member, Reservation, WaitlistEntry
 from apps.referrals.services import attribute_signup, get_valid_referral_code
+from apps.members.qr_check_in import check_in_member_by_qr
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +198,19 @@ class ReservationView(ViewSet):
         except Reservation.DoesNotExist:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         except (ReservationInvalidStateException, InvalidSpotException) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(reservation.model_dump(), status=status.HTTP_200_OK)
+
+    def qr_check_in(self, request, schedule_id=None, *args, **kwargs):
+        token = request.data.get("token") or request.query_params.get("token")
+        if not token:
+            return Response(
+                {"detail": "El token QR es obligatorio."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            reservation = check_in_member_by_qr(str(schedule_id), str(request.user.id), str(token))
+        except ReservationInvalidStateException as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(reservation.model_dump(), status=status.HTTP_200_OK)
 
