@@ -165,6 +165,11 @@ class Reservation(SoftDeletableModel, UUIDModel, TimeStampedModel):
         default="",
         help_text="Who cancelled: member, studio (staff), or schedule (class cancelled).",
     )
+    reminder_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the day-before class reminder email was sent for this reservation.",
+    )
     attended_at = models.DateTimeField(null=True, blank=True)
     attendance_method = models.CharField(
         max_length=20,
