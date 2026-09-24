@@ -1,4 +1,4 @@
-Django==5.2.7
+Django==6.1.1
 sentry-sdk[django]==2.70.0
 black==25.9.0
 djangorestframework==3.18.1
