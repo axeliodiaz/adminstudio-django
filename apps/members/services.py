@@ -272,6 +272,9 @@ def _serialize_admin_reservation(reservation: Reservation) -> dict:
     room = getattr(schedule, "room", None)
     studio = getattr(room, "studio", None) if room else None
 
+    guest_pass = getattr(reservation, "guest_pass_invitation", None)
+    host = getattr(guest_pass, "issuer", None) if guest_pass else None
+
     payload = {
         "id": reservation.id,
         "created": reservation.created,
@@ -296,6 +299,8 @@ def _serialize_admin_reservation(reservation: Reservation) -> dict:
         "notes": reservation.notes or "",
         "credit_charged": bool(reservation.credit_charged),
         "cancellation_source": reservation.cancellation_source or "",
+        "is_guest_pass": bool(guest_pass),
+        "guest_host_name": _member_display_name(host),
     }
     return AdminReservationSchema.model_validate(payload).model_dump(mode="json")
 
@@ -319,6 +324,7 @@ def admin_reservations_queryset(
     room_id: str | UUID | None = None,
     status: str | None = None,
     search: str | None = None,
+    guest_pass: str | None = None,
 ):
     """Filtered queryset behind the staff reservations list."""
     parsed_start = (
@@ -340,6 +346,7 @@ def admin_reservations_queryset(
         room_id=room_id,
         status=status,
         search=search,
+        guest_pass=guest_pass,
     )
 
 
