@@ -165,7 +165,7 @@ class ReservationView(ViewSet):
         query_serializer = ReservationListQuerySerializer(data=data)
         query_serializer.is_valid(raise_exception=True)
         data = query_serializer.validated_data
-        schemas = list_reservations(data)
+        schemas = list_reservations(data, include_schedule=True)
         payload = [schema.model_dump() for schema in schemas]
         return Response(payload, status=status.HTTP_200_OK)
 

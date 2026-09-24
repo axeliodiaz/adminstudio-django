@@ -16,6 +16,7 @@ from apps.members.schemas import (
     AdminAttendanceRiderSchema,
     AdminMemberSchema,
     AdminReservationSchema,
+    MemberReservationSchema,
     MemberSchema,
     ReservationSchema,
     WaitlistEntrySchema,
@@ -184,8 +185,36 @@ def check_in_member_reservation(reservation_id: str, user_id: str | UUID) -> Res
     return ReservationSchema.model_validate(reservation)
 
 
-def list_reservations(validated_query: dict) -> list[ReservationSchema]:
-    """Application service: list reservations via domain and return schemas."""
+def _schedule_summary(schedule) -> dict | None:
+    if schedule is None:
+        return None
+    room = getattr(schedule, "room", None)
+    studio = getattr(room, "studio", None) if room else None
+    return {
+        "id": schedule.id,
+        "title": schedule.title or "",
+        "start_time": schedule.start_time,
+        "duration_minutes": schedule.duration_minutes,
+        "status": schedule.status,
+        "cancellation_reason": schedule.cancellation_reason or "",
+        "instructor_id": schedule.instructor_id,
+        "instructor_name": _instructor_display_name(schedule),
+        "room_id": schedule.room_id,
+        "room_name": room.name if room else "",
+        "room_capacity": room.capacity if room else None,
+        "studio_id": studio.id if studio else None,
+        "studio_name": studio.name if studio else "",
+    }
+
+
+def list_reservations(
+    validated_query: dict, *, include_schedule: bool = False
+) -> list[ReservationSchema]:
+    """Application service: list reservations via domain and return schemas.
+
+    With ``include_schedule`` each row embeds its class (title, time, instructor,
+    room, studio) from one joined query, so callers don't fetch per schedule.
+    """
     query_params = {}
     if "start_date" in validated_query:
         query_params["start_date"] = validated_query["start_date"]
@@ -201,7 +230,15 @@ def list_reservations(validated_query: dict) -> list[ReservationSchema]:
         query_params["room_id"] = validated_query["schedule__room_id"]
 
     qs = members.list_reservations_by_date_range(**query_params)
-    return [ReservationSchema.model_validate(obj) for obj in qs]
+    if not include_schedule:
+        return [ReservationSchema.model_validate(obj) for obj in qs]
+
+    qs = qs.select_related("schedule__instructor__user", "schedule__room__studio")
+    rows = []
+    for obj in qs:
+        base = ReservationSchema.model_validate(obj).model_dump()
+        rows.append(MemberReservationSchema(**base, schedule=_schedule_summary(obj.schedule)))
+    return rows
 
 
 def _member_display_name(user) -> str:
