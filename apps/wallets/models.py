@@ -94,6 +94,9 @@ class PlanPurchase(UUIDModel, TimeStampedModel, TimeFramedModel):
         verbose_name="Payment method",
     )
     activated_since = models.DateField(null=True, blank=True, verbose_name="Activated Since")
+    expiry_reminder_sent_at = models.DateTimeField(
+        null=True, blank=True, verbose_name="Expiry Reminder Sent At"
+    )
 
     class Meta:
         verbose_name = "Plan Purchase"
