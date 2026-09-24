@@ -160,6 +160,17 @@ def create_reservation(validated_data: dict) -> Reservation:
     # Fetch Schedule model instance via domain function
     schedule = get_schedule_by_id(validated_data["schedule_id"])
 
+    # A class that has already started (or ended) cannot be booked by members.
+    # Staff can still record a reservation retroactively (allow_past=True).
+    if (
+        not validated_data.get("allow_past")
+        and schedule.start_time
+        and schedule.start_time <= timezone.now()
+    ):
+        raise ReservationInvalidStateException(
+            "Esta clase ya comenzó o finalizó; no se puede reservar."
+        )
+
     # Validate spot range
     spot = validated_data["spot"]
     room_capacity = schedule.room.capacity
