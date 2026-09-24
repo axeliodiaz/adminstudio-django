@@ -39,10 +39,30 @@ class PlanPurchaseSchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PurchasePlanBenefitSchema(BaseModel):
+    id: uuid.UUID
+    name: str
+    description: str = ""
+
+    model_config = {"from_attributes": True}
+
+
+class PurchasePlanSummarySchema(BaseModel):
+    id: uuid.UUID
+    name: str
+    benefits_list: list[PurchasePlanBenefitSchema] = Field(default_factory=list)
+
+
+class WalletPurchaseSchema(PlanPurchaseSchema):
+    """Purchase row for the wallet page, with its plan's active benefits (CYC-82)."""
+
+    plan: PurchasePlanSummarySchema | None = None
+
+
 class WalletDashboardSchema(BaseModel):
     """Schema for wallet dashboard response."""
 
     wallet: WalletSchema
-    purchases: list[PlanPurchaseSchema]
+    purchases: list[WalletPurchaseSchema]
 
     model_config = {"from_attributes": True}
