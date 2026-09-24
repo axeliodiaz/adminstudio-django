@@ -65,7 +65,7 @@ from apps.members.models import Member, Reservation, WaitlistEntry
 from apps.referrals.services import attribute_signup, get_valid_referral_code
 from apps.members.qr_check_in import check_in_member_by_qr
 
-from apps.common.pagination import PaginationError, paginate, wants_pagination
+from apps.common.pagination import PaginationError, paginate
 
 logger = logging.getLogger(__name__)
 
@@ -307,18 +307,15 @@ class AdminMemberListView(APIView):
             "search": request.query_params.get("search"),
             "status": request.query_params.get("status"),
         }
-        if wants_pagination(request.query_params):
-            try:
-                page = paginate(
-                    request.query_params,
-                    admin_members_queryset(**filters),
-                    serialize_admin_member,
-                )
-            except PaginationError as exc:
-                return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-            return Response(page, status=status.HTTP_200_OK)
-        members_list = list_admin_members(**filters)
-        return Response(members_list, status=status.HTTP_200_OK)
+        try:
+            page = paginate(
+                request.query_params,
+                admin_members_queryset(**filters),
+                serialize_admin_member,
+            )
+        except PaginationError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(page, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         try:
@@ -381,17 +378,14 @@ class AdminReservationListView(APIView):
             )
         }
         try:
-            if wants_pagination(request.query_params):
-                page = paginate(
-                    request.query_params,
-                    admin_reservations_queryset(**filters),
-                    serialize_admin_reservation,
-                )
-                return Response(page, status=status.HTTP_200_OK)
-            reservations = list_admin_reservations(**filters)
-        except ValueError as exc:
+            page = paginate(
+                request.query_params,
+                admin_reservations_queryset(**filters),
+                serialize_admin_reservation,
+            )
+        except (PaginationError, ValueError) as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(reservations, status=status.HTTP_200_OK)
+        return Response(page, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         try:
