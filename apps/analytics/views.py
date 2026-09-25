@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.analytics.constants import DASHBOARD_ALLOWED_DAYS, DASHBOARD_DEFAULT_DAYS
+from apps.analytics.dashboard_cache import get_or_compute, invalidate
 from apps.analytics.member_stats import get_member_stats
 from apps.analytics.services import (
     ADMIN_DASHBOARD_MODULES,
@@ -40,7 +41,8 @@ class AdminDashboardView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request, *args, **kwargs):
-        return Response(get_admin_dashboard(days=_parse_days(request.query_params.get("days"))))
+        days = _parse_days(request.query_params.get("days"))
+        return Response(get_or_compute("all", days, lambda: get_admin_dashboard(days=days)))
 
 
 class AdminDashboardModuleView(APIView):
@@ -54,12 +56,29 @@ class AdminDashboardModuleView(APIView):
         # accepting an arbitrary path parameter.
         if self.module not in ADMIN_DASHBOARD_MODULES:
             return Response({"detail": "Unknown dashboard module."}, status=404)
+        days = _parse_days(request.query_params.get("days"))
         return Response(
-            get_admin_dashboard_module(
+            get_or_compute(
                 self.module,
-                days=_parse_days(request.query_params.get("days")),
+                days,
+                lambda: get_admin_dashboard_module(self.module, days=days),
             )
         )
+
+
+class AdminDashboardRefreshView(APIView):
+    """Invalidate the cached staff dashboard payloads. Staff only.
+
+    The dashboard reload button calls this endpoint and then refetches
+    every module, so each card re-queries the database and rebuilds the
+    cache.
+    """
+
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, *args, **kwargs):
+        invalidate()
+        return Response({"detail": "Dashboard cache invalidated."})
 
 
 def _parse_days(raw) -> int:
