@@ -6,6 +6,7 @@ set -e
 # and must not block port 80.
 (
   python manage.py migrate --noinput
+  python manage.py createcachetable
   python manage.py ensure_superuser
   python manage.py load_versioned_fixtures || echo "load_versioned_fixtures failed; continuing with seeds"
   python manage.py seed_demo_catalog
