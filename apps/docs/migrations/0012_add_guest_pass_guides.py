@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 PAGES = (
     (
         "invitar-con-pase-de-invitado",

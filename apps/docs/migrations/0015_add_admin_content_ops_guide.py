@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 PAGE = {
     "slug": "admin-legales-y-docs",
     "title": "Publicar documentos legales y artículos de ayuda",
