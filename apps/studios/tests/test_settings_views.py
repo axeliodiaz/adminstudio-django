@@ -31,9 +31,18 @@ def superuser():
 
 @pytest.mark.django_db
 class TestAdminStudioSettingsView:
-    def test_staff_can_get_settings(self, api_client, staff_user):
+    def test_staff_cannot_get_settings(self, api_client, staff_user):
         StudioSettings.load()
         token = ExpiringToken.objects.create(user=staff_user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+
+        response = api_client.get(reverse("admin-studio-settings"))
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_superuser_can_get_settings(self, api_client, superuser):
+        StudioSettings.load()
+        token = ExpiringToken.objects.create(user=superuser)
         api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
         response = api_client.get(reverse("admin-studio-settings"))
