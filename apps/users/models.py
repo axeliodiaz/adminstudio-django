@@ -76,6 +76,18 @@ class User(AbstractUser, SoftDeletableModel, UUIDModel, TimeStampedModel):
 
         return Instructor.objects.filter(user_id=self.pk, is_removed=False).exists()
 
+    @property
+    def is_coach_coordinator(self) -> bool:
+        from apps.instructors.models import Instructor
+
+        return Instructor.objects.filter(
+            user_id=self.pk, is_removed=False, is_coordinator=True
+        ).exists()
+
+    @property
+    def can_view_admin_dashboard(self) -> bool:
+        return bool(self.is_staff or self.is_superuser or self.is_coach_coordinator)
+
 
 class LoadedFixturePack(TimeStampedModel):
     """Tracks which versioned fixture pack was applied (idempotent loaddata)."""
