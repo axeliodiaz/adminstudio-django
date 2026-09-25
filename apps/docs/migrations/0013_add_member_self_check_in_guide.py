@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 SECTION_SLUG = "clases-y-horarios"
 PAGE_SLUG = "confirmar-asistencia-a-una-clase"
 

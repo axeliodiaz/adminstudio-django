@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 SECTIONS = (
     {
         "slug": "informacion-publica",

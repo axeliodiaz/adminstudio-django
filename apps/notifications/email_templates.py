@@ -149,14 +149,12 @@ def render_welcome_email(*, first_name: str, classes_url: str, frontend_url: str
 def _detail_rows(rows: list[tuple[str, str]]) -> str:
     cells = []
     for label, value in rows:
-        cells.append(
-            f"""
+        cells.append(f"""
 <tr>
   <td style="padding:10px 0;border-bottom:1px solid {BORDER};font-family:{FONT};font-size:13px;color:{MUTED};width:38%;vertical-align:top">{escape(label)}</td>
   <td style="padding:10px 0;border-bottom:1px solid {BORDER};font-family:{FONT};font-size:15px;font-weight:700;color:{DARK};vertical-align:top">{escape(value)}</td>
 </tr>
-"""
-        )
+""")
     return (
         '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" '
         f'style="width:100%;border-collapse:collapse;margin:8px 0 20px">{"".join(cells)}</table>'
