@@ -16,6 +16,7 @@ from apps.analytics.services import (
     get_admin_dashboard,
     get_admin_dashboard_module,
 )
+from apps.instructors.models import Instructor
 from apps.members import constants as member_constants
 from apps.members.models import Member
 from apps.schedules import constants as schedule_constants
@@ -38,6 +39,19 @@ def staff_client(api_client):
         is_staff=True,
     )
     token = ExpiringToken.objects.create(user=staff_user)
+    api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+    return api_client
+
+
+@pytest.fixture
+def coordinator_client(api_client):
+    coordinator = User.objects.create_user(
+        username="dashcoordinator",
+        email="dashcoordinator@example.com",
+        password="testpass123",
+    )
+    Instructor.objects.create(user=coordinator, is_coordinator=True)
+    token = ExpiringToken.objects.create(user=coordinator)
     api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
     return api_client
 
@@ -244,3 +258,26 @@ class TestAdminDashboardCache:
         staff_client.get(url)
         staff_client.get(url)
         assert compute.call_count == 1
+
+
+@pytest.mark.django_db
+class TestCoachCoordinatorDashboardAccess:
+    def test_coordinator_can_view_dashboard(self, coordinator_client):
+        response = coordinator_client.get(reverse("admin-dashboard"))
+        assert response.status_code == 200
+
+    def test_coordinator_can_view_module(self, coordinator_client):
+        response = coordinator_client.get(reverse("admin-dashboard-weekly-occupancy"))
+        assert response.status_code == 200
+
+    def test_coordinator_can_refresh(self, coordinator_client):
+        response = coordinator_client.post(reverse("admin-dashboard-refresh"))
+        assert response.status_code == 200
+
+    def test_plain_coach_is_forbidden(self, api_client):
+        coach = User.objects.create_user(username="dashcoach", password="testpass123")
+        Instructor.objects.create(user=coach, is_coordinator=False)
+        token = ExpiringToken.objects.create(user=coach)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        response = api_client.get(reverse("admin-dashboard"))
+        assert response.status_code == 403
