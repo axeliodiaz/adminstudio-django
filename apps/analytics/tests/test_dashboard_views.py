@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.urls import reverse
 from drf_expiring_token.models import ExpiringToken
 from model_bakery import baker
@@ -21,6 +22,11 @@ from apps.schedules import constants as schedule_constants
 from apps.wallets.models import PlanPurchase, Wallet
 
 User = get_user_model()
+
+
+@pytest.fixture(autouse=True)
+def _clear_dashboard_cache():
+    cache.clear()
 
 
 @pytest.fixture
@@ -198,3 +204,43 @@ def test_dashboard_aggregates_occupancy_and_fx():
     )
     assert get_admin_dashboard_module("reservations-series", now=now) == payload["reservations_30d"]
     assert get_admin_dashboard_module("revenue", now=now) == payload["kpis"]["revenue_7d"]
+
+
+@pytest.mark.django_db
+class TestAdminDashboardCache:
+    def test_module_payload_is_cached(self, staff_client, mocker):
+        compute = mocker.patch(
+            "apps.analytics.views.get_admin_dashboard_module",
+            return_value={"value": 1},
+        )
+        url = reverse("admin-dashboard-reservations-today")
+        first = staff_client.get(url)
+        second = staff_client.get(url)
+        assert first.status_code == 200
+        assert second.status_code == 200
+        assert compute.call_count == 1
+
+    def test_refresh_endpoint_invalidates_cache(self, staff_client, mocker):
+        compute = mocker.patch(
+            "apps.analytics.views.get_admin_dashboard_module",
+            return_value={"value": 1},
+        )
+        url = reverse("admin-dashboard-reservations-today")
+        staff_client.get(url)
+        refresh = staff_client.post(reverse("admin-dashboard-refresh"))
+        assert refresh.status_code == 200
+        staff_client.get(url)
+        assert compute.call_count == 2
+
+    def test_refresh_requires_staff(self, api_client):
+        assert api_client.post(reverse("admin-dashboard-refresh")).status_code in (401, 403)
+
+    def test_aggregate_dashboard_is_cached(self, staff_client, mocker):
+        compute = mocker.patch(
+            "apps.analytics.views.get_admin_dashboard",
+            return_value={"kpis": {}},
+        )
+        url = reverse("admin-dashboard")
+        staff_client.get(url)
+        staff_client.get(url)
+        assert compute.call_count == 1
