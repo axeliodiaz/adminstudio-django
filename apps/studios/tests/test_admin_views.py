@@ -28,6 +28,22 @@ def staff_client(api_client, staff_user):
     return api_client
 
 
+@pytest.fixture
+def superuser():
+    return User.objects.create_superuser(
+        username="superadmin",
+        email="superadmin@example.com",
+        password="pass1234",
+    )
+
+
+@pytest.fixture
+def superuser_client(api_client, superuser):
+    token = ExpiringToken.objects.create(user=superuser)
+    api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+    return api_client
+
+
 @pytest.mark.django_db
 class TestAdminStudioViews:
     def test_list_requires_staff(self, api_client):
@@ -50,8 +66,8 @@ class TestAdminStudioViews:
         match = next(row for row in response.data if row["id"] == str(studio.id))
         assert len(match["rooms"]) == 2
 
-    def test_create_and_update_studio(self, staff_client):
-        create_response = staff_client.post(
+    def test_create_and_update_studio(self, superuser_client):
+        create_response = superuser_client.post(
             reverse("admin-studio-list"),
             data={
                 "name": "Lo Barnechea",
@@ -69,7 +85,7 @@ class TestAdminStudioViews:
         assert create_response.data["name"] == "Lo Barnechea"
         assert create_response.data["address"]["address"] == "Patio Andino 4770"
 
-        update_response = staff_client.patch(
+        update_response = superuser_client.patch(
             reverse("admin-studio-detail", kwargs={"studio_id": studio_id}),
             data={"name": "PulseFit Lo Barnechea", "is_active": False},
             format="json",
@@ -78,8 +94,8 @@ class TestAdminStudioViews:
         assert update_response.data["name"] == "PulseFit Lo Barnechea"
         assert update_response.data["is_active"] is False
 
-    def test_create_and_update_room(self, staff_client, studio):
-        create_response = staff_client.post(
+    def test_create_and_update_room(self, superuser_client, studio):
+        create_response = superuser_client.post(
             reverse("admin-room-list"),
             data={
                 "studio_id": str(studio.id),
@@ -93,7 +109,7 @@ class TestAdminStudioViews:
         room_id = create_response.data["id"]
         assert create_response.data["studio_id"] == str(studio.id)
 
-        update_response = staff_client.patch(
+        update_response = superuser_client.patch(
             reverse("admin-room-detail", kwargs={"room_id": room_id}),
             data={"capacity": 28, "is_active": False},
             format="json",
@@ -103,8 +119,8 @@ class TestAdminStudioViews:
         assert update_response.data["is_active"] is False
         assert Room.objects.get(id=room_id).capacity == 28
 
-    def test_create_studio_requires_name(self, staff_client):
-        response = staff_client.post(
+    def test_create_studio_requires_name(self, superuser_client):
+        response = superuser_client.post(
             reverse("admin-studio-list"),
             data={"is_active": True},
             format="json",
@@ -112,3 +128,52 @@ class TestAdminStudioViews:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert Address.objects.count() == 0
         assert Studio.objects.count() == 0
+
+
+@pytest.mark.django_db
+class TestAdminStudioWritePermissions:
+    """CYC-122: writes are superuser-only; staff keep read access."""
+
+    def test_staff_cannot_create_studio(self, staff_client):
+        response = staff_client.post(
+            reverse("admin-studio-list"),
+            data={"name": "No permitido", "is_active": True},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert Studio.objects.count() == 0
+
+    def test_staff_cannot_update_studio(self, staff_client, studio):
+        response = staff_client.patch(
+            reverse("admin-studio-detail", kwargs={"studio_id": studio.id}),
+            data={"name": "No permitido"},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        studio.refresh_from_db()
+        assert studio.name != "No permitido"
+
+    def test_staff_cannot_create_room(self, staff_client, studio):
+        response = staff_client.post(
+            reverse("admin-room-list"),
+            data={"studio_id": str(studio.id), "name": "Sala X", "capacity": 10},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_staff_cannot_update_room(self, staff_client, room):
+        response = staff_client.patch(
+            reverse("admin-room-detail", kwargs={"room_id": room.id}),
+            data={"capacity": 99},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        room.refresh_from_db()
+        assert room.capacity != 99
+
+    def test_staff_can_still_list_inactive_studios(self, staff_client, studio):
+        studio.is_active = False
+        studio.save()
+        response = staff_client.get(reverse("admin-studio-list"), {"status": "inactive"})
+        assert response.status_code == status.HTTP_200_OK
+        assert any(row["id"] == str(studio.id) for row in response.data)
