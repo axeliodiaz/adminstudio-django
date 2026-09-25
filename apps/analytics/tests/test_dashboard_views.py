@@ -206,7 +206,6 @@ def test_dashboard_aggregates_occupancy_and_fx():
     assert get_admin_dashboard_module("revenue", now=now) == payload["kpis"]["revenue_7d"]
 
 
-
 @pytest.mark.django_db
 class TestAdminDashboardCache:
     def test_module_payload_is_cached(self, staff_client, mocker):
