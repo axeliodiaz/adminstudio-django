@@ -29,6 +29,22 @@ def staff_client(api_client, staff_user):
 
 
 @pytest.fixture
+def superuser():
+    return User.objects.create_superuser(
+        username="superadmin",
+        email="superadmin@example.com",
+        password="pass1234",
+    )
+
+
+@pytest.fixture
+def superuser_client(api_client, superuser):
+    token = ExpiringToken.objects.create(user=superuser)
+    api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+    return api_client
+
+
+@pytest.fixture
 def section():
     return Section.objects.create(
         name="Reservas",
@@ -78,8 +94,8 @@ class TestAdminFAQSectionViews:
         response = api_client.get(reverse("admin-faq-section-list"))
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_create_and_update_section(self, staff_client):
-        create_response = staff_client.post(
+    def test_create_and_update_section(self, superuser_client):
+        create_response = superuser_client.post(
             reverse("admin-faq-section-list"),
             data={"name": "Membresías", "description": "Planes y pagos"},
             format="json",
@@ -89,7 +105,7 @@ class TestAdminFAQSectionViews:
         assert create_response.data["name"] == "Membresías"
         assert create_response.data["slug"] == "membresias"
 
-        update_response = staff_client.patch(
+        update_response = superuser_client.patch(
             reverse("admin-faq-section-detail", kwargs={"section_id": section_id}),
             data={"name": "Membresías y planes", "order": 3},
             format="json",
@@ -98,8 +114,8 @@ class TestAdminFAQSectionViews:
         assert update_response.data["name"] == "Membresías y planes"
         assert update_response.data["order"] == 3
 
-    def test_create_section_requires_name(self, staff_client):
-        response = staff_client.post(
+    def test_create_section_requires_name(self, superuser_client):
+        response = superuser_client.post(
             reverse("admin-faq-section-list"),
             data={"description": "Sin nombre"},
             format="json",
@@ -110,8 +126,8 @@ class TestAdminFAQSectionViews:
 
 @pytest.mark.django_db
 class TestAdminFAQItemViews:
-    def test_create_and_update_item(self, staff_client, section):
-        create_response = staff_client.post(
+    def test_create_and_update_item(self, superuser_client, section):
+        create_response = superuser_client.post(
             reverse("admin-faq-item-list"),
             data={
                 "section_id": str(section.id),
@@ -126,7 +142,7 @@ class TestAdminFAQItemViews:
         assert create_response.data["section_id"] == str(section.id)
         assert create_response.data["is_published"] is True
 
-        update_response = staff_client.patch(
+        update_response = superuser_client.patch(
             reverse("admin-faq-item-detail", kwargs={"item_id": item_id}),
             data={"is_published": False, "order": 4},
             format="json",
@@ -136,7 +152,7 @@ class TestAdminFAQItemViews:
         assert update_response.data["order"] == 4
         assert FAQItem.objects.get(id=item_id).is_published is False
 
-    def test_list_filters_by_status_and_search(self, staff_client, section):
+    def test_list_filters_by_status_and_search(self, superuser_client, section):
         FAQItem.objects.create(
             section=section,
             question="¿Cómo cancelo?",
@@ -150,19 +166,99 @@ class TestAdminFAQItemViews:
             is_published=False,
         )
 
-        published = staff_client.get(reverse("admin-faq-item-list"), {"status": "published"})
+        published = superuser_client.get(reverse("admin-faq-item-list"), {"status": "published"})
         assert published.status_code == status.HTTP_200_OK
         assert all(row["is_published"] is True for row in published.data)
 
-        search = staff_client.get(reverse("admin-faq-item-list"), {"search": "borrador"})
+        search = superuser_client.get(reverse("admin-faq-item-list"), {"search": "borrador"})
         assert search.status_code == status.HTTP_200_OK
         assert [row["question"] for row in search.data] == ["Pregunta borrador"]
 
-    def test_create_item_requires_question(self, staff_client, section):
-        response = staff_client.post(
+    def test_create_item_requires_question(self, superuser_client, section):
+        response = superuser_client.post(
             reverse("admin-faq-item-list"),
             data={"section_id": str(section.id), "answer": "Sin pregunta"},
             format="json",
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert FAQItem.objects.count() == 0
+
+
+@pytest.mark.django_db
+class TestAdminFAQWritePermissions:
+    """CYC-120: writes are superuser-only; staff read published items only."""
+
+    def test_staff_cannot_create_section(self, staff_client):
+        response = staff_client.post(
+            reverse("admin-faq-section-list"),
+            data={"name": "No permitido"},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert Section.objects.count() == 0
+
+    def test_staff_cannot_update_section(self, staff_client, section):
+        response = staff_client.patch(
+            reverse("admin-faq-section-detail", kwargs={"section_id": section.id}),
+            data={"name": "No permitido"},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        section.refresh_from_db()
+        assert section.name != "No permitido"
+
+    def test_staff_cannot_create_item(self, staff_client, section):
+        response = staff_client.post(
+            reverse("admin-faq-item-list"),
+            data={"section_id": str(section.id), "question": "¿X?", "answer": "Y"},
+            format="json",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert FAQItem.objects.count() == 0
+
+    def test_staff_list_only_shows_published(self, staff_client, section):
+        FAQItem.objects.create(
+            section=section,
+            question="Publicada",
+            answer="Sí.",
+            is_published=True,
+        )
+        FAQItem.objects.create(
+            section=section,
+            question="Borrador oculto",
+            answer="No.",
+            is_published=False,
+        )
+
+        default = staff_client.get(reverse("admin-faq-item-list"))
+        assert [row["question"] for row in default.data] == ["Publicada"]
+
+        draft_filter = staff_client.get(reverse("admin-faq-item-list"), {"status": "draft"})
+        assert [row["question"] for row in draft_filter.data] == ["Publicada"]
+
+        search = staff_client.get(reverse("admin-faq-item-list"), {"search": "Borrador"})
+        assert search.status_code == status.HTTP_200_OK
+        assert search.data == []
+
+    def test_staff_cannot_read_draft_detail(self, staff_client, section):
+        item = FAQItem.objects.create(
+            section=section,
+            question="Borrador",
+            answer="No.",
+            is_published=False,
+        )
+        response = staff_client.get(reverse("admin-faq-item-detail", kwargs={"item_id": item.id}))
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_superuser_can_read_draft_detail(self, superuser_client, section):
+        item = FAQItem.objects.create(
+            section=section,
+            question="Borrador",
+            answer="No.",
+            is_published=False,
+        )
+        response = superuser_client.get(
+            reverse("admin-faq-item-detail", kwargs={"item_id": item.id})
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["is_published"] is False
