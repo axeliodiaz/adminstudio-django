@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 FAVORITES_BODY = """
 <h2>Favoritos y alertas por email</h2><p>Guarda instructores, bloques horarios y spots favoritos desde tu perfil. Las alertas se envían únicamente por email cuando se publica una clase que coincide con un instructor u horario favorito, o cuando queda libre un spot favorito.</p>
 <h2>Disponibilidad y lista de espera</h2><p>Una alerta no reserva ni garantiza un cupo. Si tienes una reserva o estás en la lista de espera de esa clase, no recibirás esta alerta. La lista de espera siempre tiene prioridad cuando se libera un spot.</p>
