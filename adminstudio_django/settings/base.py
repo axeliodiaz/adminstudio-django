@@ -151,6 +151,17 @@ DATABASES = {
     }
 }
 
+# Shared cache for expensive staff payloads (admin dashboard modules).
+# Database-backed so it is consistent across the gunicorn workers and a
+# cache invalidation from the dashboard reload button reaches all of them.
+# `python manage.py createcachetable` runs at deploy (scripts/render_start.sh).
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache",
+    }
+}
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
