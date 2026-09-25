@@ -88,9 +88,12 @@ class AddressViewSet(viewsets.ViewSet):
 
 
 class AdminStudioListView(APIView):
-    """List or create studios for the PulseFit admin. Staff only."""
+    """List or create studios. GET: staff. POST: superuser only (CYC-122)."""
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated(), IsSuperUser()]
+        return [IsAuthenticated(), IsAdminUser()]
 
     def get(self, request, *args, **kwargs):
         studios = list_admin_studios(
@@ -113,9 +116,12 @@ class AdminStudioListView(APIView):
 
 
 class AdminStudioDetailView(APIView):
-    """Retrieve or update a studio for the PulseFit admin. Staff only."""
+    """Retrieve or update a studio. GET: staff. PATCH: superuser only (CYC-122)."""
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), IsSuperUser()]
+        return [IsAuthenticated(), IsAdminUser()]
 
     def get(self, request, studio_id, *args, **kwargs):
         return Response(get_admin_studio(studio_id=studio_id), status=status.HTTP_200_OK)
@@ -137,9 +143,12 @@ class AdminStudioDetailView(APIView):
 
 
 class AdminRoomListView(APIView):
-    """List or create rooms for the PulseFit admin. Staff only."""
+    """List or create rooms. GET: staff. POST: superuser only (CYC-122)."""
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated(), IsSuperUser()]
+        return [IsAuthenticated(), IsAdminUser()]
 
     def get(self, request, *args, **kwargs):
         rooms = list_admin_rooms(
@@ -162,9 +171,12 @@ class AdminRoomListView(APIView):
 
 
 class AdminRoomDetailView(APIView):
-    """Retrieve or update a room for the PulseFit admin. Staff only."""
+    """Retrieve or update a room. GET: staff. PATCH: superuser only (CYC-122)."""
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    def get_permissions(self):
+        if self.request.method == "PATCH":
+            return [IsAuthenticated(), IsSuperUser()]
+        return [IsAuthenticated(), IsAdminUser()]
 
     def get(self, request, room_id, *args, **kwargs):
         return Response(get_admin_room(room_id=room_id), status=status.HTTP_200_OK)
@@ -186,12 +198,9 @@ class AdminRoomDetailView(APIView):
 
 
 class AdminStudioSettingsView(APIView):
-    """Read/update studio policy settings. GET: staff. PATCH: superuser only."""
+    """Read/update studio policy settings. Superuser only (CYC-121)."""
 
-    def get_permissions(self):
-        if self.request.method == "PATCH":
-            return [IsAuthenticated(), IsSuperUser()]
-        return [IsAuthenticated(), IsAdminUser()]
+    permission_classes = [IsAuthenticated, IsSuperUser]
 
     def get(self, request, *args, **kwargs):
         return Response(get_studio_settings(), status=status.HTTP_200_OK)
