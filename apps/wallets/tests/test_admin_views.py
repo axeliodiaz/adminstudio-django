@@ -87,3 +87,59 @@ class TestAdminPurchaseListView:
             row["user_name"] == "Pedro Silva" and row["plan_name"] == "Unlimited"
             for row in response.data
         )
+
+
+@pytest.mark.django_db
+class TestAdminWalletCache:
+    def test_list_is_cached_and_refresh_invalidates(self, staff_client):
+        user = User.objects.create_user(
+            username="cached.socio",
+            email="cached.socio@example.com",
+            password="pass1234",
+            first_name="Ana",
+            last_name="Pérez",
+        )
+        Wallet.objects.create(user=user, class_credits=4)
+
+        first = staff_client.get(reverse("admin-wallet-list"))
+        assert first.status_code == 200
+        assert any(row["user_email"] == "cached.socio@example.com" for row in first.data)
+
+        # A wallet created after the first read stays hidden behind the cache.
+        late_user = User.objects.create_user(
+            username="late.socio",
+            email="late.socio@example.com",
+            password="pass1234",
+        )
+        Wallet.objects.create(user=late_user, class_credits=1)
+        cached = staff_client.get(reverse("admin-wallet-list"))
+        assert cached.status_code == 200
+        assert not any(row["user_email"] == "late.socio@example.com" for row in cached.data)
+
+        refresh = staff_client.post(reverse("admin-wallet-cache-refresh"))
+        assert refresh.status_code == 200
+
+        refreshed = staff_client.get(reverse("admin-wallet-list"))
+        assert refreshed.status_code == 200
+        assert any(row["user_email"] == "late.socio@example.com" for row in refreshed.data)
+
+    def test_filters_have_separate_cache_entries(self, staff_client):
+        user = User.objects.create_user(
+            username="filter.socio",
+            email="filter.socio@example.com",
+            password="pass1234",
+            first_name="Luis",
+            last_name="Rojas",
+        )
+        Wallet.objects.create(user=user, class_credits=2)
+
+        base = staff_client.get(reverse("admin-wallet-list"))
+        searched = staff_client.get(reverse("admin-wallet-list"), {"search": "no-match-zzz"})
+        assert base.status_code == 200
+        assert searched.status_code == 200
+        assert any(row["user_email"] == "filter.socio@example.com" for row in base.data)
+        assert not any(row["user_email"] == "filter.socio@example.com" for row in searched.data)
+
+    def test_refresh_requires_authentication(self, api_client):
+        response = api_client.post(reverse("admin-wallet-cache-refresh"))
+        assert response.status_code == 401
