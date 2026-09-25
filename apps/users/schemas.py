@@ -21,6 +21,8 @@ class CurrentUserSchema(UserSchema):
     is_staff: bool = False
     is_superuser: bool = False
     is_coach: bool = False
+    is_coach_coordinator: bool = False
+    can_view_admin_dashboard: bool = False
 
 
 class AdminUserSchema(BaseModel):

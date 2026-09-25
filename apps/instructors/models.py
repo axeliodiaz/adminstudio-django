@@ -22,6 +22,10 @@ class Instructor(SoftDeletableModel, UUIDModel, TimeStampedModel):
 
     # Professional metadata
     is_verified = models.BooleanField(default=False)
+    is_coordinator = models.BooleanField(
+        default=False,
+        help_text="Coach Coordinator: can view the staff admin Dashboard.",
+    )
     instructor_since = models.DateField(blank=True, null=True)
     location = models.CharField(max_length=120, blank=True, default="")
     specialties = models.JSONField(default=list, blank=True)
