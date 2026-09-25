@@ -186,12 +186,9 @@ class AdminRoomDetailView(APIView):
 
 
 class AdminStudioSettingsView(APIView):
-    """Read/update studio policy settings. GET: staff. PATCH: superuser only."""
+    """Read/update studio policy settings. Superuser only (CYC-121)."""
 
-    def get_permissions(self):
-        if self.request.method == "PATCH":
-            return [IsAuthenticated(), IsSuperUser()]
-        return [IsAuthenticated(), IsAdminUser()]
+    permission_classes = [IsAuthenticated, IsSuperUser]
 
     def get(self, request, *args, **kwargs):
         return Response(get_studio_settings(), status=status.HTTP_200_OK)
