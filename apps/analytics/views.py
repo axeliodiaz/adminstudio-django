@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -14,6 +14,16 @@ from apps.analytics.services import (
 )
 
 User = get_user_model()
+
+
+class IsAdminOrCoachCoordinator(BasePermission):
+    """Staff (is_staff/is_superuser) or a designated Coach Coordinator."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user and user.is_authenticated and getattr(user, "can_view_admin_dashboard", False)
+        )
 
 
 class MemberStatsView(APIView):
@@ -38,7 +48,7 @@ class AdminMemberStatsView(APIView):
 class AdminDashboardView(APIView):
     """Operational dashboard for PulseFit staff. Staff only."""
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminOrCoachCoordinator]
 
     def get(self, request, *args, **kwargs):
         days = _parse_days(request.query_params.get("days"))
@@ -48,7 +58,7 @@ class AdminDashboardView(APIView):
 class AdminDashboardModuleView(APIView):
     """A single independently-loadable card or chart in the staff dashboard."""
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminOrCoachCoordinator]
     module = None
 
     def get(self, request, *args, **kwargs):
@@ -74,7 +84,7 @@ class AdminDashboardRefreshView(APIView):
     cache.
     """
 
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    permission_classes = [IsAuthenticated, IsAdminOrCoachCoordinator]
 
     def post(self, request, *args, **kwargs):
         invalidate()
