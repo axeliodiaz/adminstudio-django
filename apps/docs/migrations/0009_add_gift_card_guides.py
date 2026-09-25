@@ -1,6 +1,5 @@
 from django.db import migrations
 
-
 SECTION = {
     "slug": "regalos",
     "title": "Regalos y gift cards",
