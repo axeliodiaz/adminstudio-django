@@ -93,7 +93,6 @@ def test_live_request_logs_url(client, caplog):
     assert "HTTP GET /api/does-not-exist/ 404" in caplog.text
 
 
-
 def test_middleware_logs_duration_ms(caplog):
     caplog.set_level(logging.INFO, logger="apps.common.request")
 
