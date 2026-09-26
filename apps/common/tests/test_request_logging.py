@@ -1,4 +1,5 @@
 import logging
+import re
 
 import pytest
 from django.http import HttpResponse
@@ -90,3 +91,41 @@ def test_live_request_logs_url(client, caplog):
     assert "HTTP GET /api/healthcheck/" not in caplog.text
     client.get("/api/does-not-exist/")
     assert "HTTP GET /api/does-not-exist/ 404" in caplog.text
+
+
+
+def test_middleware_logs_duration_ms(caplog):
+    caplog.set_level(logging.INFO, logger="apps.common.request")
+
+    def get_response(request):
+        return HttpResponse("ok")
+
+    middleware = SentryRequestUrlMiddleware(get_response)
+    middleware(RequestFactory().get("/api/members/"))
+
+    assert re.search(r"HTTP GET /api/members/ 200 \d+ms", caplog.text)
+
+
+def test_middleware_duration_structured_extra(caplog):
+    caplog.set_level(logging.INFO, logger="apps.common.request")
+
+    def get_response(request):
+        return HttpResponse("ok")
+
+    middleware = SentryRequestUrlMiddleware(get_response)
+    with caplog.at_level(logging.INFO, logger="apps.common.request"):
+        middleware(RequestFactory().get("/api/members/"))
+
+    record = next(r for r in caplog.records if r.name == "apps.common.request")
+    assert isinstance(record.http_duration_ms, float)
+    assert record.http_duration_ms >= 0
+
+
+def test_apps_logger_does_not_duplicate_emission():
+    """CYC-109: the 'apps' logger must propagate to root only; its own
+    console handler used to emit every line a second time."""
+    from django.conf import settings
+
+    apps_logger = settings.LOGGING["loggers"]["apps"]
+    assert apps_logger.get("propagate", True) is True
+    assert not apps_logger.get("handlers")
