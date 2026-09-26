@@ -281,9 +281,10 @@ LOGGING = {
             "level": os.getenv("DJANGO_DJANGO_LOG_LEVEL", "INFO" if DEBUG else "WARNING"),
             "propagate": False,
         },
-        # Project apps (e.g., apps.notifications.mailing will match and propagate to root)
+        # Project apps (e.g., apps.notifications.mailing will match and propagate to root).
+        # No own handler here: with one plus propagate=True every line was emitted
+        # twice (own console handler + root console handler). CYC-109.
         "apps": {
-            "handlers": ["console"],
             "level": os.getenv("DJANGO_APPS_LOG_LEVEL", "DEBUG" if DEBUG else "INFO"),
             "propagate": True,
         },
