@@ -1,4 +1,5 @@
 import logging
+from time import perf_counter
 from urllib.parse import parse_qsl, urlencode
 
 logger = logging.getLogger("apps.common.request")
@@ -57,27 +58,34 @@ class SentryRequestUrlMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        start = perf_counter()
         try:
             response = self.get_response(request)
         except Exception:
-            self._log(request, status_code=500)
+            self._log(request, status_code=500, elapsed_ms=self._elapsed_ms(start))
             raise
-        self._log(request, status_code=response.status_code)
+        self._log(request, status_code=response.status_code, elapsed_ms=self._elapsed_ms(start))
         return response
 
-    def _log(self, request, status_code: int) -> None:
+    @staticmethod
+    def _elapsed_ms(start: float) -> float:
+        return (perf_counter() - start) * 1000
+
+    def _log(self, request, status_code: int, elapsed_ms: float) -> None:
         path = request.path
         if not should_log_request_path(path):
             return
         url = request_url_for_log(request)
         logger.info(
-            "HTTP %s %s %s",
+            "HTTP %s %s %s %.0fms",
             request.method,
             url,
             status_code,
+            elapsed_ms,
             extra={
                 "http_method": request.method,
                 "http_path": path,
                 "http_status_code": status_code,
+                "http_duration_ms": round(elapsed_ms, 1),
             },
         )
