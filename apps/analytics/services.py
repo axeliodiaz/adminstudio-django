@@ -68,6 +68,7 @@ def get_admin_dashboard(*, now=None, days=DASHBOARD_DEFAULT_DAYS) -> dict:
 
     revenue_period = _revenue_between(period_start, today)
     revenue_prev = _revenue_between(prev_period_start, prev_period_end)
+    purchases_prev = _purchases_between(prev_period_start, prev_period_end)
     wallet_stats = _wallet_commerce(today, period_start)
 
     return {
@@ -98,6 +99,8 @@ def get_admin_dashboard(*, now=None, days=DASHBOARD_DEFAULT_DAYS) -> dict:
                 },
             },
             "purchases_7d": wallet_stats["purchases_period"],
+            "purchases_previous": purchases_prev,
+            "purchases_delta_pct": _pct_change(wallet_stats["purchases_period"], purchases_prev),
             "unlimited_wallets": wallet_stats["unlimited_wallets"],
             "class_credits_outstanding": wallet_stats["class_credits_outstanding"],
             "guest_passes_outstanding": wallet_stats["guest_passes_outstanding"],
@@ -188,7 +191,12 @@ def get_admin_dashboard_module(module: str, *, now=None, days=DASHBOARD_DEFAULT_
         return _revenue_module(amount, _revenue_between(previous_start, previous_end))
 
     if module == "purchases":
-        return {"value": _purchases_between(period_start, today)}
+        previous_start = period_start - timedelta(days=days)
+        previous_end = period_start - timedelta(days=1)
+        return _purchases_module(
+            _purchases_between(period_start, today),
+            _purchases_between(previous_start, previous_end),
+        )
     if module == "unlimited-wallets":
         return {"value": Wallet.objects.filter(is_unlimited_membership_active=True).count()}
     if module == "class-credits-outstanding":
@@ -248,6 +256,10 @@ def _revenue_module(amount: float, previous: float) -> dict:
         "delta_pct": _pct_change(amount, previous),
         "fx": {"base": "CLP", "clp_per_usd": CLP_PER_USD, "clp_per_mxn": CLP_PER_MXN},
     }
+
+
+def _purchases_module(count: int, previous: int) -> dict:
+    return {"value": count, "previous": previous, "delta_pct": _pct_change(count, previous)}
 
 
 def _purchases_between(start, end) -> int:
