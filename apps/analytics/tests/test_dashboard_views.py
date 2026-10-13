@@ -186,6 +186,10 @@ def test_dashboard_aggregates_occupancy_and_fx():
         activated_since=today,
     )
     PlanPurchase.objects.filter(pk=purchase.pk).update(created=now)
+    earlier = PlanPurchase.objects.create(
+        user=member_user, plan=plan, price_paid=Decimal("89000.00")
+    )
+    PlanPurchase.objects.filter(pk=earlier.pk).update(created=now - timedelta(days=40))
 
     payload = get_admin_dashboard(now=now)
 
@@ -218,6 +222,11 @@ def test_dashboard_aggregates_occupancy_and_fx():
     )
     assert get_admin_dashboard_module("reservations-series", now=now) == payload["reservations_30d"]
     assert get_admin_dashboard_module("revenue", now=now) == payload["kpis"]["revenue_7d"]
+    purchases = get_admin_dashboard_module("purchases", now=now)
+    assert purchases == {"value": 1, "previous": 1, "delta_pct": 0.0}
+    assert payload["kpis"]["purchases_7d"] == purchases["value"]
+    assert payload["kpis"]["purchases_previous"] == purchases["previous"]
+    assert payload["kpis"]["purchases_delta_pct"] == purchases["delta_pct"]
 
 
 @pytest.mark.django_db
