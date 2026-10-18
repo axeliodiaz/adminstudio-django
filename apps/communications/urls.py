@@ -7,6 +7,9 @@ from .views import (
     CommunicationsModuleView,
     ComposerPreviewView,
     ComposerVariablesView,
+    TrackedLinkDetailView,
+    TrackedLinkListCreateView,
+    TrackedLinkRedirectView,
 )
 
 urlpatterns = [
@@ -35,5 +38,20 @@ urlpatterns = [
         "composer/preview/",
         ComposerPreviewView.as_view(),
         name="communications-composer-preview",
+    ),
+    path(
+        "links/",
+        TrackedLinkListCreateView.as_view(),
+        name="communications-links",
+    ),
+    path(
+        "links/<uuid:link_id>/",
+        TrackedLinkDetailView.as_view(),
+        name="communications-link-detail",
+    ),
+    path(
+        "r/<str:token>/",
+        TrackedLinkRedirectView.as_view(),
+        name="communications-link-redirect",
     ),
 ]

@@ -1,9 +1,13 @@
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.communications import audience, composer
+from apps.common.pagination import paginate
+from apps.communications import audience, composer, tracking
+from apps.communications.models import TrackedLink
 from apps.communications.permissions import IsCommunicationsAdmin
 
 
@@ -24,7 +28,7 @@ class CommunicationsModuleView(APIView):
                 "features": {
                     "audience_filter": True,
                     "composer": True,
-                    "click_tracking": False,
+                    "click_tracking": True,
                     "sending": False,
                 },
             }
@@ -166,3 +170,77 @@ class ComposerPreviewView(APIView):
                 "email": sample_user.email,
             }
         return Response(payload)
+
+
+class TrackedLinkListCreateView(APIView):
+    """Admin: create tracked links and list them with click stats (CYC-396)."""
+
+    permission_classes = [IsAuthenticated, IsCommunicationsAdmin]
+
+    def get(self, request, *args, **kwargs):
+        links = TrackedLink.objects.select_related("user")
+        return Response(
+            paginate(
+                request.query_params,
+                links,
+                lambda link: tracking.serialize_link(link, request),
+            )
+        )
+
+    def post(self, request, *args, **kwargs):
+        try:
+            target_url = tracking.validate_target_url(request.data.get("target_url"))
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = None
+        user_id = request.data.get("user_id")
+        if user_id:
+            user = composer.get_sample_user(user_id)
+            if user is None:
+                return Response(
+                    {"detail": "Recipient user not found."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        recipient_email = (request.data.get("recipient_email") or "").strip()
+        if user is not None and not recipient_email:
+            recipient_email = user.email
+
+        link = TrackedLink.objects.create(
+            target_url=target_url,
+            label=(request.data.get("label") or "").strip()[:255],
+            user=user,
+            recipient_email=recipient_email,
+            created_by=request.user,
+        )
+        return Response(tracking.serialize_link(link, request), status=status.HTTP_201_CREATED)
+
+
+class TrackedLinkDetailView(APIView):
+    """Admin: tracked link stats plus the most recent clicks (CYC-396)."""
+
+    permission_classes = [IsAuthenticated, IsCommunicationsAdmin]
+
+    def get(self, request, link_id, *args, **kwargs):
+        link = get_object_or_404(TrackedLink, pk=link_id)
+        payload = tracking.serialize_link(link, request)
+        payload["recent_clicks"] = [
+            {"created": click.created, "user_agent": click.user_agent}
+            for click in link.clicks.all()[:10]
+        ]
+        return Response(payload)
+
+
+class TrackedLinkRedirectView(APIView):
+    """Public redirect endpoint: records the click, then redirects (CYC-396)."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, token, *args, **kwargs):
+        link = TrackedLink.objects.filter(token=token, is_active=True).first()
+        if link is None:
+            return Response({"detail": "Link not found."}, status=status.HTTP_404_NOT_FOUND)
+        tracking.record_click(link, request)
+        return HttpResponseRedirect(link.target_url)
