@@ -279,10 +279,27 @@ def update_studio_settings(data: dict) -> dict:
 BRANDING_FIELDS = tuple(DEFAULT_BRANDING)
 
 
+def _single_active_studio():
+    """The one active studio in a single-studio deployment, else None.
+
+    With exactly one active studio the public branding endpoint and the Marca
+    admin page operate on that studio's own branding row: the production
+    studio keeps its colors while the platform default row stays untouched
+    for future studios. With zero or several active studios there is no
+    unambiguous target, so the default row applies.
+    """
+    actives = list(Studio.objects.filter(is_active=True)[:2])
+    return actives[0] if len(actives) == 1 else None
+
+
 def _resolve_studio(studio_id):
-    """Return the Studio for ``studio_id`` or None; unknown ids raise ValueError."""
+    """Return the Studio for ``studio_id``; unknown ids raise ValueError.
+
+    No id resolves to the single active studio when there is exactly one,
+    otherwise to None (the platform default branding).
+    """
     if not studio_id:
-        return None
+        return _single_active_studio()
     try:
         return Studio.objects.get(pk=studio_id)
     except (Studio.DoesNotExist, ValidationError, ValueError):
