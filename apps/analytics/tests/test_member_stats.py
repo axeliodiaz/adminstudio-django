@@ -123,7 +123,8 @@ def test_member_stats_aggregates_attendance_plan_and_favorite():
         user=baker.make(User, first_name="Camila", last_name="Rojas"),
     )
     studio = baker.make("studios.Studio", name="PulseFit Patio Andino", is_active=True)
-    room = baker.make("studios.Room", studio=studio, capacity=20, is_active=True)
+    location = baker.make("studios.Location", studio=studio, is_active=True)
+    room = baker.make("studios.Room", location=location, capacity=20, is_active=True)
 
     plan = baker.make("plans.Plan", name="Starter 8", classes_included=8, price=59000)
     Wallet.objects.create(
