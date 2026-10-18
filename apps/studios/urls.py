@@ -6,9 +6,12 @@ from apps.studios.views import (
     AdminRoomDetailView,
     AdminRoomListView,
     AdminStudioDetailView,
+    AdminStudioBrandingResetView,
+    AdminStudioBrandingView,
     AdminStudioListView,
     AdminStudioSettingsView,
     RoomViewSet,
+    StudioBrandingView,
     StudioViewSet,
 )
 
@@ -18,6 +21,13 @@ router.register(r"rooms", RoomViewSet, basename="room")
 router.register(r"addresses", AddressViewSet, basename="address")
 
 urlpatterns = [
+    path("branding/", StudioBrandingView.as_view(), name="studio-branding"),
+    path("admin/branding/", AdminStudioBrandingView.as_view(), name="admin-studio-branding"),
+    path(
+        "admin/branding/reset/",
+        AdminStudioBrandingResetView.as_view(),
+        name="admin-studio-branding-reset",
+    ),
     path("admin/settings/", AdminStudioSettingsView.as_view(), name="admin-studio-settings"),
     path("admin/studios/", AdminStudioListView.as_view(), name="admin-studio-list"),
     path(

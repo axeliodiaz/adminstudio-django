@@ -1,3 +1,5 @@
+from django.core.exceptions import ValidationError
+
 """Services for studios app.
 
 Encapsulate creation and update logic for Studio and StudioRoom models.
@@ -9,13 +11,15 @@ from uuid import UUID
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
-from apps.studios.models import Address, Room, Studio, StudioSettings
+from apps.studios.branding import DEFAULT_BRANDING, FONT_CHOICES
+from apps.studios.models import Address, Room, Studio, StudioBranding, StudioSettings
 from apps.studios.schemas import (
     AddressSchema,
     AdminRoomSchema,
     AdminStudioSchema,
     RoomSchema,
     StudioSchema,
+    StudioBrandingSchema,
     StudioSettingsSchema,
 )
 from apps.studios.studios import (
@@ -270,3 +274,83 @@ def update_studio_settings(data: dict) -> dict:
         settings_obj.free_cancellation_hours = int(hours)
         settings_obj.save(update_fields=["free_cancellation_hours", "modified"])
     return get_studio_settings()
+
+
+BRANDING_FIELDS = tuple(DEFAULT_BRANDING)
+
+
+def _single_active_studio():
+    """The one active studio in a single-studio deployment, else None.
+
+    With exactly one active studio the public branding endpoint and the Marca
+    admin page operate on that studio's own branding row: the production
+    studio keeps its colors while the platform default row stays untouched
+    for future studios. With zero or several active studios there is no
+    unambiguous target, so the default row applies.
+    """
+    actives = list(Studio.objects.filter(is_active=True)[:2])
+    return actives[0] if len(actives) == 1 else None
+
+
+def _resolve_studio(studio_id):
+    """Return the Studio for ``studio_id``; unknown ids raise ValueError.
+
+    No id resolves to the single active studio when there is exactly one,
+    otherwise to None (the platform default branding).
+    """
+    if not studio_id:
+        return _single_active_studio()
+    try:
+        return Studio.objects.get(pk=studio_id)
+    except (Studio.DoesNotExist, ValidationError, ValueError):
+        raise ValueError("Estudio no encontrado.") from None
+
+
+def _branding_payload(branding: StudioBranding) -> dict:
+    data = StudioBrandingSchema.model_validate(branding).model_dump()
+    data["studio_id"] = str(branding.studio_id) if branding.studio_id else None
+    return data
+
+
+def get_studio_branding(studio_id=None) -> dict:
+    """Public read: the studio's branding, falling back to the default row."""
+    studio = _resolve_studio(studio_id)
+    return _branding_payload(StudioBranding.effective(studio))
+
+
+def get_admin_branding(studio_id=None) -> dict:
+    """Admin read of the row that edits would change (created on demand)."""
+    studio = _resolve_studio(studio_id)
+    return _branding_payload(StudioBranding.load(studio))
+
+
+def get_branding_options() -> dict:
+    """Static choices the admin editor offers (fonts and defaults)."""
+    return {"fonts": list(FONT_CHOICES), "defaults": dict(DEFAULT_BRANDING)}
+
+
+def update_studio_branding(data: dict, studio_id=None) -> dict:
+    """Apply a validated partial update (superuser callers only)."""
+    branding = StudioBranding.load(_resolve_studio(studio_id))
+    changed = []
+    for field in BRANDING_FIELDS:
+        value = data.get(field)
+        if value is not None:
+            setattr(branding, field, value)
+            changed.append(field)
+    if changed:
+        branding.save(update_fields=[*changed, "modified"])
+    return _branding_payload(branding)
+
+
+def reset_studio_branding(studio_id=None) -> dict:
+    """Restore the defaults. A studio override is removed (falls back to default)."""
+    studio = _resolve_studio(studio_id)
+    if studio is not None:
+        StudioBranding.objects.filter(studio=studio).delete()
+        return _branding_payload(StudioBranding.effective(studio))
+    branding = StudioBranding.load()
+    for field, value in DEFAULT_BRANDING.items():
+        setattr(branding, field, value)
+    branding.save()
+    return _branding_payload(branding)
