@@ -622,9 +622,27 @@ def reconcile_no_show_reservations(now=None) -> int:
     ]
     if not due_ids:
         return 0
-    return Reservation.objects.filter(id__in=due_ids).update(
+    updated = Reservation.objects.filter(id__in=due_ids).update(
         status=member_constants.RESERVATION_STATUS_MISSED
     )
+    _refresh_reports_after_bulk_update(
+        Reservation.objects.filter(id__in=due_ids).values_list("schedule_id", flat=True)
+    )
+    return updated
+
+
+def _refresh_reports_after_bulk_update(schedule_ids):
+    """Refresh precomputed report rows after a queryset ``.update()``.
+
+    Bulk updates bypass the ``post_save`` signals that keep the reports
+    tables fresh (CYC-441). A reporting failure must never break attendance.
+    """
+    try:
+        from apps.reports.services import refresh_schedules
+
+        refresh_schedules(list(schedule_ids))
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def mark_remaining_attendance_missed(schedule_id: str | UUID) -> dict:
@@ -641,6 +659,8 @@ def mark_remaining_attendance_missed(schedule_id: str | UUID) -> dict:
         is_removed=False,
         status=member_constants.RESERVATION_STATUS_RESERVED,
     ).update(status=member_constants.RESERVATION_STATUS_MISSED)
+    if updated:
+        _refresh_reports_after_bulk_update([schedule.id])
     roster = get_admin_attendance_roster(schedule.id)
     roster["updated"] = updated
     return roster

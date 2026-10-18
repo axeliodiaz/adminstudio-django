@@ -43,6 +43,7 @@ urlpatterns = [
     path("api/communications/", include("apps.communications.urls")),
     path("api/people/", include("apps.people.urls")),
     path("api/inventory/", include("apps.inventory.urls")),
+    path("api/reports/", include("apps.reports.urls")),
     path("ckeditor5/", include("django_ckeditor_5.urls")),
 ]
 
