@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.communications import audience
+from apps.communications import audience, composer
 from apps.communications.permissions import IsCommunicationsAdmin
 
 
@@ -23,7 +23,7 @@ class CommunicationsModuleView(APIView):
                 "status": "active",
                 "features": {
                     "audience_filter": True,
-                    "composer": False,
+                    "composer": True,
                     "click_tracking": False,
                     "sending": False,
                 },
@@ -74,3 +74,95 @@ class AudiencePreviewView(APIView):
                 "filter": normalized,
             }
         )
+
+
+CHANNELS = [
+    {"id": "email", "label": "Email", "enabled": True},
+    {
+        "id": "sms",
+        "label": "SMS",
+        "enabled": False,
+        "reason": "SMS sending is not supported yet.",
+    },
+    {
+        "id": "whatsapp",
+        "label": "WhatsApp",
+        "enabled": False,
+        "reason": "WhatsApp sending is not supported yet.",
+    },
+]
+
+
+class CommunicationChannelsView(APIView):
+    """Channel selector metadata: email enabled, SMS/WhatsApp disabled (CYC-394)."""
+
+    permission_classes = [IsAuthenticated, IsCommunicationsAdmin]
+
+    def get(self, request, *args, **kwargs):
+        return Response({"channels": CHANNELS})
+
+
+class ComposerVariablesView(APIView):
+    """Variables available to the message composer (CYC-394)."""
+
+    permission_classes = [IsAuthenticated, IsCommunicationsAdmin]
+
+    def get(self, request, *args, **kwargs):
+        variables = [
+            {
+                "key": key,
+                "label": spec["label"],
+                "description": spec["description"],
+                "sample": spec["sample"],
+            }
+            for key, spec in composer.VARIABLES.items()
+        ]
+        return Response({"variables": variables})
+
+
+class ComposerPreviewView(APIView):
+    """Render subject/message with variables resolved for a sample user."""
+
+    permission_classes = [IsAuthenticated, IsCommunicationsAdmin]
+
+    def post(self, request, *args, **kwargs):
+        subject = request.data.get("subject") or ""
+        message = request.data.get("message") or ""
+        if not message.strip():
+            return Response(
+                {"detail": "'message' is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        unknown = composer.find_unknown_variables(subject, message)
+        if unknown:
+            return Response(
+                {
+                    "detail": f"Unknown variables: {', '.join(unknown)}.",
+                    "unknown_variables": unknown,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        sample_user = None
+        sample_user_id = request.data.get("sample_user_id")
+        if sample_user_id:
+            sample_user = composer.get_sample_user(sample_user_id)
+            if sample_user is None:
+                return Response(
+                    {"detail": "Sample user not found."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        payload = {
+            "subject": composer.render_template(subject, sample_user),
+            "message": composer.render_template(message, sample_user),
+            "sample_user": None,
+        }
+        if sample_user is not None:
+            payload["sample_user"] = {
+                "id": str(sample_user.id),
+                "name": composer._display_name(sample_user),
+                "email": sample_user.email,
+            }
+        return Response(payload)
