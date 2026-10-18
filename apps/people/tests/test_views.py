@@ -24,12 +24,26 @@ def member_client(api_client):
 
 
 @pytest.fixture
+def plain_staff_client(api_client):
+    staff = User.objects.create_user(
+        username="plain.staff",
+        email="plain.staff@example.com",
+        password="testpass123",
+        is_staff=True,
+    )
+    token = ExpiringToken.objects.create(user=staff)
+    api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+    return api_client
+
+
+@pytest.fixture
 def staff_client(api_client):
     staff = User.objects.create_user(
         username="people.admin",
         email="people.admin@example.com",
         password="testpass123",
         is_staff=True,
+        is_superuser=True,
     )
     token = ExpiringToken.objects.create(user=staff)
     api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
@@ -96,3 +110,10 @@ class TestPeopleMemberListView:
         response = staff_client.get(reverse("people-member-list"), {"search": "finda"})
         emails = {row["email"] for row in response.data["results"]}
         assert emails == {"findable@example.com"}
+
+
+@pytest.mark.django_db
+class TestAdminOnlyAccess:
+    def test_plain_staff_gets_403(self, plain_staff_client):
+        response = plain_staff_client.get(reverse("people-module"))
+        assert response.status_code == status.HTTP_403_FORBIDDEN

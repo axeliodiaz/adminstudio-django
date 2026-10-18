@@ -19,7 +19,7 @@ def make_user(username, **kwargs):
 
 @pytest.fixture
 def staff_client(api_client):
-    staff = make_user("composer.admin", is_staff=True)
+    staff = make_user("composer.admin", is_staff=True, is_superuser=True)
     token = ExpiringToken.objects.create(user=staff)
     api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
     return api_client
