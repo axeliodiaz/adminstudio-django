@@ -42,8 +42,14 @@ class FAQViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
 
     def list(self, request):
-        """Get all published FAQ items grouped by sections."""
-        data = get_published_faq()
+        """Get all published FAQ items grouped by sections.
+
+        Staff-only sections are included for admins (superusers) only (CYC-420).
+        """
+        include_staff = bool(
+            request.user and request.user.is_authenticated and request.user.is_superuser
+        )
+        data = get_published_faq(include_staff=include_staff)
         return Response(data, status=status.HTTP_200_OK)
 
 
