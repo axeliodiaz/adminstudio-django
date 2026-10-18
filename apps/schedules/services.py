@@ -276,7 +276,7 @@ def _serialize_admin_schedule(
 
 def _admin_queryset():
     return (
-        Schedule.objects.select_related("instructor__user", "room__studio")
+        Schedule.objects.select_related("instructor__user", "room__location__studio")
         .annotate(
             reservation_count=Count(
                 "reservations",
@@ -328,7 +328,7 @@ def admin_schedules_queryset(
             Q(title__icontains=term)
             | Q(description__icontains=term)
             | Q(room__name__icontains=term)
-            | Q(room__studio__name__icontains=term)
+            | Q(room__location__studio__name__icontains=term)
             | Q(instructor__user__first_name__icontains=term)
             | Q(instructor__user__last_name__icontains=term)
             | Q(instructor__user__username__icontains=term)
@@ -536,7 +536,7 @@ def overlapping_schedules_for_instructor(
         Schedule.objects.filter(instructor_id=instructor_id, is_removed=False)
         .exclude(status=constants.SCHEDULE_STATUS_CANCELED)
         .filter(start_time__lt=window_end)
-        .select_related("room__studio", "instructor__user")
+        .select_related("room__location__studio", "instructor__user")
         .order_by("start_time")
     )
     if exclude_schedule_id is not None:
@@ -562,7 +562,7 @@ def overlapping_schedules_for_room(
         Schedule.objects.filter(room_id=room_id, is_removed=False)
         .exclude(status=constants.SCHEDULE_STATUS_CANCELED)
         .filter(start_time__lt=window_end)
-        .select_related("room__studio", "instructor__user")
+        .select_related("room__location__studio", "instructor__user")
         .order_by("start_time")
     )
     if exclude_schedule_id is not None:
@@ -626,7 +626,7 @@ def preview_substitute_coach(
     new_instructor_id: str | UUID | None = None,
 ) -> dict:
     schedule = get_object_or_404(
-        Schedule.objects.select_related("instructor__user", "room__studio"),
+        Schedule.objects.select_related("instructor__user", "room__location__studio"),
         id=schedule_id,
         is_removed=False,
     )
@@ -707,7 +707,9 @@ def substitute_coach(
 
     with transaction.atomic():
         schedule = get_object_or_404(
-            Schedule.objects.select_for_update().select_related("instructor__user", "room__studio"),
+            Schedule.objects.select_for_update().select_related(
+                "instructor__user", "room__location__studio"
+            ),
             id=schedule_id,
             is_removed=False,
         )

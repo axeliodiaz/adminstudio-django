@@ -38,7 +38,7 @@ def get_schedules_list(
     """
     qs = Schedule.objects.select_related(
         "instructor__user",
-        "room__studio__address",
+        "room__location__studio__address",
     ).filter(is_removed=False)
     if scheduled_only:
         qs = qs.filter(status=constants.SCHEDULE_STATUS_SCHEDULED)
