@@ -229,3 +229,39 @@ class TestPerStudioBranding:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["studio_id"] is None
         assert not StudioBranding.objects.filter(studio=studio).exists()
+
+
+@pytest.mark.django_db
+class TestSingleActiveStudioResolution:
+    """Exactly one active studio: the site and Marca use that studio's row."""
+
+    def test_public_uses_the_single_active_studio_row(self, api_client):
+        studio = baker.make("studios.Studio", name="Sede Unica", is_active=True)
+        StudioBranding.objects.create(studio=studio, name=studio.name, primary_color="#C9A66B")
+        data = api_client.get(reverse("studio-branding")).data
+        assert data["studio_id"] == str(studio.id)
+        assert data["primary_color"] == "#C9A66B"
+
+    def test_admin_without_param_edits_the_studio_row(self, api_client, superuser):
+        studio = baker.make("studios.Studio", name="Sede Unica", is_active=True)
+        _auth(api_client, superuser)
+        response = api_client.patch(
+            reverse("admin-studio-branding"), {"primary_color": "#C9A66B"}, format="json"
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["studio_id"] == str(studio.id)
+        assert StudioBranding.load().primary_color == DEFAULT_BRANDING["primary_color"]
+        assert StudioBranding.load(studio).primary_color == "#C9A66B"
+
+    def test_active_studio_without_row_gets_default_palette(self, api_client):
+        baker.make("studios.Studio", name="Sede Nueva", is_active=True)
+        data = api_client.get(reverse("studio-branding")).data
+        assert data["studio_id"] is None
+        assert data["primary_color"] == DEFAULT_BRANDING["primary_color"]
+
+    def test_two_active_studios_use_the_default_row(self, api_client):
+        baker.make("studios.Studio", is_active=True)
+        baker.make("studios.Studio", is_active=True)
+        data = api_client.get(reverse("studio-branding")).data
+        assert data["studio_id"] is None
+        assert data["primary_color"] == DEFAULT_BRANDING["primary_color"]
