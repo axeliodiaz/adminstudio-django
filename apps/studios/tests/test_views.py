@@ -24,6 +24,9 @@ class TestStudioViewSet:
         assert set(["id", "name", "address", "is_active", "created", "modified"]).issubset(
             sample.keys()
         )
+        # Sedes are included (CYC-458)
+        assert "locations" in sample
+        assert isinstance(sample["locations"], list)
         # Address should be an object (or null)
         assert sample["address"] is None or isinstance(sample["address"], dict)
         if sample["address"]:

@@ -19,7 +19,7 @@ from apps.studios.services import (
 
 class TestGetStudio:
     @pytest.mark.django_db
-    def test_get_studio_returns_schema(self, studio, room):
+    def test_get_studio_returns_schema(self, studio, room, location):
         # Act
         result = get_studio(studio.id)
         # Assert
@@ -37,6 +37,9 @@ class TestGetStudio:
         assert len(result.rooms) == 1
         assert isinstance(result.rooms[0], RoomSchema)
         assert result.rooms[0].id == room.id
+        # Sedes under the brand (CYC-458)
+        assert isinstance(result.locations, list)
+        assert [loc.name for loc in result.locations] == [location.name]
 
     @pytest.mark.django_db
     def test_get_studio_raises_404(self):

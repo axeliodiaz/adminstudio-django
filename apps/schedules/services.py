@@ -78,9 +78,13 @@ def _annotate_occupancy(queryset):
 
 
 def _studio_address(schedule: Schedule) -> str | None:
+    """Class address: the sede's address, falling back to the brand's."""
     room = getattr(schedule, "room", None)
-    studio = getattr(room, "studio", None) if room else None
-    address = getattr(studio, "address", None) if studio else None
+    location = getattr(room, "location", None) if room else None
+    address = getattr(location, "address", None) if location else None
+    if address is None:
+        studio = getattr(location, "studio", None) if location else None
+        address = getattr(studio, "address", None) if studio else None
     value = getattr(address, "address", None) if address else None
     return value or None
 
@@ -88,12 +92,15 @@ def _studio_address(schedule: Schedule) -> str | None:
 def _schedule_display_fields(schedule: Schedule) -> dict:
     room = getattr(schedule, "room", None)
     studio = getattr(room, "studio", None) if room else None
+    location = getattr(room, "location", None) if room else None
     return {
         "instructor_name": _instructor_display_name(schedule),
         "room_name": room.name if room else "",
         "studio_id": studio.id if studio else None,
         "studio_name": studio.name if studio else None,
         "studio_address": _studio_address(schedule),
+        "location_id": location.id if location else None,
+        "location_name": location.name if location else None,
     }
 
 
@@ -227,6 +234,7 @@ def _serialize_admin_schedule(
 ) -> dict:
     room = schedule.room
     studio = getattr(room, "studio", None)
+    location = getattr(room, "location", None) if room else None
     payload = {
         "id": schedule.id,
         "title": schedule.title or "",
@@ -241,6 +249,8 @@ def _serialize_admin_schedule(
         "room_name": room.name if room else "",
         "studio_id": studio.id if studio else None,
         "studio_name": studio.name if studio else None,
+        "location_id": location.id if location else None,
+        "location_name": location.name if location else None,
         "room_capacity": room.capacity if room else None,
         "reservation_count": (
             getattr(schedule, "reservation_count", None)

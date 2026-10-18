@@ -24,6 +24,7 @@ from apps.studios.schemas import (
     AddressSchema,
     AdminRoomSchema,
     AdminStudioSchema,
+    LocationSchema,
     RoomSchema,
     StudioSchema,
     StudioBrandingSchema,
@@ -109,6 +110,10 @@ def _serialize_admin_studio(studio: Studio) -> dict:
         "closing_time": studio.closing_time,
         "address": AddressSchema.model_validate(studio.address) if studio.address else None,
         "rooms": [_serialize_admin_room(room) for room in rooms],
+        "locations": [
+            LocationSchema.model_validate(location).model_dump(mode="json")
+            for location in studio.locations_list
+        ],
     }
     return AdminStudioSchema.model_validate(payload).model_dump(mode="json")
 
