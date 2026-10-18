@@ -200,7 +200,8 @@ def _schedule_summary(schedule) -> dict | None:
     if schedule is None:
         return None
     room = getattr(schedule, "room", None)
-    studio = getattr(room, "studio", None) if room else None
+    studio = getattr(room, "studio", None)
+    location = getattr(room, "location", None) if room else None
     return {
         "id": schedule.id,
         "title": schedule.title or "",
@@ -215,6 +216,8 @@ def _schedule_summary(schedule) -> dict | None:
         "room_capacity": room.capacity if room else None,
         "studio_id": studio.id if studio else None,
         "studio_name": studio.name if studio else "",
+        "location_id": location.id if location else None,
+        "location_name": location.name if location else "",
     }
 
 
@@ -270,7 +273,8 @@ def _serialize_admin_reservation(reservation: Reservation) -> dict:
     user = getattr(member, "user", None)
     schedule = reservation.schedule
     room = getattr(schedule, "room", None)
-    studio = getattr(room, "studio", None) if room else None
+    studio = getattr(room, "studio", None)
+    location = getattr(room, "location", None) if room else None
 
     guest_pass = getattr(reservation, "guest_pass_invitation", None)
     host = getattr(guest_pass, "issuer", None) if guest_pass else None
@@ -293,6 +297,8 @@ def _serialize_admin_reservation(reservation: Reservation) -> dict:
         "room_name": room.name if room else "",
         "studio_id": studio.id if studio else None,
         "studio_name": studio.name if studio else None,
+        "location_id": location.id if location else None,
+        "location_name": location.name if location else None,
         "room_capacity": room.capacity if room else None,
         "status": reservation.status,
         "spot": reservation.spot,
@@ -671,7 +677,8 @@ def _serialize_waitlist_entry(entry) -> dict:
 
     schedule = entry.schedule
     room = getattr(schedule, "room", None)
-    studio = getattr(room, "studio", None) if room else None
+    studio = getattr(room, "studio", None)
+    location = getattr(room, "location", None) if room else None
     payload = {
         "id": entry.id,
         "created": entry.created,
@@ -690,6 +697,7 @@ def _serialize_waitlist_entry(entry) -> dict:
             "duration_minutes": schedule.duration_minutes,
             "room_name": room.name if room else "",
             "studio_name": studio.name if studio else "",
+            "location_name": location.name if location else "",
             "capacity": room.capacity if room else None,
             "booked": reserved_count_for_schedule(schedule.id),
         },
