@@ -11,6 +11,10 @@ class Section(UUIDModel, TimeStampedModel):
         blank=True, default="", help_text="Descripción opcional de la sección"
     )
     order = models.PositiveIntegerField(default=0, help_text="Orden de visualización")
+    requires_staff = models.BooleanField(
+        default=False,
+        help_text="Si está activa, la sección solo se muestra a usuarios staff",
+    )
 
     class Meta:
         ordering = ["order", "name"]

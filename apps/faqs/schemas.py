@@ -45,6 +45,7 @@ class AdminSectionSchema(BaseModel):
     slug: str
     description: str
     order: int
+    requires_staff: bool = False
     faq_count: int = 0
     created: datetime
     modified: datetime
@@ -59,6 +60,7 @@ class AdminSectionWriteSchema(BaseModel):
     slug: str | None = None
     description: str | None = None
     order: int | None = None
+    requires_staff: bool | None = None
 
 
 class AdminFAQItemSchema(BaseModel):
