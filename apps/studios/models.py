@@ -41,8 +41,12 @@ class Studio(SoftDeletableModel, UUIDModel, TimeStampedModel):
 
     @property
     def rooms_list(self):
-        """Return related rooms as a concrete list to ease Pydantic serialization."""
-        return list(self.rooms.all())
+        """Return related rooms (across locations) as a concrete list.
+
+        Rooms hang off Location since CYC-456; the brand's rooms are the union
+        of its locations' rooms.
+        """
+        return [room for location in self.locations.all() for room in location.rooms.all()]
 
 
 class Location(SoftDeletableModel, UUIDModel, TimeStampedModel):
@@ -76,14 +80,24 @@ class Location(SoftDeletableModel, UUIDModel, TimeStampedModel):
 
 
 class Room(SoftDeletableModel, UUIDModel, TimeStampedModel):
-    studio = models.ForeignKey(
-        Studio,
+    location = models.ForeignKey(
+        Location,
         on_delete=models.CASCADE,
         related_name="rooms",
     )
     name = models.CharField(max_length=100)
     capacity = models.PositiveIntegerField()
     is_active = models.BooleanField(default=False)
+
+    @property
+    def studio(self):
+        """The brand studio, derived from the room's location (CYC-456)."""
+        return self.location.studio
+
+    @property
+    def studio_id(self):
+        """The brand studio id, derived from the room's location (CYC-456)."""
+        return self.location.studio_id
 
     def __str__(self):
         return self.name
