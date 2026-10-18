@@ -12,7 +12,14 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
 from apps.studios.branding import DEFAULT_BRANDING, FONT_CHOICES
-from apps.studios.models import Address, Room, Studio, StudioBranding, StudioSettings
+from apps.studios.models import (
+    Address,
+    Location,
+    Room,
+    Studio,
+    StudioBranding,
+    StudioSettings,
+)
 from apps.studios.schemas import (
     AddressSchema,
     AdminRoomSchema,
@@ -307,27 +314,35 @@ def update_studio_settings(data: dict) -> dict:
 BRANDING_FIELDS = tuple(DEFAULT_BRANDING)
 
 
-def _single_active_studio():
-    """The one active studio in a single-studio deployment, else None.
+def _brand_studio():
+    """The site's brand studio, else None (platform default branding).
 
-    With exactly one active studio the public branding endpoint and the Marca
-    admin page operate on that studio's own branding row: the production
-    studio keeps its colors while the platform default row stays untouched
-    for future studios. With zero or several active studios there is no
-    unambiguous target, so the default row applies.
+    Studio is the brand since CYC-455/456: one brand serves all its Locations,
+    and branding lives on the brand studio's row. Resolution order: the studio
+    flagged ``is_default_brand``, then the single active studio in a
+    single-brand deployment, then None so the default row applies.
     """
+    flagged = Studio.objects.filter(is_active=True, is_default_brand=True).first()
+    if flagged is not None:
+        return flagged
     actives = list(Studio.objects.filter(is_active=True)[:2])
     return actives[0] if len(actives) == 1 else None
 
 
-def _resolve_studio(studio_id):
+def _resolve_studio(studio_id, location_id=None):
     """Return the Studio for ``studio_id``; unknown ids raise ValueError.
 
-    No id resolves to the single active studio when there is exactly one,
-    otherwise to None (the platform default branding).
+    A ``location_id`` resolves to that sede's brand studio. No id resolves to
+    the site's brand studio (see ``_brand_studio``), otherwise None (the
+    platform default branding).
     """
+    if location_id:
+        try:
+            return Location.objects.select_related("studio").get(pk=location_id).studio
+        except (Location.DoesNotExist, ValidationError, ValueError):
+            raise ValueError("Sede no encontrada.") from None
     if not studio_id:
-        return _single_active_studio()
+        return _brand_studio()
     try:
         return Studio.objects.get(pk=studio_id)
     except (Studio.DoesNotExist, ValidationError, ValueError):
@@ -340,9 +355,9 @@ def _branding_payload(branding: StudioBranding) -> dict:
     return data
 
 
-def get_studio_branding(studio_id=None) -> dict:
-    """Public read: the studio's branding, falling back to the default row."""
-    studio = _resolve_studio(studio_id)
+def get_studio_branding(studio_id=None, location_id=None) -> dict:
+    """Public read: the brand studio's branding, default row as fallback."""
+    studio = _resolve_studio(studio_id, location_id)
     return _branding_payload(StudioBranding.effective(studio))
 
 

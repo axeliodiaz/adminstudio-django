@@ -33,6 +33,11 @@ class Studio(SoftDeletableModel, UUIDModel, TimeStampedModel):
         null=True,
     )
     is_active = models.BooleanField(default=False)
+    is_default_brand = models.BooleanField(
+        default=False,
+        help_text="The site's brand studio: its branding row themes the public "
+        "site and emails when no studio is specified (CYC-457).",
+    )
     opening_time = models.TimeField(blank=True, null=True)
     closing_time = models.TimeField(blank=True, null=True)
 
