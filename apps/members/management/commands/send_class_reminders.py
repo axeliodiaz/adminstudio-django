@@ -2,6 +2,8 @@
 
 from datetime import datetime, time, timedelta
 
+from apps.notifications.branding import email_branding
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -51,6 +53,7 @@ def _send_reminder(reservation) -> bool:
             spot=reservation.spot,
             action_url=action_url,
             frontend_url=frontend_url,
+            branding=email_branding(getattr(room, "studio", None)),
         ),
     )
     reservation.reminder_sent_at = timezone.now()
