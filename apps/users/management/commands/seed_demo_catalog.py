@@ -11,7 +11,7 @@ from apps.instructors.models import Instructor
 from apps.members.models import Member
 from apps.plans import constants as plan_constants
 from apps.plans.models import Benefit, Plan, PromoCode
-from apps.studios.models import Address, Room, Studio
+from apps.studios.models import Address, Location, Room, Studio
 from apps.users.demo_catalog import (
     DEMO_CLOSING,
     DEMO_OPENING,
@@ -91,8 +91,13 @@ class Command(BaseCommand):
         studio.opening_time = DEMO_OPENING
         studio.closing_time = DEMO_CLOSING
         studio.save()
-        room, _ = Room.objects.get_or_create(
+        location, _ = Location.objects.get_or_create(
             studio=studio,
+            name="Sede Demo",
+            defaults={"address": address, "is_active": True},
+        )
+        room, _ = Room.objects.get_or_create(
+            location=location,
             name="Sala A",
             defaults={"capacity": 40, "is_active": True},
         )
