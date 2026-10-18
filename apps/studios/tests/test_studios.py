@@ -56,7 +56,7 @@ class TestStudioQuerysets:
         studio = studios[0]
         assert isinstance(studio, Studio)
         with django_assert_num_queries(0):
-            rooms = list(studio.rooms.all())
+            rooms = studio.rooms_list
         assert len(rooms) == 1
         assert rooms[0].id == room.id
 

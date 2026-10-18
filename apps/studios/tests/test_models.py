@@ -24,8 +24,8 @@ class TestStudioRoomsList:
         self, django_assert_num_queries, studio, room, extra_room
     ):
         # Evaluate queryset with prefetch
-        with django_assert_num_queries(2):
-            s = Studio.objects.filter(id=studio.id).prefetch_related("rooms").get()
+        with django_assert_num_queries(3):
+            s = Studio.objects.filter(id=studio.id).prefetch_related("locations__rooms").get()
         # Accessing rooms_list should not hit the DB again thanks to prefetch cache
         with django_assert_num_queries(0):
             result = s.rooms_list
@@ -34,7 +34,6 @@ class TestStudioRoomsList:
 
     @pytest.mark.django_db
     def test_rooms_list_empty_for_studio_without_rooms(self, empty_studio):
-        assert empty_studio.rooms.count() == 0
         assert empty_studio.rooms_list == []
 
 
