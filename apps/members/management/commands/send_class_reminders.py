@@ -78,7 +78,9 @@ class Command(BaseCommand):
                 schedule__start_time__lte=end_dt,
             )
             .exclude(schedule__status__in=[SCHEDULE_STATUS_DRAFT, SCHEDULE_STATUS_CANCELED])
-            .select_related("member__user", "schedule__instructor__user", "schedule__room__studio")
+            .select_related(
+                "member__user", "schedule__instructor__user", "schedule__room__location__studio"
+            )
         )
         sent = 0
         for reservation in reservations:
