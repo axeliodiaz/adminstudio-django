@@ -1,6 +1,6 @@
 # Studio branding (CYC-427)
 
-Singleton `StudioBranding` (pk 1) in the database. No file storage: the logo is sanitized SVG text.
+`StudioBranding` in the database: one default row (`studio` NULL) plus an optional override row per studio (`studio` FK, one-to-one). Reads fall back to the default row when a studio has no override. Pass `?studio=<uuid>` on every endpoint to target a studio. Permissions are unchanged: edits are superuser only. No file storage: the logo is sanitized SVG text.
 
 | Endpoint | Access | Purpose |
 |---|---|---|

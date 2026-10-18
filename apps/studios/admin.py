@@ -86,13 +86,10 @@ class StudioBrandingAdminForm(forms.ModelForm):
 
 class StudioBrandingAdmin(admin.ModelAdmin):
     form = StudioBrandingAdminForm
-    list_display = ("name", "primary_color", "heading_font", "body_font", "modified")
-
-    def has_add_permission(self, request):
-        return not StudioBranding.objects.exists()
+    list_display = ("name", "studio", "primary_color", "heading_font", "body_font", "modified")
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        return obj is None or obj.studio_id is not None
 
 
 admin.site.register(StudioBranding, StudioBrandingAdmin)

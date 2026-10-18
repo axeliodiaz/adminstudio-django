@@ -1,3 +1,5 @@
+from django.core.exceptions import ValidationError
+
 """Services for studios app.
 
 Encapsulate creation and update logic for Studio and StudioRoom models.
@@ -277,9 +279,32 @@ def update_studio_settings(data: dict) -> dict:
 BRANDING_FIELDS = tuple(DEFAULT_BRANDING)
 
 
-def get_studio_branding() -> dict:
-    """Return the studio branding tokens (public, read-only)."""
-    return StudioBrandingSchema.model_validate(StudioBranding.load()).model_dump()
+def _resolve_studio(studio_id):
+    """Return the Studio for ``studio_id`` or None; unknown ids raise ValueError."""
+    if not studio_id:
+        return None
+    try:
+        return Studio.objects.get(pk=studio_id)
+    except (Studio.DoesNotExist, ValidationError, ValueError):
+        raise ValueError("Estudio no encontrado.") from None
+
+
+def _branding_payload(branding: StudioBranding) -> dict:
+    data = StudioBrandingSchema.model_validate(branding).model_dump()
+    data["studio_id"] = str(branding.studio_id) if branding.studio_id else None
+    return data
+
+
+def get_studio_branding(studio_id=None) -> dict:
+    """Public read: the studio's branding, falling back to the default row."""
+    studio = _resolve_studio(studio_id)
+    return _branding_payload(StudioBranding.effective(studio))
+
+
+def get_admin_branding(studio_id=None) -> dict:
+    """Admin read of the row that edits would change (created on demand)."""
+    studio = _resolve_studio(studio_id)
+    return _branding_payload(StudioBranding.load(studio))
 
 
 def get_branding_options() -> dict:
@@ -287,9 +312,9 @@ def get_branding_options() -> dict:
     return {"fonts": list(FONT_CHOICES), "defaults": dict(DEFAULT_BRANDING)}
 
 
-def update_studio_branding(data: dict) -> dict:
+def update_studio_branding(data: dict, studio_id=None) -> dict:
     """Apply a validated partial update (superuser callers only)."""
-    branding = StudioBranding.load()
+    branding = StudioBranding.load(_resolve_studio(studio_id))
     changed = []
     for field in BRANDING_FIELDS:
         value = data.get(field)
@@ -298,13 +323,17 @@ def update_studio_branding(data: dict) -> dict:
             changed.append(field)
     if changed:
         branding.save(update_fields=[*changed, "modified"])
-    return get_studio_branding()
+    return _branding_payload(branding)
 
 
-def reset_studio_branding() -> dict:
-    """Restore the default branding."""
+def reset_studio_branding(studio_id=None) -> dict:
+    """Restore the defaults. A studio override is removed (falls back to default)."""
+    studio = _resolve_studio(studio_id)
+    if studio is not None:
+        StudioBranding.objects.filter(studio=studio).delete()
+        return _branding_payload(StudioBranding.effective(studio))
     branding = StudioBranding.load()
     for field, value in DEFAULT_BRANDING.items():
         setattr(branding, field, value)
     branding.save()
-    return get_studio_branding()
+    return _branding_payload(branding)

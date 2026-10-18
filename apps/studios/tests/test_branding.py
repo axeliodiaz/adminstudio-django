@@ -5,6 +5,8 @@ from drf_expiring_token.models import ExpiringToken
 from rest_framework import status
 
 from apps.studios.branding import DEFAULT_BRANDING, BrandingError, sanitize_svg
+from model_bakery import baker
+
 from apps.studios.models import StudioBranding
 
 User = get_user_model()
@@ -178,3 +180,52 @@ class TestAdminBranding:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["name"] == DEFAULT_BRANDING["name"]
         assert response.data["primary_color"] == DEFAULT_BRANDING["primary_color"]
+
+
+@pytest.mark.django_db
+class TestPerStudioBranding:
+    def test_studio_override_does_not_change_default(self, api_client, superuser):
+        studio = baker.make("studios.Studio", name="Sede Norte")
+        _auth(api_client, superuser)
+        url = reverse("admin-studio-branding")
+        response = api_client.patch(
+            f"{url}?studio={studio.id}", {"primary_color": "#0D9488"}, format="json"
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["studio_id"] == str(studio.id)
+        assert StudioBranding.load().primary_color == DEFAULT_BRANDING["primary_color"]
+        api_client.credentials()
+        public_url = reverse("studio-branding")
+        assert api_client.get(f"{public_url}?studio={studio.id}").data["primary_color"] == "#0D9488"
+        assert api_client.get(public_url).data["primary_color"] == DEFAULT_BRANDING["primary_color"]
+
+    def test_studio_without_row_falls_back_to_default(self, api_client):
+        studio = baker.make("studios.Studio", name="Sede Sur")
+        data = api_client.get(f"{reverse('studio-branding')}?studio={studio.id}").data
+        assert data["studio_id"] is None
+        assert data["primary_color"] == DEFAULT_BRANDING["primary_color"]
+
+    def test_unknown_or_malformed_studio_is_404(self, api_client, superuser):
+        public = reverse("studio-branding")
+        assert api_client.get(f"{public}?studio=nope").status_code == status.HTTP_404_NOT_FOUND
+        _auth(api_client, superuser)
+        admin_url = reverse("admin-studio-branding")
+        missing = "00000000-0000-0000-0000-000000000000"
+        assert api_client.get(f"{admin_url}?studio={missing}").status_code == 404
+
+    def test_plain_staff_cannot_edit_a_studio_row(self, api_client, staff_user):
+        studio = baker.make("studios.Studio", name="Sede Este")
+        _auth(api_client, staff_user)
+        url = f"{reverse('admin-studio-branding')}?studio={studio.id}"
+        assert api_client.patch(url, {"name": "X"}, format="json").status_code == 403
+        assert not StudioBranding.objects.filter(studio=studio).exists()
+
+    def test_reset_studio_drops_override(self, api_client, superuser):
+        studio = baker.make("studios.Studio", name="Sede Oeste")
+        _auth(api_client, superuser)
+        url = f"{reverse('admin-studio-branding')}?studio={studio.id}"
+        api_client.patch(url, {"name": "Custom"}, format="json")
+        response = api_client.post(f"{reverse('admin-studio-branding-reset')}?studio={studio.id}")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["studio_id"] is None
+        assert not StudioBranding.objects.filter(studio=studio).exists()
