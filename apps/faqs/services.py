@@ -14,13 +14,18 @@ from apps.faqs.models import FAQItem, Section
 from apps.faqs.schemas import AdminFAQItemSchema, AdminSectionSchema
 
 
-def get_published_faq() -> dict:
+def get_published_faq(*, include_staff: bool = False) -> dict:
     """Return all published FAQ items grouped by sections.
+
+    Staff-only sections (``requires_staff``) are included only when
+    ``include_staff`` is true (CYC-420).
 
     Returns:
         dict: FAQPublicSchema as dict with sections and their FAQ items.
     """
     sections = Section.objects.all().order_by("order", "name")
+    if not include_staff:
+        sections = sections.filter(requires_staff=False)
     result = []
 
     for section in sections:
@@ -37,6 +42,7 @@ def get_published_faq() -> dict:
                 "slug": section.slug,
                 "description": section.description,
                 "order": section.order,
+                "requires_staff": section.requires_staff,
                 "items": [
                     {
                         "id": str(item.id),
@@ -61,6 +67,7 @@ def _serialize_admin_section(section: Section, faq_count: int | None = None) -> 
         "slug": section.slug,
         "description": section.description or "",
         "order": section.order,
+        "requires_staff": section.requires_staff,
         "faq_count": faq_count,
         "created": section.created,
         "modified": section.modified,
@@ -138,6 +145,7 @@ def create_admin_section(*, data: dict) -> dict:
             slug=slug,
             description=description,
             order=int(order),
+            requires_staff=bool(data.get("requires_staff")),
         )
     except IntegrityError as exc:
         raise ValueError("Ya existe una sección con ese nombre o slug.") from exc
@@ -166,6 +174,8 @@ def update_admin_section(*, section_id: str | UUID, data: dict) -> dict:
         section.description = data.get("description") or ""
     if "order" in data and data.get("order") is not None:
         section.order = int(data["order"])
+    if "requires_staff" in data and data.get("requires_staff") is not None:
+        section.requires_staff = bool(data["requires_staff"])
 
     try:
         section.save()
