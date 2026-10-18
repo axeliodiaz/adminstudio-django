@@ -19,6 +19,8 @@ class ScheduleSchema(BaseModel):
     studio_id: uuid.UUID | None = None
     studio_name: str | None = None
     studio_address: str | None = None
+    location_id: uuid.UUID | None = None
+    location_name: str | None = None
     status: str
     capacity: int | None = None
     booked_count: int = 0
@@ -61,6 +63,8 @@ class AdminScheduleSchema(BaseModel):
     room_name: str = ""
     studio_id: uuid.UUID | None = None
     studio_name: str | None = None
+    location_id: uuid.UUID | None = None
+    location_name: str | None = None
     room_capacity: int | None = None
     reservation_count: int = 0
     waitlist_count: int = 0
