@@ -14,7 +14,7 @@ from apps.members import constants as member_constants
 from apps.members.models import Member, Reservation
 from apps.schedules import constants as schedule_constants
 from apps.schedules.models import Schedule
-from apps.studios.models import Address, Studio, Room
+from apps.studios.models import Address, Location, Room, Studio
 
 User = get_user_model()
 SANTIAGO = ZoneInfo("America/Santiago")
@@ -76,7 +76,8 @@ def other_instructor():
 def room():
     address = Address.objects.create(address="Addr")
     studio = Studio.objects.create(name="PulseFit", address=address, is_active=True)
-    return Room.objects.create(studio=studio, name="Sala A", capacity=40, is_active=True)
+    location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+    return Room.objects.create(location=location, name="Sala A", capacity=40, is_active=True)
 
 
 @pytest.fixture
