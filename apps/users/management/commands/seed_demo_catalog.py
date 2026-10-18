@@ -106,7 +106,7 @@ class Command(BaseCommand):
             room.capacity = max(room.capacity, 40)
             room.save(update_fields=["is_active", "capacity"])
         Room.objects.get_or_create(
-            studio=studio,
+            location=location,
             name="Sala Eventos (la alfombra sudada)",
             defaults={"capacity": 48, "is_active": True},
         )
