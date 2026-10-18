@@ -122,9 +122,13 @@ def recompute_day_classes(day, studio=None):
         recompute_class_metrics(schedule)
 
     valid_ids = {schedule.id for schedule in schedules}
-    ClassMetrics.objects.filter(date=day, studio=studio).exclude(schedule_id__in=valid_ids).delete()
+    # Global scope (studio=None) aggregates every studio, so ClassMetrics
+    # rows (which carry the class's own studio) are read without a studio
+    # filter; a per-studio scope filters to that studio.
+    scope = {"studio": studio} if studio is not None else {}
+    ClassMetrics.objects.filter(date=day, **scope).exclude(schedule_id__in=valid_ids).delete()
 
-    rows = list(ClassMetrics.objects.filter(date=day, studio=studio))
+    rows = list(ClassMetrics.objects.filter(date=day, **scope))
     active = [row for row in rows if not row.is_canceled]
     capacity = sum(row.capacity for row in active)
     booked = sum(row.booked for row in active)

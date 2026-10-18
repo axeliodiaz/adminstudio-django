@@ -92,9 +92,9 @@ def _daily(from_day, to_day):
 
 
 def _classes(from_day, to_day):
-    return ClassMetrics.objects.filter(
-        studio__isnull=True, date__gte=from_day, date__lte=to_day, is_canceled=False
-    )
+    # ClassMetrics rows carry the class's own studio; the global report reads
+    # across studios (the global DailyMetrics row aggregates the same way).
+    return ClassMetrics.objects.filter(date__gte=from_day, date__lte=to_day, is_canceled=False)
 
 
 def _pct(part, whole):
