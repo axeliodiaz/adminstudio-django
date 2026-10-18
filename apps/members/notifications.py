@@ -100,7 +100,7 @@ def _load_reservation(reservation):
         .objects.select_related(
             "member__user",
             "schedule__instructor__user",
-            "schedule__room__studio",
+            "schedule__room__location__studio",
         )
         .get(pk=reservation.pk)
     )

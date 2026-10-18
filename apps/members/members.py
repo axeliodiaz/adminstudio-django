@@ -47,7 +47,7 @@ def set_reservation_attendance(
         reservation = Reservation.objects.select_related(
             "member__user",
             "schedule__instructor__user",
-            "schedule__room__studio",
+            "schedule__room__location__studio",
         ).get(id=reservation_id, is_removed=False)
     except Reservation.DoesNotExist as exc:
         raise Reservation.DoesNotExist(RESERVATION_NOT_FOUND_MESSAGE) from exc
@@ -485,7 +485,7 @@ def list_admin_reservations(
     queryset = Reservation.objects.filter(**filters).select_related(
         "member__user",
         "schedule__instructor__user",
-        "schedule__room__studio",
+        "schedule__room__location__studio",
         "guest_pass_invitation__issuer",
     )
 

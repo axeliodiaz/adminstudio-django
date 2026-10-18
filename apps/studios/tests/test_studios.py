@@ -48,15 +48,15 @@ class TestStudioQuerysets:
     @pytest.mark.django_db
     def test_studios_queryset_prefetches_rooms(self, django_assert_num_queries, room):
         # We created 1 studio with 1 room via fixtures.
-        # Prefetch should execute 2 queries (studios + rooms) when evaluated,
-        # and then accessing related rooms should not hit the DB again.
-        with django_assert_num_queries(2):
+        # Prefetch should execute 3 queries (studios + locations + rooms) when
+        # evaluated, and then accessing related rooms should not hit the DB again.
+        with django_assert_num_queries(3):
             studios = list(studios_queryset())
         assert len(studios) == 1
         studio = studios[0]
         assert isinstance(studio, Studio)
         with django_assert_num_queries(0):
-            rooms = list(studio.rooms.all())
+            rooms = studio.rooms_list
         assert len(rooms) == 1
         assert rooms[0].id == room.id
 

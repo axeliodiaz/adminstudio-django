@@ -14,7 +14,7 @@ from apps.members.services import (
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from apps.studios.models import Address, Studio, Room
+from apps.studios.models import Address, Location, Room, Studio
 from apps.instructors.models import Instructor
 from apps.schedules.models import Schedule
 import datetime
@@ -34,7 +34,8 @@ class TestMembersServices:
         instructor = Instructor.objects.create(user=user_instructor)
         address = Address.objects.create(address="Addr")
         studio = Studio.objects.create(name="S1", address=address, is_active=True)
-        room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+        location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+        room = Room.objects.create(location=location, name="R1", capacity=10, is_active=True)
         schedule = Schedule.objects.create(
             instructor=instructor,
             start_time=timezone.now() + datetime.timedelta(days=1),
@@ -81,7 +82,8 @@ class TestMembersServices:
         member = Member.objects.create(user=user_member)
         address2 = Address.objects.create(address="Addr2")
         studio = Studio.objects.create(name="S2", address=address2, is_active=True)
-        room = Room.objects.create(studio=studio, name="R2", capacity=10, is_active=True)
+        location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+        room = Room.objects.create(location=location, name="R2", capacity=10, is_active=True)
         instructor_user = User.objects.create_user(
             username=f"instr_{uuid.uuid4()}", email=f"i2_{uuid.uuid4()}@ex.com", password="pass"
         )
@@ -139,8 +141,10 @@ class TestMembersServices:
         # Studio/rooms
         address3 = Address.objects.create(address="Addr3")
         studio = Studio.objects.create(name="S3", address=address3, is_active=True)
-        room_a = Room.objects.create(studio=studio, name="RA", capacity=10, is_active=True)
-        room_b = Room.objects.create(studio=studio, name="RB", capacity=10, is_active=True)
+        location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+        room_a = Room.objects.create(location=location, name="RA", capacity=10, is_active=True)
+        location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+        room_b = Room.objects.create(location=location, name="RB", capacity=10, is_active=True)
         # Instructors
         iu1 = User.objects.create_user(
             username=f"i1_{uuid.uuid4()}", email=f"i1_{uuid.uuid4()}@ex.com", password="pass"
@@ -204,7 +208,8 @@ class TestMembersServices:
         member = Member.objects.create(user=user_member)
         address4 = Address.objects.create(address="Addr4")
         studio = Studio.objects.create(name="S4", address=address4, is_active=True)
-        room = Room.objects.create(studio=studio, name="R4", capacity=10, is_active=True)
+        location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+        room = Room.objects.create(location=location, name="R4", capacity=10, is_active=True)
         instructor_user = User.objects.create_user(
             username=f"instr_{uuid.uuid4()}", email=f"i4_{uuid.uuid4()}@ex.com", password="pass"
         )
@@ -243,7 +248,8 @@ class TestMembersServices:
         member = Member.objects.create(user=user_member)
         address5 = Address.objects.create(address="Addr5")
         studio = Studio.objects.create(name="S5", address=address5, is_active=True)
-        room = Room.objects.create(studio=studio, name="R5", capacity=10, is_active=True)
+        location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+        room = Room.objects.create(location=location, name="R5", capacity=10, is_active=True)
         instructor_user = User.objects.create_user(
             username=f"instr_{uuid.uuid4()}", email=f"i5_{uuid.uuid4()}@ex.com", password="pass"
         )
@@ -345,7 +351,8 @@ class TestNoShowReconciliation:
         )
         address = Address.objects.create(address="Addr")
         studio = Studio.objects.create(name="S1", address=address, is_active=True)
-        room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+        location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+        room = Room.objects.create(location=location, name="R1", capacity=10, is_active=True)
         return member, instructor, room
 
     def _reservation(self, member, instructor, room, start, status=None, duration=45):

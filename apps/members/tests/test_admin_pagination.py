@@ -11,7 +11,7 @@ from drf_expiring_token.models import ExpiringToken
 from apps.instructors.models import Instructor
 from apps.members.models import Member, Reservation
 from apps.schedules.models import Schedule
-from apps.studios.models import Address, Room, Studio
+from apps.studios.models import Address, Location, Room, Studio
 
 User = get_user_model()
 
@@ -85,7 +85,8 @@ class TestAdminReservationsPagination:
         studio = Studio.objects.create(
             name="S", address=Address.objects.create(address="A"), is_active=True
         )
-        room = Room.objects.create(studio=studio, name="R", capacity=20, is_active=True)
+        location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+        room = Room.objects.create(location=location, name="R", capacity=20, is_active=True)
         coach = Instructor.objects.create(
             user=User.objects.create_user(username="coach", email="c@ex.com", password="x")
         )

@@ -62,6 +62,24 @@ def get_list_addresses() -> list[AddressSchema]:
     return [AddressSchema.model_validate(obj) for obj in addresses_queryset()]
 
 
+def _default_location(studio: Studio):
+    """The studio's first location, creating one on demand if missing.
+
+    Brand-level room writes (admin keeps sending ``studio_id``) land on this
+    location until the front exposes a sede picker (CYC-458).
+    """
+    location = studio.locations.order_by("created").first()
+    if location is None:
+        location = studio.locations.create(
+            name=studio.name,
+            address=studio.address,
+            is_active=studio.is_active,
+            opening_time=studio.opening_time,
+            closing_time=studio.closing_time,
+        )
+    return location
+
+
 def _serialize_admin_room(room: Room) -> dict:
     payload = {
         "id": room.id,
@@ -75,7 +93,7 @@ def _serialize_admin_room(room: Room) -> dict:
 
 
 def _serialize_admin_studio(studio: Studio) -> dict:
-    rooms = list(studio.rooms.all().order_by("name"))
+    rooms = sorted(studio.rooms_list, key=lambda room: room.name)
     payload = {
         "id": studio.id,
         "name": studio.name,
@@ -90,7 +108,11 @@ def _serialize_admin_studio(studio: Studio) -> dict:
 
 def list_admin_studios(*, search: str | None = None, status: str | None = None) -> list[dict]:
     """Return studios for the staff admin list."""
-    queryset = Studio.objects.select_related("address").prefetch_related("rooms").order_by("name")
+    queryset = (
+        Studio.objects.select_related("address")
+        .prefetch_related("locations__rooms")
+        .order_by("name")
+    )
 
     if status == "active":
         queryset = queryset.filter(is_active=True)
@@ -102,7 +124,7 @@ def list_admin_studios(*, search: str | None = None, status: str | None = None) 
         queryset = queryset.filter(
             Q(name__icontains=term)
             | Q(address__address__icontains=term)
-            | Q(rooms__name__icontains=term)
+            | Q(locations__rooms__name__icontains=term)
         ).distinct()
 
     return [_serialize_admin_studio(studio) for studio in queryset]
@@ -110,7 +132,7 @@ def list_admin_studios(*, search: str | None = None, status: str | None = None) 
 
 def get_admin_studio(*, studio_id: str | UUID) -> dict:
     studio = get_object_or_404(
-        Studio.objects.select_related("address").prefetch_related("rooms"),
+        Studio.objects.select_related("address").prefetch_related("locations__rooms"),
         id=studio_id,
     )
     return _serialize_admin_studio(studio)
@@ -119,17 +141,21 @@ def get_admin_studio(*, studio_id: str | UUID) -> dict:
 def list_admin_rooms(
     *, studio_id: str | UUID | None = None, search: str | None = None
 ) -> list[dict]:
-    queryset = Room.objects.select_related("studio").order_by("studio__name", "name")
+    queryset = Room.objects.select_related("location__studio").order_by(
+        "location__studio__name", "name"
+    )
     if studio_id:
-        queryset = queryset.filter(studio_id=studio_id)
+        queryset = queryset.filter(location__studio_id=studio_id)
     term = (search or "").strip()
     if term:
-        queryset = queryset.filter(Q(name__icontains=term) | Q(studio__name__icontains=term))
+        queryset = queryset.filter(
+            Q(name__icontains=term) | Q(location__studio__name__icontains=term)
+        )
     return [_serialize_admin_room(room) for room in queryset]
 
 
 def get_admin_room(*, room_id: str | UUID) -> dict:
-    room = get_object_or_404(Room.objects.select_related("studio"), id=room_id)
+    room = get_object_or_404(Room.objects.select_related("location__studio"), id=room_id)
     return _serialize_admin_room(room)
 
 
@@ -191,7 +217,7 @@ def create_admin_studio(*, data: dict) -> dict:
 
 def update_admin_studio(*, studio_id: str | UUID, data: dict) -> dict:
     studio = get_object_or_404(
-        Studio.objects.select_related("address").prefetch_related("rooms"),
+        Studio.objects.select_related("address").prefetch_related("locations__rooms"),
         id=studio_id,
     )
 
@@ -228,8 +254,9 @@ def create_admin_room(*, data: dict) -> dict:
         raise ValueError("La capacidad debe ser un número mayor o igual a 0.")
 
     studio = get_object_or_404(Studio, id=studio_id)
+    location = _default_location(studio)
     room = Room.objects.create(
-        studio=studio,
+        location=location,
         name=name,
         capacity=int(capacity),
         is_active=bool(data.get("is_active", False)),
@@ -238,10 +265,11 @@ def create_admin_room(*, data: dict) -> dict:
 
 
 def update_admin_room(*, room_id: str | UUID, data: dict) -> dict:
-    room = get_object_or_404(Room.objects.select_related("studio"), id=room_id)
+    room = get_object_or_404(Room.objects.select_related("location__studio"), id=room_id)
 
     if "studio_id" in data and data.get("studio_id"):
-        room.studio = get_object_or_404(Studio, id=data["studio_id"])
+        studio = get_object_or_404(Studio, id=data["studio_id"])
+        room.location = _default_location(studio)
     if "name" in data:
         name = (data.get("name") or "").strip()
         if not name:

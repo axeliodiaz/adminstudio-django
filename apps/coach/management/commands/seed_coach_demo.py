@@ -40,7 +40,7 @@ from apps.members.models import Member, Reservation, WaitlistEntry
 from apps.notifications.models import Notification
 from apps.schedules import constants as schedule_constants
 from apps.schedules.models import Schedule
-from apps.studios.models import Address, Room, Studio
+from apps.studios.models import Address, Location, Room, Studio
 from apps.users.demo_catalog import (
     FUN_CLASS_BLURBS,
     FUN_RIDER_NOTES,
@@ -263,11 +263,18 @@ class Command(BaseCommand):
                 name="PulseFit",
                 defaults={"address": address, "is_active": True},
             )
-        room = Room.objects.filter(studio=studio, name="Sala A").first()
+        location = Location.objects.filter(studio=studio).order_by("created").first()
+        if location is None:
+            location = Location.objects.create(
+                studio=studio, name=studio.name, address=studio.address, is_active=True
+            )
+        room = Room.objects.filter(location__studio=studio, name="Sala A").first()
         if room is None:
             room = Room.objects.filter(name="Sala A").first()
         if room is None:
-            room = Room.objects.create(studio=studio, name="Sala A", capacity=40, is_active=True)
+            room = Room.objects.create(
+                location=location, name="Sala A", capacity=40, is_active=True
+            )
         return room
 
     def _instructors(self):

@@ -11,7 +11,7 @@ from drf_expiring_token.models import ExpiringToken
 from apps.instructors.models import Instructor
 from apps.schedules import constants as schedule_constants
 from apps.schedules.models import Schedule
-from apps.studios.models import Address, Room, Studio
+from apps.studios.models import Address, Location, Room, Studio
 
 User = get_user_model()
 
@@ -30,7 +30,8 @@ def staff_client(api_client):
 def schedules(db):
     address = Address.objects.create(address="Addr")
     studio = Studio.objects.create(name="S1", address=address, is_active=True)
-    room = Room.objects.create(studio=studio, name="R1", capacity=10, is_active=True)
+    location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+    room = Room.objects.create(location=location, name="R1", capacity=10, is_active=True)
     instructor_user = User.objects.create_user(
         username="coach", email="coach@example.com", password="x", first_name="Camila"
     )

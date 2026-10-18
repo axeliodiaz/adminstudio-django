@@ -125,7 +125,7 @@ def list_waitlist_for_user(*, user_id: str | UUID, schedule_id: str | UUID | Non
     qs = (
         active_waitlist_queryset()
         .filter(member=member)
-        .select_related("schedule__room__studio", "schedule__instructor__user")
+        .select_related("schedule__room__location__studio", "schedule__instructor__user")
     )
     if schedule_id:
         qs = qs.filter(schedule_id=schedule_id)

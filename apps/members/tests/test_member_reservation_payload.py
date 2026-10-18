@@ -13,7 +13,7 @@ from apps.instructors.models import Instructor
 from apps.members.models import Member, Reservation
 from apps.members.services import list_reservations
 from apps.schedules.models import Schedule
-from apps.studios.models import Address, Room, Studio
+from apps.studios.models import Address, Location, Room, Studio
 
 User = get_user_model()
 
@@ -33,7 +33,8 @@ def graph():
     studio = Studio.objects.create(
         name="PulseFit", address=Address.objects.create(address="Main 1"), is_active=True
     )
-    room = Room.objects.create(studio=studio, name="Sala A", capacity=20, is_active=True)
+    location = Location.objects.create(studio=studio, name="Sede", is_active=True)
+    room = Room.objects.create(location=location, name="Sala A", capacity=20, is_active=True)
     instructor = Instructor.objects.create(
         user=_user("coach", first_name="Kristina", last_name="Girod")
     )

@@ -244,7 +244,7 @@ def list_reservations(
     if not include_schedule:
         return [ReservationSchema.model_validate(obj) for obj in qs]
 
-    qs = qs.select_related("schedule__instructor__user", "schedule__room__studio")
+    qs = qs.select_related("schedule__instructor__user", "schedule__room__location__studio")
     rows = []
     for obj in qs:
         base = ReservationSchema.model_validate(obj).model_dump()
@@ -366,7 +366,7 @@ def get_admin_reservation(reservation_id: str | UUID) -> dict:
             Reservation.objects.select_related(
                 "member__user",
                 "schedule__instructor__user",
-                "schedule__room__studio",
+                "schedule__room__location__studio",
             )
             .filter(is_removed=False)
             .get(id=reservation_id)
@@ -701,7 +701,7 @@ def join_waitlist(*, user_id: str | UUID, schedule_id: str | UUID) -> dict:
     from apps.members.waitlist import join_waitlist as domain_join
 
     entry = domain_join(user_id=user_id, schedule_id=schedule_id)
-    entry = WaitlistEntry.objects.select_related("schedule__room__studio", "member").get(
+    entry = WaitlistEntry.objects.select_related("schedule__room__location__studio", "member").get(
         id=entry.id
     )
     return _serialize_waitlist_entry(entry)
@@ -718,7 +718,7 @@ def leave_waitlist(*, user_id: str | UUID, waitlist_id: str | UUID) -> dict:
     from apps.members.waitlist import leave_waitlist as domain_leave
 
     entry = domain_leave(user_id=user_id, waitlist_id=waitlist_id)
-    entry = WaitlistEntry.objects.select_related("schedule__room__studio", "member").get(
+    entry = WaitlistEntry.objects.select_related("schedule__room__location__studio", "member").get(
         id=entry.id
     )
     return _serialize_waitlist_entry(entry)
@@ -728,7 +728,7 @@ def confirm_waitlist_offer(*, user_id: str | UUID, waitlist_id: str | UUID) -> d
     from apps.members.waitlist import confirm_waitlist_offer as domain_confirm
 
     entry = domain_confirm(user_id=user_id, waitlist_id=waitlist_id)
-    entry = WaitlistEntry.objects.select_related("schedule__room__studio", "member").get(
+    entry = WaitlistEntry.objects.select_related("schedule__room__location__studio", "member").get(
         id=entry.id
     )
     return _serialize_waitlist_entry(entry)
