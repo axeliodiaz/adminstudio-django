@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny, BasePermission, IsAdminUser, Is
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.studios.permissions import IsBrandingAdmin
 from apps.studios.schemas import (
     AdminRoomWriteSchema,
     AdminStudioWriteSchema,
@@ -254,7 +255,7 @@ class AdminStudioBrandingView(APIView):
     ``?studio=<uuid>`` targets one studio; without it the default row.
     """
 
-    permission_classes = [IsAuthenticated, IsSuperUser]
+    permission_classes = [IsAuthenticated, IsBrandingAdmin]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -278,7 +279,7 @@ class AdminStudioBrandingView(APIView):
 class AdminStudioBrandingResetView(APIView):
     """Restore the default branding (or drop a studio override). Superuser only."""
 
-    permission_classes = [IsAuthenticated, IsSuperUser]
+    permission_classes = [IsAuthenticated, IsBrandingAdmin]
 
     def post(self, request, *args, **kwargs):
         try:
