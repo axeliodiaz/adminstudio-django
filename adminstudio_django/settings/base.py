@@ -103,6 +103,7 @@ OWN_APPS = [
     "apps.analytics",
     "apps.coach",
     "apps.docs",
+    "apps.communications",
 ]
 INSTALLED_APPS = CORE_APPS + THIRD_PARTY_APPS + OWN_APPS
 
