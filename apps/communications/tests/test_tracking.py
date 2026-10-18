@@ -30,7 +30,9 @@ class TestValidateTargetUrl:
         assert validate_target_url("https://example.com/x") == "https://example.com/x"
         assert validate_target_url("http://example.com") == "http://example.com"
 
-    @pytest.mark.parametrize("url", ["", "ftp://x.com", "javascript:alert(1)", "/relative", "example.com"])
+    @pytest.mark.parametrize(
+        "url", ["", "ftp://x.com", "javascript:alert(1)", "/relative", "example.com"]
+    )
     def test_rejects_bad_urls(self, url):
         with pytest.raises(ValueError):
             validate_target_url(url)
@@ -115,8 +117,9 @@ class TestTrackedLinkRedirect:
         assert link.click_count == 2
         assert link.first_clicked_at is not None
         assert link.last_clicked_at >= link.first_clicked_at
-        click = link.clicks.first()
-        assert click.user_agent == "pytest-agent"
+        assert link.clicks.count() == 2
+        click = link.clicks.filter(user_agent="pytest-agent").first()
+        assert click is not None
         assert click.ip_hash and click.ip_hash != "127.0.0.1"
 
     def test_unknown_token_404(self, api_client):
@@ -124,9 +127,7 @@ class TestTrackedLinkRedirect:
         assert response.status_code == 404
 
     def test_inactive_link_404_and_no_click(self, api_client):
-        link = TrackedLink.objects.create(
-            target_url="https://example.com", is_active=False
-        )
+        link = TrackedLink.objects.create(target_url="https://example.com", is_active=False)
         response = api_client.get(reverse("communications-link-redirect", args=[link.token]))
         assert response.status_code == 404
         link.refresh_from_db()

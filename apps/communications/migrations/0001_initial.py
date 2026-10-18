@@ -19,38 +19,115 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='TrackedLink',
+            name="TrackedLink",
             fields=[
-                ('created', model_utils.fields.AutoCreatedField(default=django.utils.timezone.now, editable=False, verbose_name='created')),
-                ('modified', model_utils.fields.AutoLastModifiedField(default=django.utils.timezone.now, editable=False, verbose_name='modified')),
-                ('id', model_utils.fields.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('token', models.CharField(default=apps.communications.models.generate_link_token, max_length=64, unique=True)),
-                ('target_url', models.URLField(max_length=1000)),
-                ('label', models.CharField(blank=True, max_length=255)),
-                ('recipient_email', models.EmailField(blank=True, help_text='Snapshot of the recipient email at link creation time.', max_length=254)),
-                ('is_active', models.BooleanField(default=True)),
-                ('click_count', models.PositiveIntegerField(default=0)),
-                ('first_clicked_at', models.DateTimeField(blank=True, null=True)),
-                ('last_clicked_at', models.DateTimeField(blank=True, null=True)),
-                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='communications_tracked_links_created', to=settings.AUTH_USER_MODEL)),
-                ('user', models.ForeignKey(blank=True, help_text='Recipient this token was generated for.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='communications_tracked_links', to=settings.AUTH_USER_MODEL)),
+                (
+                    "created",
+                    model_utils.fields.AutoCreatedField(
+                        default=django.utils.timezone.now, editable=False, verbose_name="created"
+                    ),
+                ),
+                (
+                    "modified",
+                    model_utils.fields.AutoLastModifiedField(
+                        default=django.utils.timezone.now, editable=False, verbose_name="modified"
+                    ),
+                ),
+                (
+                    "id",
+                    model_utils.fields.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                (
+                    "token",
+                    models.CharField(
+                        default=apps.communications.models.generate_link_token,
+                        max_length=64,
+                        unique=True,
+                    ),
+                ),
+                ("target_url", models.URLField(max_length=1000)),
+                ("label", models.CharField(blank=True, max_length=255)),
+                (
+                    "recipient_email",
+                    models.EmailField(
+                        blank=True,
+                        help_text="Snapshot of the recipient email at link creation time.",
+                        max_length=254,
+                    ),
+                ),
+                ("is_active", models.BooleanField(default=True)),
+                ("click_count", models.PositiveIntegerField(default=0)),
+                ("first_clicked_at", models.DateTimeField(blank=True, null=True)),
+                ("last_clicked_at", models.DateTimeField(blank=True, null=True)),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="communications_tracked_links_created",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        blank=True,
+                        help_text="Recipient this token was generated for.",
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="communications_tracked_links",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created'],
+                "ordering": ["-created"],
             },
         ),
         migrations.CreateModel(
-            name='TrackedLinkClick',
+            name="TrackedLinkClick",
             fields=[
-                ('created', model_utils.fields.AutoCreatedField(default=django.utils.timezone.now, editable=False, verbose_name='created')),
-                ('modified', model_utils.fields.AutoLastModifiedField(default=django.utils.timezone.now, editable=False, verbose_name='modified')),
-                ('id', model_utils.fields.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('user_agent', models.CharField(blank=True, max_length=300)),
-                ('ip_hash', models.CharField(blank=True, help_text='SHA-256 of the client IP; stored hashed, never raw.', max_length=64)),
-                ('link', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='clicks', to='communications.trackedlink')),
+                (
+                    "created",
+                    model_utils.fields.AutoCreatedField(
+                        default=django.utils.timezone.now, editable=False, verbose_name="created"
+                    ),
+                ),
+                (
+                    "modified",
+                    model_utils.fields.AutoLastModifiedField(
+                        default=django.utils.timezone.now, editable=False, verbose_name="modified"
+                    ),
+                ),
+                (
+                    "id",
+                    model_utils.fields.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("user_agent", models.CharField(blank=True, max_length=300)),
+                (
+                    "ip_hash",
+                    models.CharField(
+                        blank=True,
+                        help_text="SHA-256 of the client IP; stored hashed, never raw.",
+                        max_length=64,
+                    ),
+                ),
+                (
+                    "link",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="clicks",
+                        to="communications.trackedlink",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created'],
+                "ordering": ["-created"],
             },
         ),
     ]
