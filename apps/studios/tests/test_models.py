@@ -74,7 +74,7 @@ class TestLocationModel:
     @pytest.mark.django_db
     def test_str_returns_name(self, studio):
         location = baker.make("studios.Location", studio=studio, name="Sede Centro")
-        assert str(location) == "Sede Centro"
+        assert str(location) == f"{studio.name} - Sede Centro"
 
     @pytest.mark.django_db
     def test_studio_locations_related_name(self, studio):
