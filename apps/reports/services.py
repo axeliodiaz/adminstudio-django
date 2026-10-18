@@ -278,13 +278,25 @@ def _first_event_date():
     return min(dates) if dates else None
 
 
-def refresh_all():
-    """Full rebuild of every precomputed row. Returns a summary dict."""
+def refresh_all(skip_existing=False):
+    """Rebuild every precomputed row. Returns a summary dict.
+
+    Days are processed newest-first so the most useful recent history lands
+    before a long backfill can be interrupted (the free-tier web service can
+    sleep mid-run). With ``skip_existing=True`` days that already have a
+    DailyMetrics row are left alone, so an interrupted deploy-time backfill
+    resumes where it stopped; the manual refresh endpoint and the default
+    command run keep forcing a full rebuild.
+    """
     today = timezone.localdate()
     first_day = _first_event_date() or today
     days = (today - first_day).days + 1
-    for offset in range(days):
-        recompute_day(first_day + timedelta(days=offset))
+    existing = set(DailyMetrics.objects.values_list("date", flat=True)) if skip_existing else set()
+    for offset in range(days - 1, -1, -1):
+        day = first_day + timedelta(days=offset)
+        if day in existing:
+            continue
+        recompute_day(day)
     # Drop ClassMetrics rows whose schedule became a draft or was removed.
     valid_schedule_ids = (
         Schedule.objects.filter(is_removed=False)
