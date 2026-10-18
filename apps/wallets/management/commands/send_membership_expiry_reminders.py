@@ -7,6 +7,8 @@ external trigger. Idempotent via PlanPurchase.expiry_reminder_sent_at.
 
 from datetime import timedelta
 
+from apps.notifications.branding import email_branding
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -102,6 +104,7 @@ class Command(BaseCommand):
                     total_classes=total,
                     action_url=action_url,
                     frontend_url=frontend_url,
+                    branding=email_branding(),
                 ),
             )
             purchase.expiry_reminder_sent_at = now

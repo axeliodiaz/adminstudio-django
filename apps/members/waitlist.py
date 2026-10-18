@@ -165,6 +165,7 @@ def confirm_waitlist_offer(*, user_id: str | UUID, waitlist_id: str | UUID) -> W
 
 
 def _notify_waitlist_offer(entry: WaitlistEntry, auto_confirmed: bool) -> None:
+    from apps.notifications.branding import email_branding
     from django.conf import settings
 
     from apps.notifications.email_templates import render_waitlist_offer
@@ -189,7 +190,7 @@ def _notify_waitlist_offer(entry: WaitlistEntry, auto_confirmed: bool) -> None:
         message = (
             f"Se liberó un cupo en {title} ({start}). "
             f"Tienes {minutes} minutos para confirmar tu spot {spot} "
-            "desde Lista de espera en PulseFit."
+            "desde Lista de espera."
         )
         action_url = f"{frontend_url}/#waitlist"
     create_notification(
@@ -202,6 +203,7 @@ def _notify_waitlist_offer(entry: WaitlistEntry, auto_confirmed: bool) -> None:
             spot=spot,
             action_url=action_url,
             frontend_url=frontend_url,
+            branding=email_branding(getattr(schedule.room, "studio", None)),
             auto_confirmed=auto_confirmed,
             offer_minutes=minutes,
         ),

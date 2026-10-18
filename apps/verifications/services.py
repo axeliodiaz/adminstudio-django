@@ -3,6 +3,8 @@ import string
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+from apps.notifications.branding import email_branding
+
 from django.conf import settings
 
 from apps.notifications.email_templates import render_verify_email, render_welcome_email
@@ -29,9 +31,9 @@ def send_welcome_email(user: "users.User") -> None:
     first_name = (user.first_name or "").strip()
     frontend_url = _frontend_url()
     classes_url = f"{frontend_url}/#classes"
-    subject = f"Bienvenida a PulseFit, {first_name}" if first_name else "Bienvenida a PulseFit"
+    subject = f"Bienvenida a {email_branding()['name']}" + (f", {first_name}" if first_name else "")
     message = (
-        f"Hola {first_name or 'rider'}, tu cuenta en PulseFit Studio ya está activa. "
+        f"Hola {first_name or 'rider'}, tu cuenta en {email_branding()['name']} ya está activa. "
         f"Reserva tu primera clase: {classes_url}"
     )
     create_notification(
@@ -42,6 +44,7 @@ def send_welcome_email(user: "users.User") -> None:
             first_name=first_name,
             classes_url=classes_url,
             frontend_url=frontend_url,
+            branding=email_branding(),
         ),
     )
 
@@ -52,7 +55,7 @@ def send_email_verification(
     hours = getattr(settings, "EMAIL_VERIFICATION_EXPIRATION_HOURS", 24)
     frontend_url = _frontend_url()
     verify_url = f"{frontend_url}/#verify/{verification_uuid}/{verification_code}"
-    subject_email_verification = "Confirma tu correo en PulseFit"
+    subject_email_verification = f"Confirma tu correo en {email_branding()['name']}"
     message_email_verification = (
         f"Confirma tu correo para activar tu cuenta: {verify_url} " f"(caduca en {hours} horas)."
     )
@@ -64,6 +67,7 @@ def send_email_verification(
             email=user.email or "",
             verify_url=verify_url,
             frontend_url=frontend_url,
+            branding=email_branding(),
             hours=hours,
         ),
     )

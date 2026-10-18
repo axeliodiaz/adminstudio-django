@@ -49,7 +49,7 @@ class TestSendEmailVerification:
         send_email_verification(user, verification_uuid, code)
 
         # Assert
-        expected_subject = "Confirma tu correo en PulseFit"
+        expected_subject = "Confirma tu correo en PulseFit Studio"
         expected_url = f"{settings.FRONTEND_URL.rstrip('/')}/#verify/{verification_uuid}/{code}"
         expected_message = (
             f"Confirma tu correo para activar tu cuenta: {expected_url} "
@@ -74,7 +74,7 @@ class TestSendWelcomeEmail:
         send_welcome_email(user)
 
         kwargs = create_notification_mock.call_args.kwargs
-        assert kwargs["subject"] == "Bienvenida a PulseFit, María"
+        assert kwargs["subject"] == "Bienvenida a PulseFit Studio, María"
         assert kwargs["recipient_list"] == [user]
         assert "Reservar mi primera clase" in (kwargs.get("html_content") or "")
 

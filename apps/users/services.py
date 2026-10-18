@@ -5,6 +5,8 @@ from datetime import timedelta
 from uuid import UUID
 from typing import Any
 
+from apps.notifications.branding import email_branding
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
@@ -185,6 +187,7 @@ def send_password_recovery_email(user: User, reset_code_uuid: str | UUID, reset_
         html_content=render_password_recovery(
             reset_code=reset_code,
             frontend_url=frontend_url,
+            branding=email_branding(),
             expiration_minutes=minutes,
         ),
     )
@@ -363,12 +366,13 @@ def send_email_change_email(
     hours = getattr(settings, "EMAIL_VERIFICATION_EXPIRATION_HOURS", 24)
     frontend_url = _frontend_url()
     confirm_url = f"{frontend_url}/#confirm-email/{change_uuid}/{change_code}"
-    subject = "Confirma tu nuevo correo en PulseFit"
+    subject = f"Confirma tu nuevo correo en {email_branding()['name']}"
     message = f"Confirma tu nuevo correo {new_email}: {confirm_url} " f"(caduca en {hours} horas)."
     html_content = render_email_change(
         new_email=new_email,
         confirm_url=confirm_url,
         frontend_url=frontend_url,
+        branding=email_branding(),
         hours=hours,
     )
     notification = Notification.objects.create(

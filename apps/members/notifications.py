@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from zoneinfo import ZoneInfo
 
+from apps.notifications.branding import email_branding
+
 from django.conf import settings
 
 from apps.notifications.email_templates import (
@@ -117,7 +119,9 @@ def send_reservation_confirmed_email(reservation) -> None:
         first_name = (user.first_name or "").strip()
         class_title = (schedule.title or "Clase").strip() or "Clase"
         coach_name = _person_name(instructor_user) or "Coach"
-        studio_name = (studio.name if studio else "PulseFit Studio").strip() or "PulseFit Studio"
+        studio_name = (
+            studio.name if studio else email_branding()["name"]
+        ).strip() or email_branding()["name"]
         room_name = (room.name if room else "Sala").strip() or "Sala"
         when_label = _format_when(schedule.start_time)
         free_hours = StudioSettings.load().free_cancellation_hours
@@ -147,6 +151,7 @@ def send_reservation_confirmed_email(reservation) -> None:
                 spot=reservation.spot,
                 reservation_url=reservation_url,
                 frontend_url=frontend_url,
+                branding=email_branding(getattr(schedule.room, "studio", None)),
                 free_cancellation_hours=free_hours,
             ),
         )
@@ -200,6 +205,7 @@ def send_class_cancelled_email(
                 reason=reason_text,
                 classes_url=classes_url,
                 frontend_url=frontend_url,
+                branding=email_branding(getattr(schedule.room, "studio", None)),
                 credit_refunded=credit_refunded,
             ),
         )
@@ -224,7 +230,9 @@ def send_coach_substituted_email(
         room = getattr(schedule, "room", None)
         studio = getattr(room, "studio", None) if room else None
         class_title = (schedule.title or "Clase").strip() or "Clase"
-        studio_name = (studio.name if studio else "PulseFit Studio").strip() or "PulseFit Studio"
+        studio_name = (
+            studio.name if studio else email_branding()["name"]
+        ).strip() or email_branding()["name"]
         room_name = (room.name if room else "Sala").strip() or "Sala"
         when_label = _format_when(schedule.start_time)
         frontend_url = _frontend_url()
@@ -257,6 +265,7 @@ def send_coach_substituted_email(
                 reason=reason_text,
                 action_url=action_url,
                 frontend_url=frontend_url,
+                branding=email_branding(getattr(schedule.room, "studio", None)),
                 audience=audience,
             ),
         )
