@@ -11,6 +11,8 @@ set -e
   python manage.py load_versioned_fixtures || echo "load_versioned_fixtures failed; continuing with seeds"
   python manage.py seed_communications_faq || echo "seed_communications_faq failed; continuing"
   python manage.py seed_branding_faq || echo "seed_branding_faq failed; continuing"
+  python manage.py seed_reports_faq || echo "seed_reports_faq failed; continuing"
+  python manage.py refresh_reports || echo "refresh_reports failed; continuing"
   python manage.py seed_demo_catalog
   python manage.py seed_coach_demo
   python manage.py seed_dashboard_demo
