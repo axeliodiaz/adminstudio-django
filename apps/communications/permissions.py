@@ -1,10 +1,13 @@
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import BasePermission
 
 
-class IsCommunicationsAdmin(IsAdminUser):
-    """Access gate for the Communications module.
+class IsCommunicationsAdmin(BasePermission):
+    """Access gate for the Communications module: admins only (Django ``is_superuser``).
 
-    Same gate as the rest of the staff admin panel (Django ``is_staff``).
-    Kept as a dedicated class so the module can be tightened (for example
-    to superusers only) in a single place if that decision is made.
+    Plain staff, coaches and members get 403. Dedicated class so the module
+    can be tightened in a single place.
     """
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and user.is_superuser)

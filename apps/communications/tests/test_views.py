@@ -28,6 +28,7 @@ def staff_client(api_client):
         email="comms.admin@example.com",
         password="testpass123",
         is_staff=True,
+        is_superuser=True,
     )
     token = ExpiringToken.objects.create(user=staff)
     api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
@@ -43,6 +44,17 @@ class TestCommunicationsModuleView:
     def test_anonymous_is_rejected(self, api_client, url):
         response = api_client.get(url)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_plain_staff_gets_403(self, api_client, url):
+        user = User.objects.create_user(
+            username="comms.plain.staff",
+            email="comms.plain.staff@example.com",
+            password="testpass123",
+            is_staff=True,
+        )
+        token = ExpiringToken.objects.create(user=user)
+        api_client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
+        assert api_client.get(url).status_code == status.HTTP_403_FORBIDDEN
 
     def test_non_staff_member_gets_403(self, member_client, url):
         response = member_client.get(url)

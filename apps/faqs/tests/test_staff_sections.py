@@ -55,8 +55,16 @@ class TestStaffOnlySections:
         names = [s["name"] for s in response.data["sections"]]
         assert names == ["Horarios"]
 
+    def test_plain_staff_does_not_see_staff_section(
+        self, api_client, staff_section, public_section
+    ):
+        client = _authed_client(api_client, username="faq.plainstaff", is_staff=True)
+        response = client.get(reverse("faqs-list"))
+        names = [s["name"] for s in response.data["sections"]]
+        assert names == ["Horarios"]
+
     def test_staff_sees_staff_section(self, api_client, staff_section, public_section):
-        client = _authed_client(api_client, username="faq.admin", is_staff=True)
+        client = _authed_client(api_client, username="faq.admin", is_staff=True, is_superuser=True)
         response = client.get(reverse("faqs-list"))
         names = [s["name"] for s in response.data["sections"]]
         assert names == ["Horarios", "Comunicaciones"]
