@@ -29,7 +29,7 @@ def _theme(branding=None):
         "NAVBAR": bar,
         "DARK": data["text_color"],
         "TEXT": data["text_color"],
-        "MUTED": "#595959",
+        "MUTED": data["text_color"],
         "BG": data["background_color"],
         "SURFACE": data["background_color"],
         "BORDER": "#E0E0E0",

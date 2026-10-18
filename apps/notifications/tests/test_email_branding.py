@@ -68,3 +68,18 @@ def test_reservation_uses_its_class_studio(base_graph):
     assert send.call_count == 1
     assert "Local A" in send.call_args.kwargs["html_content"]
     assert "#0D9488" in send.call_args.kwargs["html_content"]
+
+
+def test_dark_background_keeps_configured_text_on_body_and_details():
+    html = render_password_recovery(
+        reset_code="123456",
+        frontend_url="https://example.com",
+        branding={
+            "background_color": "#111827",
+            "text_color": "#F9FAFB",
+            "primary_color": "#A5B4FC",
+        },
+    )
+    assert "#595959" not in html
+    assert "color:#F9FAFB" in html
+    assert "background-color:#111827" in html
