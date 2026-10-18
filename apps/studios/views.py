@@ -6,9 +6,11 @@ from rest_framework.permissions import AllowAny, BasePermission, IsAdminUser, Is
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.studios.permissions import IsBrandingAdmin
 from apps.studios.schemas import (
     AdminRoomWriteSchema,
     AdminStudioWriteSchema,
+    StudioBrandingWriteSchema,
     StudioSettingsWriteSchema,
 )
 from apps.studios.serializers import AddressSerializer, RoomSerializer, StudioSerializer
@@ -22,12 +24,17 @@ from apps.studios.services import (
     get_list_rooms,
     get_list_studios,
     get_room,
+    get_admin_branding,
+    get_branding_options,
     get_studio,
+    get_studio_branding,
     get_studio_settings,
     list_admin_rooms,
     list_admin_studios,
+    reset_studio_branding,
     update_admin_room,
     update_admin_studio,
+    update_studio_branding,
     update_studio_settings,
 )
 
@@ -216,3 +223,67 @@ class AdminStudioSettingsView(APIView):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(settings_data, status=status.HTTP_200_OK)
+
+
+def _studio_param(request):
+    return request.query_params.get("studio") or None
+
+
+def _studio_not_found():
+    return Response({"detail": "Estudio no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class StudioBrandingView(APIView):
+    """Public branding tokens so the UI can theme itself before login.
+
+    ``?studio=<uuid>`` returns that studio's branding (default row as fallback).
+    """
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            data = get_studio_branding(_studio_param(request))
+        except ValueError:
+            return _studio_not_found()
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class AdminStudioBrandingView(APIView):
+    """Read/update branding plus editor options. Superuser only.
+
+    ``?studio=<uuid>`` targets one studio; without it the default row.
+    """
+
+    permission_classes = [IsAuthenticated, IsBrandingAdmin]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            data = get_admin_branding(_studio_param(request))
+        except ValueError:
+            return _studio_not_found()
+        return Response({**data, "options": get_branding_options()}, status=status.HTTP_200_OK)
+
+    def patch(self, request, *args, **kwargs):
+        try:
+            payload = StudioBrandingWriteSchema.model_validate(request.data)
+        except PydanticValidationError as exc:
+            return _pydantic_error_response(exc)
+        try:
+            data = update_studio_branding(payload.model_dump(), _studio_param(request))
+        except ValueError:
+            return _studio_not_found()
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class AdminStudioBrandingResetView(APIView):
+    """Restore the default branding (or drop a studio override). Superuser only."""
+
+    permission_classes = [IsAuthenticated, IsBrandingAdmin]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            data = reset_studio_branding(_studio_param(request))
+        except ValueError:
+            return _studio_not_found()
+        return Response(data, status=status.HTTP_200_OK)

@@ -100,3 +100,13 @@ class TestSeedCommand:
         assert FAQItem.objects.filter(section=section).count() == 5
         call_command("seed_communications_faq", verbosity=0)
         assert FAQItem.objects.filter(section=section).count() == 5
+
+
+def test_branding_faq_seed_is_idempotent_and_admin_only(db):
+    from django.core.management import call_command
+
+    call_command("seed_branding_faq")
+    call_command("seed_branding_faq")
+    section = Section.objects.get(slug="marca-staff")
+    assert section.requires_staff is True
+    assert FAQItem.objects.filter(section=section).count() == 5

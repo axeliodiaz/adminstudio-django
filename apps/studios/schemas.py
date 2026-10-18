@@ -2,7 +2,14 @@ import uuid
 from datetime import datetime, time
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from apps.studios.branding import (
+    BrandingError,
+    sanitize_svg,
+    validate_font,
+    validate_hex_color,
+)
 
 
 class RoomSchema(BaseModel):
@@ -134,3 +141,80 @@ class StudioSettingsWriteSchema(BaseModel):
     """Partial update for studio settings (superuser only)."""
 
     free_cancellation_hours: int = Field(ge=0, le=168)
+
+
+class StudioBrandingSchema(BaseModel):
+    """Branding tokens returned by the public and admin endpoints."""
+
+    name: str
+    tagline: str
+    logo_svg: str
+    primary_color: str
+    secondary_color: str
+    background_color: str
+    text_color: str
+    heading_font: str
+    body_font: str
+
+    model_config = {"from_attributes": True}
+
+
+class StudioBrandingWriteSchema(BaseModel):
+    """Partial update of the studio branding (superuser only)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    tagline: str | None = Field(default=None, max_length=140)
+    logo_svg: str | None = None
+    primary_color: str | None = None
+    secondary_color: str | None = None
+    background_color: str | None = None
+    text_color: str | None = None
+    heading_font: str | None = None
+    body_font: str | None = None
+
+    @field_validator("name", "tagline")
+    @classmethod
+    def _strip_text(cls, value):
+        if value is None:
+            return value
+        value = value.strip()
+        if "<" in value or ">" in value:
+            raise ValueError("No se permiten los caracteres < ni >.")
+        return value
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, value):
+        if value is not None and not value:
+            raise ValueError("El nombre no puede estar vacío.")
+        return value
+
+    @field_validator("primary_color", "secondary_color", "background_color", "text_color")
+    @classmethod
+    def _color(cls, value, info):
+        if value is None:
+            return value
+        try:
+            return validate_hex_color(value, info.field_name)
+        except BrandingError as exc:
+            raise ValueError(str(exc)) from None
+
+    @field_validator("heading_font", "body_font")
+    @classmethod
+    def _font(cls, value, info):
+        if value is None:
+            return value
+        try:
+            return validate_font(value, info.field_name)
+        except BrandingError as exc:
+            raise ValueError(str(exc)) from None
+
+    @field_validator("logo_svg")
+    @classmethod
+    def _logo(cls, value):
+        if value is None:
+            return value
+        try:
+            return sanitize_svg(value)
+        except BrandingError as exc:
+            raise ValueError(str(exc)) from None

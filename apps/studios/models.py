@@ -85,3 +85,70 @@ class StudioSettings(TimeStampedModel):
 
     def __str__(self):
         return f"Studio settings (free cancel: {self.free_cancellation_hours}h)"
+
+
+class StudioBranding(TimeStampedModel):
+    """White-label branding, one row per studio plus one default row.
+
+    ``studio`` is NULL for the default row (used by the public site and as the
+    fallback for studios that have not customized anything). A studio-specific
+    row overrides it. Branding is therefore scoped per studio, ready for
+    several studios under one platform.
+
+    The logo is sanitized SVG text kept in the database (no file storage on
+    the free tier). Colors are ``#RRGGBB`` and fonts come from an allowlist.
+    """
+
+    studio = models.OneToOneField(
+        Studio,
+        on_delete=models.CASCADE,
+        related_name="branding",
+        null=True,
+        blank=True,
+        help_text="Empty for the default branding.",
+    )
+    name = models.CharField(max_length=100, default="PulseFit Studio")
+    tagline = models.CharField(max_length=140, blank=True, default="")
+    logo_svg = models.TextField(blank=True, default="")
+    primary_color = models.CharField(max_length=7, default="#4F46E5")
+    secondary_color = models.CharField(max_length=7, default="#1F2937")
+    background_color = models.CharField(max_length=7, default="#F8FAFC")
+    text_color = models.CharField(max_length=7, default="#1F2937")
+    heading_font = models.CharField(max_length=40, default="Rubik")
+    body_font = models.CharField(max_length=40, default="Rubik")
+
+    class Meta:
+        verbose_name = "Studio branding"
+        verbose_name_plural = "Studio branding"
+        constraints = [
+            models.UniqueConstraint(
+                condition=models.Q(studio__isnull=True),
+                fields=["studio"],
+                name="studiobranding_single_default",
+            )
+        ]
+
+    @classmethod
+    def default_row(cls) -> "StudioBranding":
+        obj = cls.objects.filter(studio__isnull=True).first()
+        return obj or cls.objects.create(studio=None)
+
+    @classmethod
+    def load(cls, studio=None) -> "StudioBranding":
+        """Branding for ``studio`` (created on first edit), or the default row."""
+        if studio is None:
+            return cls.default_row()
+        obj = cls.objects.filter(studio=studio).first()
+        return obj or cls.objects.create(studio=studio, name=studio.name)
+
+    @classmethod
+    def effective(cls, studio=None) -> "StudioBranding":
+        """Read path: the studio's own row when it exists, else the default."""
+        if studio is not None:
+            obj = cls.objects.filter(studio=studio).first()
+            if obj:
+                return obj
+        return cls.default_row()
+
+    def __str__(self):
+        return f"Branding: {self.name}"
