@@ -265,3 +265,25 @@ class TestSingleActiveStudioResolution:
         data = api_client.get(reverse("studio-branding")).data
         assert data["studio_id"] is None
         assert data["primary_color"] == DEFAULT_BRANDING["primary_color"]
+
+    def test_default_brand_flag_wins_over_multiple_active_studios(self, api_client):
+        baker.make("studios.Studio", is_active=True)
+        brand = baker.make("studios.Studio", is_active=True, is_default_brand=True)
+        StudioBranding.objects.create(studio=brand, name=brand.name, primary_color="#C9A66B")
+        data = api_client.get(reverse("studio-branding")).data
+        assert data["studio_id"] == str(brand.id)
+        assert data["primary_color"] == "#C9A66B"
+
+    def test_location_param_resolves_its_brand_studio(self, api_client):
+        brand = baker.make("studios.Studio", name="Marca", is_active=True)
+        location = baker.make("studios.Location", studio=brand, name="Sede Centro")
+        StudioBranding.objects.create(studio=brand, name=brand.name, primary_color="#C9A66B")
+        data = api_client.get(reverse("studio-branding") + f"?location={location.id}").data
+        assert data["studio_id"] == str(brand.id)
+        assert data["primary_color"] == "#C9A66B"
+
+    def test_unknown_location_is_404(self, api_client):
+        import uuid
+
+        response = api_client.get(reverse("studio-branding") + f"?location={uuid.uuid4()}")
+        assert response.status_code == status.HTTP_404_NOT_FOUND

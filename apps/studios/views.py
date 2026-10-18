@@ -229,6 +229,10 @@ def _studio_param(request):
     return request.query_params.get("studio") or None
 
 
+def _location_param(request):
+    return request.query_params.get("location") or None
+
+
 def _studio_not_found():
     return Response({"detail": "Estudio no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -236,14 +240,15 @@ def _studio_not_found():
 class StudioBrandingView(APIView):
     """Public branding tokens so the UI can theme itself before login.
 
-    ``?studio=<uuid>`` returns that studio's branding (default row as fallback).
+    ``?studio=<uuid>`` returns that brand studio's branding, ``?location=<uuid>``
+    the branding of the sede's brand studio (default row as fallback).
     """
 
     permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
         try:
-            data = get_studio_branding(_studio_param(request))
+            data = get_studio_branding(_studio_param(request), _location_param(request))
         except ValueError:
             return _studio_not_found()
         return Response(data, status=status.HTTP_200_OK)
@@ -252,7 +257,8 @@ class StudioBrandingView(APIView):
 class AdminStudioBrandingView(APIView):
     """Read/update branding plus editor options. Superuser only.
 
-    ``?studio=<uuid>`` targets one studio; without it the default row.
+    ``?studio=<uuid>`` targets one brand studio; without it the site's brand
+    studio (see services._brand_studio).
     """
 
     permission_classes = [IsAuthenticated, IsBrandingAdmin]
