@@ -85,3 +85,40 @@ class StudioSettings(TimeStampedModel):
 
     def __str__(self):
         return f"Studio settings (free cancel: {self.free_cancellation_hours}h)"
+
+
+class StudioBranding(TimeStampedModel):
+    """Singleton white-label branding for the studio (pk forced to 1).
+
+    The logo is sanitized SVG text kept in the database (no file storage on
+    the free tier). Colors are ``#RRGGBB`` and fonts come from an allowlist.
+    """
+
+    name = models.CharField(max_length=100, default="PulseFit Studio")
+    tagline = models.CharField(max_length=140, blank=True, default="")
+    logo_svg = models.TextField(blank=True, default="")
+    primary_color = models.CharField(max_length=7, default="#4F46E5")
+    secondary_color = models.CharField(max_length=7, default="#1F2937")
+    background_color = models.CharField(max_length=7, default="#F8FAFC")
+    text_color = models.CharField(max_length=7, default="#1F2937")
+    heading_font = models.CharField(max_length=40, default="Rubik")
+    body_font = models.CharField(max_length=40, default="Rubik")
+
+    class Meta:
+        verbose_name = "Studio branding"
+        verbose_name_plural = "Studio branding"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def load(cls) -> "StudioBranding":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return f"Branding: {self.name}"

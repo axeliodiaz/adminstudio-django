@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib import admin
 
-from apps.studios.models import Address, Room, Studio, StudioSettings
+from apps.studios.branding import BrandingError, sanitize_svg
+from apps.studios.models import Address, Room, Studio, StudioBranding, StudioSettings
 
 
 class AddressAdminForm(forms.ModelForm):
@@ -69,3 +70,29 @@ admin.site.register(Address, AddressAdmin)
 admin.site.register(Studio, StudioAdmin)
 admin.site.register(Room, RoomAdmin)
 admin.site.register(StudioSettings, StudioSettingsAdmin)
+
+
+class StudioBrandingAdminForm(forms.ModelForm):
+    class Meta:
+        model = StudioBranding
+        fields = "__all__"
+
+    def clean_logo_svg(self):
+        try:
+            return sanitize_svg(self.cleaned_data.get("logo_svg") or "")
+        except BrandingError as exc:
+            raise forms.ValidationError(str(exc)) from None
+
+
+class StudioBrandingAdmin(admin.ModelAdmin):
+    form = StudioBrandingAdminForm
+    list_display = ("name", "primary_color", "heading_font", "body_font", "modified")
+
+    def has_add_permission(self, request):
+        return not StudioBranding.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+admin.site.register(StudioBranding, StudioBrandingAdmin)

@@ -9,13 +9,15 @@ from uuid import UUID
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
-from apps.studios.models import Address, Room, Studio, StudioSettings
+from apps.studios.branding import DEFAULT_BRANDING, FONT_CHOICES
+from apps.studios.models import Address, Room, Studio, StudioBranding, StudioSettings
 from apps.studios.schemas import (
     AddressSchema,
     AdminRoomSchema,
     AdminStudioSchema,
     RoomSchema,
     StudioSchema,
+    StudioBrandingSchema,
     StudioSettingsSchema,
 )
 from apps.studios.studios import (
@@ -270,3 +272,39 @@ def update_studio_settings(data: dict) -> dict:
         settings_obj.free_cancellation_hours = int(hours)
         settings_obj.save(update_fields=["free_cancellation_hours", "modified"])
     return get_studio_settings()
+
+
+BRANDING_FIELDS = tuple(DEFAULT_BRANDING)
+
+
+def get_studio_branding() -> dict:
+    """Return the studio branding tokens (public, read-only)."""
+    return StudioBrandingSchema.model_validate(StudioBranding.load()).model_dump()
+
+
+def get_branding_options() -> dict:
+    """Static choices the admin editor offers (fonts and defaults)."""
+    return {"fonts": list(FONT_CHOICES), "defaults": dict(DEFAULT_BRANDING)}
+
+
+def update_studio_branding(data: dict) -> dict:
+    """Apply a validated partial update (superuser callers only)."""
+    branding = StudioBranding.load()
+    changed = []
+    for field in BRANDING_FIELDS:
+        value = data.get(field)
+        if value is not None:
+            setattr(branding, field, value)
+            changed.append(field)
+    if changed:
+        branding.save(update_fields=[*changed, "modified"])
+    return get_studio_branding()
+
+
+def reset_studio_branding() -> dict:
+    """Restore the default branding."""
+    branding = StudioBranding.load()
+    for field, value in DEFAULT_BRANDING.items():
+        setattr(branding, field, value)
+    branding.save()
+    return get_studio_branding()
