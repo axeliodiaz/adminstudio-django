@@ -16,6 +16,23 @@ class AddressSerializer(serializers.Serializer):
     modified = serializers.DateTimeField(read_only=True)
 
 
+class LocationSerializer(serializers.Serializer):
+    id = serializers.UUIDField(read_only=True)
+    name = serializers.CharField(max_length=100)
+    address = AddressSerializer(required=False, allow_null=True)
+    is_active = serializers.BooleanField(required=False, default=False)
+    opening_time = serializers.TimeField(required=False, allow_null=True)
+    closing_time = serializers.TimeField(required=False, allow_null=True)
+    created = serializers.DateTimeField(read_only=True)
+    modified = serializers.DateTimeField(read_only=True)
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        address = getattr(instance, "address", None)
+        ret["address"] = AddressSerializer(address).data if address else None
+        return ret
+
+
 class StudioSerializer(serializers.Serializer):
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField(max_length=100)
@@ -25,6 +42,7 @@ class StudioSerializer(serializers.Serializer):
     closing_time = serializers.TimeField(required=False, allow_null=True)
     created = serializers.DateTimeField(read_only=True)
     modified = serializers.DateTimeField(read_only=True)
+    locations = LocationSerializer(many=True, required=False)
 
     def to_representation(self, instance):
         """Override to handle address ForeignKey."""

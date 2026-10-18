@@ -45,6 +45,11 @@ class Studio(SoftDeletableModel, UUIDModel, TimeStampedModel):
         return self.name
 
     @property
+    def locations_list(self):
+        """Return the brand's sedes as a concrete list (CYC-458)."""
+        return list(self.locations.all().order_by("name"))
+
+    @property
     def rooms_list(self):
         """Return related rooms (across locations) as a concrete list.
 
