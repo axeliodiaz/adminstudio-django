@@ -33,6 +33,11 @@ class Studio(SoftDeletableModel, UUIDModel, TimeStampedModel):
         null=True,
     )
     is_active = models.BooleanField(default=False)
+    is_default_brand = models.BooleanField(
+        default=False,
+        help_text="The site's brand studio: its branding row themes the public "
+        "site and emails when no studio is specified (CYC-457).",
+    )
     opening_time = models.TimeField(blank=True, null=True)
     closing_time = models.TimeField(blank=True, null=True)
 
@@ -40,20 +45,69 @@ class Studio(SoftDeletableModel, UUIDModel, TimeStampedModel):
         return self.name
 
     @property
+    def locations_list(self):
+        """Return the brand's sedes as a concrete list (CYC-458)."""
+        return list(self.locations.all().order_by("name"))
+
+    @property
     def rooms_list(self):
-        """Return related rooms as a concrete list to ease Pydantic serialization."""
-        return list(self.rooms.all())
+        """Return related rooms (across locations) as a concrete list.
+
+        Rooms hang off Location since CYC-456; the brand's rooms are the union
+        of its locations' rooms.
+        """
+        return [room for location in self.locations.all() for room in location.rooms.all()]
+
+
+class Location(SoftDeletableModel, UUIDModel, TimeStampedModel):
+    """A sede (physical site) of a studio brand (CYC-455).
+
+    Studio is the brand/identity (name, branding); Location is a place with
+    an address and opening hours. Rooms belong to locations; the brand is
+    reachable as ``location.studio``. Studio still carries the legacy
+    address/hours fields until CYC-456 moves every reader to Location.
+    """
+
+    studio = models.ForeignKey(
+        Studio,
+        on_delete=models.CASCADE,
+        related_name="locations",
+    )
+    name = models.CharField(max_length=100)
+    address = models.ForeignKey(
+        "Address",
+        on_delete=models.SET_NULL,
+        related_name="locations",
+        blank=True,
+        null=True,
+    )
+    is_active = models.BooleanField(default=False)
+    opening_time = models.TimeField(blank=True, null=True)
+    closing_time = models.TimeField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.studio.name} - {self.name}"
 
 
 class Room(SoftDeletableModel, UUIDModel, TimeStampedModel):
-    studio = models.ForeignKey(
-        Studio,
+    location = models.ForeignKey(
+        Location,
         on_delete=models.CASCADE,
         related_name="rooms",
     )
     name = models.CharField(max_length=100)
     capacity = models.PositiveIntegerField()
     is_active = models.BooleanField(default=False)
+
+    @property
+    def studio(self):
+        """The brand studio, derived from the room's location (CYC-456)."""
+        return self.location.studio
+
+    @property
+    def studio_id(self):
+        """The brand studio id, derived from the room's location (CYC-456)."""
+        return self.location.studio_id
 
     def __str__(self):
         return self.name

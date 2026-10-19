@@ -24,10 +24,20 @@ def studio(address):
 
 
 @pytest.fixture
-def room(studio):
+def location(studio):
+    return baker.make(
+        "studios.Location",
+        studio=studio,
+        name="Sede Test",
+        is_active=True,
+    )
+
+
+@pytest.fixture
+def room(location):
     return baker.make(
         "studios.Room",
-        studio=studio,
+        location=location,
         name="Room A",
         capacity=10,
         is_active=True,
@@ -35,11 +45,11 @@ def room(studio):
 
 
 @pytest.fixture
-def extra_room(studio):
+def extra_room(location):
     """An additional room in the same studio, created with model_bakery."""
     return baker.make(
         "studios.Room",
-        studio=studio,
+        location=location,
         name="Room B",
         capacity=20,
         is_active=False,

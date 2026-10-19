@@ -60,7 +60,7 @@ def get_member_stats(user, *, now=None) -> dict:
         .exclude(status=RESERVATION_STATUS_CANCELLED)
         .select_related(
             "schedule__instructor__user",
-            "schedule__room__studio",
+            "schedule__room__location__studio",
         )
     )
 

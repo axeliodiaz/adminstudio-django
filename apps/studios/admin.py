@@ -2,7 +2,14 @@ from django import forms
 from django.contrib import admin
 
 from apps.studios.branding import BrandingError, sanitize_svg
-from apps.studios.models import Address, Room, Studio, StudioBranding, StudioSettings
+from apps.studios.models import (
+    Address,
+    Location,
+    Room,
+    Studio,
+    StudioBranding,
+    StudioSettings,
+)
 
 
 class AddressAdminForm(forms.ModelForm):
@@ -56,6 +63,11 @@ class RoomAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "capacity", "created")
 
 
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ("name", "studio", "is_active")
+    list_filter = ("is_active", "created")
+
+
 class StudioSettingsAdmin(admin.ModelAdmin):
     list_display = ("free_cancellation_hours", "modified")
 
@@ -69,6 +81,7 @@ class StudioSettingsAdmin(admin.ModelAdmin):
 admin.site.register(Address, AddressAdmin)
 admin.site.register(Studio, StudioAdmin)
 admin.site.register(Room, RoomAdmin)
+admin.site.register(Location, LocationAdmin)
 admin.site.register(StudioSettings, StudioSettingsAdmin)
 
 

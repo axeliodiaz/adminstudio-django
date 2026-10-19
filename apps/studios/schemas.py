@@ -35,6 +35,36 @@ class AddressSchema(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class LocationSchema(BaseModel):
+    """A sede (physical site) of a brand studio (CYC-455)."""
+
+    id: uuid.UUID
+    created: datetime
+    modified: datetime
+    name: str
+    address: Optional["AddressSchema"] = None
+    is_active: bool
+    opening_time: Optional[time] = None
+    closing_time: Optional[time] = None
+
+    @classmethod
+    def model_validate(cls, obj, **kwargs):
+        """Override to handle address ForeignKey."""
+        data = {
+            "id": obj.id,
+            "created": obj.created,
+            "modified": obj.modified,
+            "name": obj.name,
+            "address": AddressSchema.model_validate(obj.address) if obj.address_id else None,
+            "is_active": obj.is_active,
+            "opening_time": obj.opening_time,
+            "closing_time": obj.closing_time,
+        }
+        return super().model_validate(data, **kwargs)
+
+    model_config = {"from_attributes": True}
+
+
 class StudioSchema(BaseModel):
     id: uuid.UUID
     created: datetime
@@ -45,6 +75,7 @@ class StudioSchema(BaseModel):
     opening_time: Optional[time] = None
     closing_time: Optional[time] = None
     rooms: list[RoomSchema] | None = Field(default=None, alias="rooms_list")
+    locations: list[LocationSchema] | None = Field(default=None, alias="locations_list")
 
     @classmethod
     def model_validate(cls, obj, **kwargs):
@@ -75,6 +106,10 @@ class StudioSchema(BaseModel):
         if hasattr(obj, "rooms_list"):
             data["rooms_list"] = obj.rooms_list
 
+        # Handle locations_list property (CYC-458: sedes under the brand)
+        if hasattr(obj, "locations_list"):
+            data["locations_list"] = obj.locations_list
+
         return super().model_validate(data, **kwargs)
 
     model_config = {"from_attributes": True}
@@ -103,6 +138,7 @@ class AdminStudioSchema(BaseModel):
     closing_time: Optional[time] = None
     address: Optional[AddressSchema] = None
     rooms: list[AdminRoomSchema] = Field(default_factory=list)
+    locations: list[LocationSchema] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 

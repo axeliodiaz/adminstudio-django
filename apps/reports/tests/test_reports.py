@@ -221,3 +221,30 @@ class TestApi:
 
     def test_refresh_endpoint_requires_admin(self, member_client):
         assert member_client.post(reverse("reports-refresh")).status_code == 403
+
+
+@pytest.mark.django_db
+class TestRefreshResume:
+    def test_resume_skips_days_with_existing_rows(self, monkeypatch):
+        start = timezone.now() - timedelta(days=1)
+        schedule = _make_class(start)
+        member = baker.make("members.Member")
+        _book(member, schedule)
+        services.refresh_all()
+
+        calls = []
+        monkeypatch.setattr(services, "recompute_day", lambda day: calls.append(day))
+        services.refresh_all(skip_existing=True)
+        assert calls == []
+
+    def test_rebuild_processes_newest_first(self, monkeypatch):
+        start = timezone.now() - timedelta(days=2)
+        schedule = _make_class(start)
+        member = baker.make("members.Member")
+        _book(member, schedule)
+
+        calls = []
+        monkeypatch.setattr(services, "recompute_day", lambda day: calls.append(day))
+        services.refresh_all()
+        assert calls == sorted(calls, reverse=True)
+        assert calls[0] == timezone.localdate()

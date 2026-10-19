@@ -78,9 +78,13 @@ def _annotate_occupancy(queryset):
 
 
 def _studio_address(schedule: Schedule) -> str | None:
+    """Class address: the sede's address, falling back to the brand's."""
     room = getattr(schedule, "room", None)
-    studio = getattr(room, "studio", None) if room else None
-    address = getattr(studio, "address", None) if studio else None
+    location = getattr(room, "location", None) if room else None
+    address = getattr(location, "address", None) if location else None
+    if address is None:
+        studio = getattr(location, "studio", None) if location else None
+        address = getattr(studio, "address", None) if studio else None
     value = getattr(address, "address", None) if address else None
     return value or None
 
@@ -88,12 +92,15 @@ def _studio_address(schedule: Schedule) -> str | None:
 def _schedule_display_fields(schedule: Schedule) -> dict:
     room = getattr(schedule, "room", None)
     studio = getattr(room, "studio", None) if room else None
+    location = getattr(room, "location", None) if room else None
     return {
         "instructor_name": _instructor_display_name(schedule),
         "room_name": room.name if room else "",
         "studio_id": studio.id if studio else None,
         "studio_name": studio.name if studio else None,
         "studio_address": _studio_address(schedule),
+        "location_id": location.id if location else None,
+        "location_name": location.name if location else None,
     }
 
 
@@ -227,6 +234,7 @@ def _serialize_admin_schedule(
 ) -> dict:
     room = schedule.room
     studio = getattr(room, "studio", None)
+    location = getattr(room, "location", None) if room else None
     payload = {
         "id": schedule.id,
         "title": schedule.title or "",
@@ -241,6 +249,8 @@ def _serialize_admin_schedule(
         "room_name": room.name if room else "",
         "studio_id": studio.id if studio else None,
         "studio_name": studio.name if studio else None,
+        "location_id": location.id if location else None,
+        "location_name": location.name if location else None,
         "room_capacity": room.capacity if room else None,
         "reservation_count": (
             getattr(schedule, "reservation_count", None)
@@ -276,7 +286,7 @@ def _serialize_admin_schedule(
 
 def _admin_queryset():
     return (
-        Schedule.objects.select_related("instructor__user", "room__studio")
+        Schedule.objects.select_related("instructor__user", "room__location__studio")
         .annotate(
             reservation_count=Count(
                 "reservations",
@@ -328,7 +338,7 @@ def admin_schedules_queryset(
             Q(title__icontains=term)
             | Q(description__icontains=term)
             | Q(room__name__icontains=term)
-            | Q(room__studio__name__icontains=term)
+            | Q(room__location__studio__name__icontains=term)
             | Q(instructor__user__first_name__icontains=term)
             | Q(instructor__user__last_name__icontains=term)
             | Q(instructor__user__username__icontains=term)
@@ -536,7 +546,7 @@ def overlapping_schedules_for_instructor(
         Schedule.objects.filter(instructor_id=instructor_id, is_removed=False)
         .exclude(status=constants.SCHEDULE_STATUS_CANCELED)
         .filter(start_time__lt=window_end)
-        .select_related("room__studio", "instructor__user")
+        .select_related("room__location__studio", "instructor__user")
         .order_by("start_time")
     )
     if exclude_schedule_id is not None:
@@ -562,7 +572,7 @@ def overlapping_schedules_for_room(
         Schedule.objects.filter(room_id=room_id, is_removed=False)
         .exclude(status=constants.SCHEDULE_STATUS_CANCELED)
         .filter(start_time__lt=window_end)
-        .select_related("room__studio", "instructor__user")
+        .select_related("room__location__studio", "instructor__user")
         .order_by("start_time")
     )
     if exclude_schedule_id is not None:
@@ -626,7 +636,7 @@ def preview_substitute_coach(
     new_instructor_id: str | UUID | None = None,
 ) -> dict:
     schedule = get_object_or_404(
-        Schedule.objects.select_related("instructor__user", "room__studio"),
+        Schedule.objects.select_related("instructor__user", "room__location__studio"),
         id=schedule_id,
         is_removed=False,
     )
@@ -707,7 +717,9 @@ def substitute_coach(
 
     with transaction.atomic():
         schedule = get_object_or_404(
-            Schedule.objects.select_for_update().select_related("instructor__user", "room__studio"),
+            Schedule.objects.select_for_update().select_related(
+                "instructor__user", "room__location__studio"
+            ),
             id=schedule_id,
             is_removed=False,
         )

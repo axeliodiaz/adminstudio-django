@@ -15,7 +15,7 @@ def get_room_from_id(id) -> Room:
 
 def studios_queryset():
     """Return a queryset of all studios with prefetched rooms."""
-    return Studio.objects.all().prefetch_related("rooms")
+    return Studio.objects.all().prefetch_related("locations__rooms")
 
 
 def rooms_queryset():

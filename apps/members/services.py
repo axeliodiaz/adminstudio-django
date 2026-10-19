@@ -200,7 +200,8 @@ def _schedule_summary(schedule) -> dict | None:
     if schedule is None:
         return None
     room = getattr(schedule, "room", None)
-    studio = getattr(room, "studio", None) if room else None
+    studio = getattr(room, "studio", None)
+    location = getattr(room, "location", None) if room else None
     return {
         "id": schedule.id,
         "title": schedule.title or "",
@@ -215,6 +216,8 @@ def _schedule_summary(schedule) -> dict | None:
         "room_capacity": room.capacity if room else None,
         "studio_id": studio.id if studio else None,
         "studio_name": studio.name if studio else "",
+        "location_id": location.id if location else None,
+        "location_name": location.name if location else "",
     }
 
 
@@ -244,7 +247,7 @@ def list_reservations(
     if not include_schedule:
         return [ReservationSchema.model_validate(obj) for obj in qs]
 
-    qs = qs.select_related("schedule__instructor__user", "schedule__room__studio")
+    qs = qs.select_related("schedule__instructor__user", "schedule__room__location__studio")
     rows = []
     for obj in qs:
         base = ReservationSchema.model_validate(obj).model_dump()
@@ -270,7 +273,8 @@ def _serialize_admin_reservation(reservation: Reservation) -> dict:
     user = getattr(member, "user", None)
     schedule = reservation.schedule
     room = getattr(schedule, "room", None)
-    studio = getattr(room, "studio", None) if room else None
+    studio = getattr(room, "studio", None)
+    location = getattr(room, "location", None) if room else None
 
     guest_pass = getattr(reservation, "guest_pass_invitation", None)
     host = getattr(guest_pass, "issuer", None) if guest_pass else None
@@ -293,6 +297,8 @@ def _serialize_admin_reservation(reservation: Reservation) -> dict:
         "room_name": room.name if room else "",
         "studio_id": studio.id if studio else None,
         "studio_name": studio.name if studio else None,
+        "location_id": location.id if location else None,
+        "location_name": location.name if location else None,
         "room_capacity": room.capacity if room else None,
         "status": reservation.status,
         "spot": reservation.spot,
@@ -366,7 +372,7 @@ def get_admin_reservation(reservation_id: str | UUID) -> dict:
             Reservation.objects.select_related(
                 "member__user",
                 "schedule__instructor__user",
-                "schedule__room__studio",
+                "schedule__room__location__studio",
             )
             .filter(is_removed=False)
             .get(id=reservation_id)
@@ -671,7 +677,8 @@ def _serialize_waitlist_entry(entry) -> dict:
 
     schedule = entry.schedule
     room = getattr(schedule, "room", None)
-    studio = getattr(room, "studio", None) if room else None
+    studio = getattr(room, "studio", None)
+    location = getattr(room, "location", None) if room else None
     payload = {
         "id": entry.id,
         "created": entry.created,
@@ -690,6 +697,7 @@ def _serialize_waitlist_entry(entry) -> dict:
             "duration_minutes": schedule.duration_minutes,
             "room_name": room.name if room else "",
             "studio_name": studio.name if studio else "",
+            "location_name": location.name if location else "",
             "capacity": room.capacity if room else None,
             "booked": reserved_count_for_schedule(schedule.id),
         },
@@ -701,7 +709,7 @@ def join_waitlist(*, user_id: str | UUID, schedule_id: str | UUID) -> dict:
     from apps.members.waitlist import join_waitlist as domain_join
 
     entry = domain_join(user_id=user_id, schedule_id=schedule_id)
-    entry = WaitlistEntry.objects.select_related("schedule__room__studio", "member").get(
+    entry = WaitlistEntry.objects.select_related("schedule__room__location__studio", "member").get(
         id=entry.id
     )
     return _serialize_waitlist_entry(entry)
@@ -718,7 +726,7 @@ def leave_waitlist(*, user_id: str | UUID, waitlist_id: str | UUID) -> dict:
     from apps.members.waitlist import leave_waitlist as domain_leave
 
     entry = domain_leave(user_id=user_id, waitlist_id=waitlist_id)
-    entry = WaitlistEntry.objects.select_related("schedule__room__studio", "member").get(
+    entry = WaitlistEntry.objects.select_related("schedule__room__location__studio", "member").get(
         id=entry.id
     )
     return _serialize_waitlist_entry(entry)
@@ -728,7 +736,7 @@ def confirm_waitlist_offer(*, user_id: str | UUID, waitlist_id: str | UUID) -> d
     from apps.members.waitlist import confirm_waitlist_offer as domain_confirm
 
     entry = domain_confirm(user_id=user_id, waitlist_id=waitlist_id)
-    entry = WaitlistEntry.objects.select_related("schedule__room__studio", "member").get(
+    entry = WaitlistEntry.objects.select_related("schedule__room__location__studio", "member").get(
         id=entry.id
     )
     return _serialize_waitlist_entry(entry)

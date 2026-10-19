@@ -108,6 +108,8 @@ class TestScheduleViewSetList:
         assert "instructor_name" in row
         assert "room_name" in row
         assert "studio_name" in row
+        assert "location_id" in row
+        assert "location_name" in row
         assert "booked_count" in row
         assert "is_full" in row
 

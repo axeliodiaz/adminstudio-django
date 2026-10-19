@@ -1,8 +1,9 @@
 """Tests for studios models, focusing on Studio.rooms_list property and Address model."""
 
 import pytest
+from model_bakery import baker
 
-from apps.studios.models import Address, Room, Studio
+from apps.studios.models import Address, Location, Room, Studio
 
 
 class TestStudioRoomsList:
@@ -23,8 +24,8 @@ class TestStudioRoomsList:
         self, django_assert_num_queries, studio, room, extra_room
     ):
         # Evaluate queryset with prefetch
-        with django_assert_num_queries(2):
-            s = Studio.objects.filter(id=studio.id).prefetch_related("rooms").get()
+        with django_assert_num_queries(3):
+            s = Studio.objects.filter(id=studio.id).prefetch_related("locations__rooms").get()
         # Accessing rooms_list should not hit the DB again thanks to prefetch cache
         with django_assert_num_queries(0):
             result = s.rooms_list
@@ -33,7 +34,6 @@ class TestStudioRoomsList:
 
     @pytest.mark.django_db
     def test_rooms_list_empty_for_studio_without_rooms(self, empty_studio):
-        assert empty_studio.rooms.count() == 0
         assert empty_studio.rooms_list == []
 
 
@@ -67,3 +67,29 @@ class TestAddressModel:
     def test_studio_can_have_null_address(self):
         studio = Studio.objects.create(name="Studio Without Address", is_active=True)
         assert studio.address is None
+
+
+class TestLocationModel:
+    @pytest.mark.django_db
+    def test_str_returns_name(self, studio):
+        location = baker.make("studios.Location", studio=studio, name="Sede Centro")
+        assert str(location) == f"{studio.name} - Sede Centro"
+
+    @pytest.mark.django_db
+    def test_studio_locations_related_name(self, studio):
+        first = baker.make("studios.Location", studio=studio)
+        second = baker.make("studios.Location", studio=studio)
+        locations = studio.locations.all()
+        assert set(locations) == {first, second}
+
+    @pytest.mark.django_db
+    def test_address_is_optional_and_nullable(self, studio):
+        location = baker.make("studios.Location", studio=studio, address=None)
+        assert location.address_id is None
+
+    @pytest.mark.django_db
+    def test_location_is_soft_deletable(self, studio):
+        location = baker.make("studios.Location", studio=studio)
+        location.delete()
+        assert Location.all_objects.filter(id=location.id).exists()
+        assert not Location.objects.filter(id=location.id).exists()
