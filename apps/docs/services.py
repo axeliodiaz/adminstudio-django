@@ -24,7 +24,7 @@ def _published_pages_qs():
     return DocPage.objects.filter(is_published=True, is_removed=False).order_by("order", "title")
 
 
-def get_published_docs_index(
+def _build_published_docs_index(
     *,
     audience: str | None = None,
     allowed_audiences: frozenset[str],
@@ -77,6 +77,25 @@ def get_published_docs_index(
         )
 
     return DocsIndexSchema.model_validate({"audiences": audiences}).model_dump(mode="json")
+
+
+def get_published_docs_index(
+    *,
+    audience: str | None = None,
+    allowed_audiences: frozenset[str],
+) -> dict:
+    from apps.common.public_cache import get_or_compute
+
+    audience_key = audience or ""
+    allowed_key = ",".join(sorted(allowed_audiences))
+    return get_or_compute(
+        "docs",
+        {"audience": audience_key, "allowed": allowed_key},
+        lambda: _build_published_docs_index(
+            audience=audience,
+            allowed_audiences=allowed_audiences,
+        ),
+    )
 
 
 def get_published_doc_page(

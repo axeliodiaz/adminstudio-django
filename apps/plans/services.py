@@ -21,7 +21,16 @@ from apps.plans.schemas import (
 
 def get_plans(*, plan_type: str | None = None) -> list[PlanSchema]:
     """Return a list of PlanSchema for all active plans."""
-    return [PlanSchema.model_validate(obj) for obj in get_plan_models(plan_type=plan_type)]
+    from apps.common.public_cache import get_or_compute
+
+    def compute() -> list[dict]:
+        return [
+            PlanSchema.model_validate(obj).model_dump(by_alias=True)
+            for obj in get_plan_models(plan_type=plan_type)
+        ]
+
+    cached = get_or_compute("plans", {"type": plan_type or ""}, compute)
+    return [PlanSchema.model_validate(item) for item in cached]
 
 
 def get_plan_by_id(plan_id: UUID | str) -> PlanSchema:

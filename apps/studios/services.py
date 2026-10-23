@@ -52,7 +52,16 @@ def get_room(pk) -> RoomSchema:
 
 def get_list_studios() -> list[StudioSchema]:
     """Return a list of StudioSchema for all studios."""
-    return [StudioSchema.model_validate(obj) for obj in studios_queryset()]
+    from apps.common.public_cache import get_or_compute
+
+    def compute() -> list[dict]:
+        return [
+            StudioSchema.model_validate(obj).model_dump(by_alias=True)
+            for obj in studios_queryset()
+        ]
+
+    cached = get_or_compute("studios", {"list": "all"}, compute)
+    return [StudioSchema.model_validate(item) for item in cached]
 
 
 def get_list_rooms() -> list[RoomSchema]:
@@ -360,10 +369,27 @@ def _branding_payload(branding: StudioBranding) -> dict:
     return data
 
 
-def get_studio_branding(studio_id=None, location_id=None) -> dict:
+def _compute_studio_branding(studio_id=None, location_id=None) -> dict:
     """Public read: the brand studio's branding, default row as fallback."""
     studio = _resolve_studio(studio_id, location_id)
-    return _branding_payload(StudioBranding.effective(studio))
+    if studio is not None:
+        branding = StudioBranding.objects.filter(studio=studio).first()
+        if branding is not None:
+            return _branding_payload(branding)
+    return _branding_payload(StudioBranding.default_row())
+
+
+def get_studio_branding(studio_id=None, location_id=None) -> dict:
+    from apps.common.public_cache import get_or_compute
+
+    return get_or_compute(
+        "studios",
+        {
+            "branding_studio": str(studio_id) if studio_id else "",
+            "branding_location": str(location_id) if location_id else "",
+        },
+        lambda: _compute_studio_branding(studio_id, location_id),
+    )
 
 
 def get_admin_branding(studio_id=None) -> dict:

@@ -6,7 +6,7 @@ Expose functions that return schemas or simple dicts for consumption by views.
 from apps.legal.models import LegalDocument, LegalDocumentType
 
 
-def get_published_legal_document(document_type: str, language: str = "es") -> dict | None:
+def _fetch_published_legal_document(document_type: str, language: str = "es") -> dict | None:
     """Return the latest published legal document of a specific type and language.
 
     Args:
@@ -46,7 +46,17 @@ def get_published_legal_document(document_type: str, language: str = "es") -> di
         return None
 
 
-def get_all_published_legal_documents(language: str = "es") -> dict:
+def get_published_legal_document(document_type: str, language: str = "es") -> dict | None:
+    from apps.common.public_cache import get_or_compute
+
+    return get_or_compute(
+        "legal",
+        {"type": document_type, "language": language},
+        lambda: _fetch_published_legal_document(document_type, language),
+    )
+
+
+def _fetch_all_published_legal_documents(language: str = "es") -> dict:
     """Return all published legal documents grouped by type.
 
     Args:
@@ -80,6 +90,16 @@ def get_all_published_legal_documents(language: str = "es") -> dict:
             }
 
     return result
+
+
+def get_all_published_legal_documents(language: str = "es") -> dict:
+    from apps.common.public_cache import get_or_compute
+
+    return get_or_compute(
+        "legal",
+        {"list": "all", "language": language},
+        lambda: _fetch_all_published_legal_documents(language),
+    )
 
 
 def get_legal_document_by_slug(slug: str) -> dict | None:

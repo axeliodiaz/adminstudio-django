@@ -81,7 +81,13 @@ class Plan(UUIDModel, TimeStampedModel, SoftDeletableModel):
 
     @property
     def benefits_list(self):
-        return list(self.benefits.filter(is_active=True).order_by("name"))
+        prefetched = getattr(self, "_prefetched_objects_cache", {}).get("benefits")
+        if prefetched is not None:
+            active = [benefit for benefit in prefetched if benefit.is_active and not benefit.is_removed]
+            return sorted(active, key=lambda benefit: benefit.name)
+        return list(
+            self.benefits.filter(is_active=True, is_removed=False).order_by("name")
+        )
 
     def __str__(self):
         return f"{self.name}"

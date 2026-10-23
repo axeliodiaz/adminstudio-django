@@ -47,6 +47,9 @@ class Studio(SoftDeletableModel, UUIDModel, TimeStampedModel):
     @property
     def locations_list(self):
         """Return the brand's sedes as a concrete list (CYC-458)."""
+        prefetched = getattr(self, "_prefetched_objects_cache", {}).get("locations")
+        if prefetched is not None:
+            return sorted(prefetched, key=lambda location: location.name)
         return list(self.locations.all().order_by("name"))
 
     @property
@@ -56,7 +59,14 @@ class Studio(SoftDeletableModel, UUIDModel, TimeStampedModel):
         Rooms hang off Location since CYC-456; the brand's rooms are the union
         of its locations' rooms.
         """
-        return [room for location in self.locations.all() for room in location.rooms.all()]
+        rooms = []
+        for location in self.locations_list:
+            prefetched = getattr(location, "_prefetched_objects_cache", {}).get("rooms")
+            if prefetched is not None:
+                rooms.extend(prefetched)
+            else:
+                rooms.extend(location.rooms.all())
+        return rooms
 
 
 class Location(SoftDeletableModel, UUIDModel, TimeStampedModel):
