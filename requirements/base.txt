@@ -1,5 +1,5 @@
 Django==6.1.2
-sentry-sdk[django]==2.71.0
+sentry-sdk[django]==2.73.0
 black==26.10.1
 djangorestframework==3.18.3
 drf-expiring-token==1.1.2
@@ -8,13 +8,13 @@ pytest-xdist==3.8.0
 pytest-django==4.14.0
 django-model-utils==5.0.0
 pydantic==2.14.1
-pytest-mock==3.16.0
+pytest-mock==3.17.0
 model_bakery==1.24.2
 email-validator==2.3.0
 requests==2.34.2
 cryptography>=45.0.7
 Pillow==12.3.0
-markdown==3.11
+markdown==3.11.2
 Pygments==2.21.0
 django-extensions==4.1.0
 django-ckeditor-5==0.2.20
