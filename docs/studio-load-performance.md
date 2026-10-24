@@ -3,8 +3,8 @@
 ## Despliegue en Render
 
 - **Imagen / comando**: `Dockerfile` → `scripts/render_start.sh` (Gunicorn en `0.0.0.0:80`, migraciones y seeds en segundo plano).
-- **Rama que despliega**: el remoto por defecto del repo es `develop` (`origin/HEAD`). Render suele estar enlazado a esa rama; confirmar en el dashboard del servicio *adminstudio-django* (Settings → Build & Deploy → Branch).
-- **Este trabajo**: rama `perf/studio-load`, sin merge a `main`/`develop` hasta confirmación explícita.
+- **Rama que despliega**: `develop` (`origin/HEAD`). Confirmar en el dashboard del servicio *adminstudio-django* (Settings → Build & Deploy → Branch).
+- **Mejoras de rendimiento**: merge del PR #187 a `develop` (caché pública, N+1, `/api/healthcheck/live/`).
 
 ## Cold start (plan gratuito)
 
@@ -14,15 +14,43 @@ Render apaga el servicio tras ~15 min sin tráfico. La primera petición paga:
 2. Migraciones/seeds en background (`render_start.sh`).
 3. Conexión a Postgres remoto (healthcheck completo y primeros endpoints).
 
-**Mitigación gratuita implementada**: workflow [`.github/workflows/render-keepalive.yml`](../.github/workflows/render-keepalive.yml) hace `GET /api/healthcheck/live/` cada 10 minutos (sin consultar la base).
+## Keep-alive (GitHub Actions)
+
+Workflow [`.github/workflows/render-keepalive.yml`](../.github/workflows/render-keepalive.yml):
+
+- **Ventana**: solo **08:00–23:59** hora **America/Santiago** (incluye cambio horario de verano vía `TZ=America/Santiago`).
+- **Fuera de ventana**: el job termina sin `curl` — el servicio **puede dormir** (no se fuerza uptime nocturno).
+- **Intervalo**: cada **10 minutos** (por debajo del spin-down de ~15 min).
+- **URL**: `GET /api/healthcheck/live/` (sin base de datos).
+
+### Horas de instancia estimadas (este servicio web)
+
+Render factura **horas de instancia encendida** en el plan free (750 h/mes **por workspace**, compartidas entre todos los servicios free).
+
+Si el keep-alive mantiene el web despierto solo en la ventana diaria:
+
+| Concepto | Cálculo |
+|----------|---------|
+| Horas despierto / día | 16 h (08:00 → 23:59) |
+| Días / mes (media) | ~30,4 |
+| **Horas / mes (solo este servicio)** | **16 × 30,4 ≈ 487 h** |
+
+Otros servicios free del mismo workspace (otro web, worker, DB free de Render, etc.) **suman** al mismo cupo de 750 h. Si se supera, Render suspende todos los servicios free hasta el mes siguiente.
 
 **Otras opciones (no implementadas / de pago)**:
 
 | Opción | Coste | Notas |
 |--------|-------|--------|
 | Plan sin sleep en Render | De pago | Elimina el spin-down. |
-| Cron Job de Render | Gratis con límites | Misma URL de liveness cada 10–14 min. |
-| UptimeRobot / similar | Gratis | Ping externo al mismo endpoint. |
+| Cron Job de Render | Gratis con límites | Misma lógica de ventana horaria. |
+| UptimeRobot / similar | Gratis | Ping externo con horario. |
+
+## Infra desde el repo (sin dashboard Render)
+
+- **No hay `render.yaml`** en el repositorio: la definición del servicio vive en el dashboard de Render (o blueprint no versionado aquí).
+- **Un servicio web** documentado por URL: `adminstudio-django.onrender.com` (`Dockerfile` + `scripts/render_start.sh`).
+- **Postgres**: producción exige `DATABASE_URL` (ver `adminstudio_django/settings/database.py` y `prod.py`). Los comentarios del código indican **Supabase session pooler** (`*.pooler.supabase.com:5432`), no Postgres free de Render (que expira a 30 días). El host real solo está en el secreto `DATABASE_URL` en Render — **no accesible desde este repo**.
+- **Cuántos servicios free hay en el workspace**: requiere dashboard o API de Render; el MCP de Render no está disponible en este entorno.
 
 ## Endpoints públicos del SPA (bundle `studio.axeldiaz.com`)
 
@@ -45,11 +73,7 @@ Rutas relativas a `https://adminstudio-django.onrender.com/api/`:
 
 ## Frontend (`adminstudio-front`) — sugerencias
 
-Repo no accesible desde este entorno; cambios propuestos en rama `perf/studio-load` del front:
-
-1. **Precalentar API** al montar la app: `fetch(`${API}/healthcheck/live/`)` en paralelo al bootstrap (no bloquear UI).
+1. **Precalentar API** al montar la app: `fetch(`${API}/healthcheck/live/`)` en paralelo al bootstrap.
 2. **React Query / SWR** con `staleTime: 5 * 60_000` para `studios/branding/`, `plans/plans/`, `faqs/`.
-3. **Skeleton** en `#pricing` y FAQ en lugar de spinner de pantalla completa mientras llegan planes + branding.
-4. **Respetar `Cache-Control`** del backend (fetch por defecto en navegador ya cachea GET).
-
-Archivos típicos a tocar: cliente API (`src/api` o similar), layout raíz, página de pricing/promociones.
+3. **Skeleton** en `#pricing` y FAQ en lugar de spinner de pantalla completa.
+4. **Respetar `Cache-Control`** del backend en GET públicos.
