@@ -47,7 +47,9 @@ class TestPublicApiQueryBudgets:
 
     def test_studios_list_bounded_queries(self, django_assert_num_queries):
         address = baker.make("studios.Address")
-        studio = baker.make("studios.Studio", address=address, is_active=True, is_default_brand=True)
+        studio = baker.make(
+            "studios.Studio", address=address, is_active=True, is_default_brand=True
+        )
         location = baker.make("studios.Location", studio=studio, is_active=True)
         baker.make("studios.Room", location=location)
         with django_assert_num_queries(3):

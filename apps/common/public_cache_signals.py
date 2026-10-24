@@ -12,12 +12,12 @@ from apps.studios.models import Address, Location, Room, Studio, StudioBranding
 
 
 def _connect(model, namespace: str) -> None:
-    receiver(post_save, sender=model, dispatch_uid=f"public-cache-save-{namespace}-{model._meta.label}")(
-        lambda **_: invalidate(namespace)
-    )
-    receiver(post_delete, sender=model, dispatch_uid=f"public-cache-del-{namespace}-{model._meta.label}")(
-        lambda **_: invalidate(namespace)
-    )
+    receiver(
+        post_save, sender=model, dispatch_uid=f"public-cache-save-{namespace}-{model._meta.label}"
+    )(lambda **_: invalidate(namespace))
+    receiver(
+        post_delete, sender=model, dispatch_uid=f"public-cache-del-{namespace}-{model._meta.label}"
+    )(lambda **_: invalidate(namespace))
 
 
 for _model in (Section, FAQItem):

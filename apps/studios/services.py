@@ -56,8 +56,7 @@ def get_list_studios() -> list[StudioSchema]:
 
     def compute() -> list[dict]:
         return [
-            StudioSchema.model_validate(obj).model_dump(by_alias=True)
-            for obj in studios_queryset()
+            StudioSchema.model_validate(obj).model_dump(by_alias=True) for obj in studios_queryset()
         ]
 
     cached = get_or_compute("studios", {"list": "all"}, compute)
