@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.legal.models import LegalDocumentType
+from apps.common.public_http import with_public_cache_headers
 from apps.legal.services import (
     get_all_published_legal_documents,
     get_legal_document_by_slug,
@@ -22,7 +23,7 @@ class LegalDocumentViewSet(viewsets.ViewSet):
         """Get all published legal documents grouped by type."""
         language = request.query_params.get("language", "es")
         data = get_all_published_legal_documents(language=language)
-        return Response(data, status=status.HTTP_200_OK)
+        return with_public_cache_headers(Response(data, status=status.HTTP_200_OK))
 
     @action(detail=False, methods=["get"], url_path="terms-and-conditions")
     def terms_and_conditions(self, request):
@@ -32,7 +33,7 @@ class LegalDocumentViewSet(viewsets.ViewSet):
             document_type=LegalDocumentType.TERMS_AND_CONDITIONS, language=language
         )
         if data:
-            return Response(data, status=status.HTTP_200_OK)
+            return with_public_cache_headers(Response(data, status=status.HTTP_200_OK))
         return Response(
             {"detail": "Terms and Conditions not found"},
             status=status.HTTP_404_NOT_FOUND,
@@ -46,7 +47,7 @@ class LegalDocumentViewSet(viewsets.ViewSet):
             document_type=LegalDocumentType.PRIVACY_POLICY, language=language
         )
         if data:
-            return Response(data, status=status.HTTP_200_OK)
+            return with_public_cache_headers(Response(data, status=status.HTTP_200_OK))
         return Response(
             {"detail": "Privacy Policy not found"},
             status=status.HTTP_404_NOT_FOUND,
@@ -60,7 +61,7 @@ class LegalDocumentViewSet(viewsets.ViewSet):
             document_type=LegalDocumentType.WAIVER, language=language
         )
         if data:
-            return Response(data, status=status.HTTP_200_OK)
+            return with_public_cache_headers(Response(data, status=status.HTTP_200_OK))
         return Response(
             {"detail": "Waiver not found"},
             status=status.HTTP_404_NOT_FOUND,
@@ -70,7 +71,7 @@ class LegalDocumentViewSet(viewsets.ViewSet):
         """Get a legal document by slug."""
         data = get_legal_document_by_slug(slug)
         if data:
-            return Response(data, status=status.HTTP_200_OK)
+            return with_public_cache_headers(Response(data, status=status.HTTP_200_OK))
         return Response(
             {"detail": "Legal document not found"},
             status=status.HTTP_404_NOT_FOUND,

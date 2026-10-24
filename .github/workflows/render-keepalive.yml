@@ -1,0 +1,27 @@
+# Keep the Render web service awake only during Chile business hours (America/Santiago).
+# Outside 08:00–23:59 CLT there is NO ping so the free tier instance can sleep.
+# Uses the lightweight liveness endpoint (no database). Interval: 10 min (< 15 min spin-down).
+name: Render keep-alive
+
+on:
+  schedule:
+    # Every 10 minutes UTC; the job exits without pinging outside the Santiago window
+    # (handles CLT/CLST via TZ=America/Santiago).
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render (08:00–23:59 America/Santiago only)
+        run: |
+          hour=$(TZ=America/Santiago date +%H)
+          if [ "$hour" -lt 8 ]; then
+            echo "Outside ping window (America/Santiago hour=${hour}). No request — instance may sleep."
+            exit 0
+          fi
+          echo "Inside ping window (America/Santiago hour=${hour})."
+          curl -fsS --max-time 30 \
+            "https://adminstudio-django.onrender.com/api/healthcheck/live/" \
+            -H "Accept: application/json"

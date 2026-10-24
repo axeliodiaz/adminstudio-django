@@ -14,29 +14,29 @@ from apps.faqs.models import FAQItem, Section
 from apps.faqs.schemas import AdminFAQItemSchema, AdminSectionSchema
 
 
-def get_published_faq(*, include_staff: bool = False) -> dict:
-    """Return all published FAQ items grouped by sections.
-
-    Staff-only sections (``requires_staff``) are included only when
-    ``include_staff`` is true (CYC-420).
-
-    Returns:
-        dict: FAQPublicSchema as dict with sections and their FAQ items.
-    """
-    sections = Section.objects.all().order_by("order", "name")
+def _build_published_faq(*, include_staff: bool = False) -> dict:
+    """Compute published FAQ payload (two queries: sections + items)."""
+    sections_qs = Section.objects.all().order_by("order", "name")
     if not include_staff:
-        sections = sections.filter(requires_staff=False)
+        sections_qs = sections_qs.filter(requires_staff=False)
+
+    items_by_section: dict = {}
+    for item in (
+        FAQItem.objects.filter(is_published=True, is_removed=False)
+        .select_related("section")
+        .order_by("section__order", "order", "question")
+    ):
+        if not include_staff and item.section.requires_staff:
+            continue
+        items_by_section.setdefault(item.section_id, []).append(item)
+
     result = []
-
-    for section in sections:
-        faq_items = (
-            FAQItem.objects.filter(section=section, is_published=True, is_removed=False)
-            .order_by("order", "question")
-            .select_related("section")
-        )
-
-        if faq_items.exists():
-            section_data = {
+    for section in sections_qs:
+        faq_items = items_by_section.get(section.id)
+        if not faq_items:
+            continue
+        result.append(
+            {
                 "id": str(section.id),
                 "name": section.name,
                 "slug": section.slug,
@@ -47,15 +47,33 @@ def get_published_faq(*, include_staff: bool = False) -> dict:
                     {
                         "id": str(item.id),
                         "question": item.question,
-                        "answer": item.answer,  # Markdown content
+                        "answer": item.answer,
                         "order": item.order,
                     }
                     for item in faq_items
                 ],
             }
-            result.append(section_data)
+        )
 
     return {"sections": result}
+
+
+def get_published_faq(*, include_staff: bool = False) -> dict:
+    """Return all published FAQ items grouped by sections.
+
+    Staff-only sections (``requires_staff``) are included only when
+    ``include_staff`` is true (CYC-420).
+    """
+    from apps.common.public_cache import get_or_compute
+
+    if include_staff:
+        return _build_published_faq(include_staff=True)
+
+    return get_or_compute(
+        "faqs",
+        {"audience": "public"},
+        lambda: _build_published_faq(include_staff=False),
+    )
 
 
 def _serialize_admin_section(section: Section, faq_count: int | None = None) -> dict:

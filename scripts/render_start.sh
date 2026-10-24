@@ -22,4 +22,5 @@ exec gunicorn adminstudio_django.wsgi:application \
   --bind 0.0.0.0:80 \
   --workers 2 \
   --threads 2 \
-  --timeout 120
+  --timeout 120 \
+  --preload
