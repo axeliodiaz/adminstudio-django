@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny, BasePermission, IsAdminUser, Is
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.public_http import with_public_cache_headers
 from apps.studios.permissions import IsBrandingAdmin
 from apps.studios.schemas import (
     AdminRoomWriteSchema,
@@ -60,7 +61,7 @@ class StudioViewSet(viewsets.ViewSet):
 
     def list(self, request):
         data = StudioSerializer(get_list_studios(), many=True).data
-        return Response(data, status=status.HTTP_200_OK)
+        return with_public_cache_headers(Response(data, status=status.HTTP_200_OK))
 
     def retrieve(self, request, pk=None):
         studio = get_studio(pk)
@@ -251,7 +252,7 @@ class StudioBrandingView(APIView):
             data = get_studio_branding(_studio_param(request), _location_param(request))
         except ValueError:
             return _studio_not_found()
-        return Response(data, status=status.HTTP_200_OK)
+        return with_public_cache_headers(Response(data, status=status.HTTP_200_OK))
 
 
 class AdminStudioBrandingView(APIView):

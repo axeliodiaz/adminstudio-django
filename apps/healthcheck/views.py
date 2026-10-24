@@ -5,6 +5,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 
+class LivenessView(APIView):
+    """Cheap liveness probe: no database, for keep-alive pings and fast cold checks."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, *args, **kwargs):
+        return Response({"status": "ok"}, status=status.HTTP_200_OK)
+
+
 class HealthcheckView(APIView):
     """
     Healthcheck endpoint implemented as a DRF class-based view.

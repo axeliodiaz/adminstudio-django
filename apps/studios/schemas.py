@@ -82,6 +82,9 @@ class StudioSchema(BaseModel):
         """Override to handle address ForeignKey."""
         from django.db import models
 
+        if isinstance(obj, dict):
+            return super().model_validate(obj, **kwargs)
+
         # Build data dict from model instance
         data = {}
         for field in obj._meta.fields:
