@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.faqs.schemas import AdminFAQItemWriteSchema, AdminSectionWriteSchema
+from apps.common.public_http import with_public_cache_headers
 from apps.faqs.services import (
     create_admin_faq_item,
     create_admin_section,
@@ -50,7 +51,7 @@ class FAQViewSet(viewsets.ViewSet):
             request.user and request.user.is_authenticated and request.user.is_superuser
         )
         data = get_published_faq(include_staff=include_staff)
-        return Response(data, status=status.HTTP_200_OK)
+        return with_public_cache_headers(Response(data, status=status.HTTP_200_OK))
 
 
 class AdminFAQSectionListView(APIView):

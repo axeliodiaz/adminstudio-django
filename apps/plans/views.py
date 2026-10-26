@@ -10,6 +10,7 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.public_http import with_public_cache_headers
 from apps.plans import checkout_services, promo_services, services
 from apps.plans.models import Plan
 from apps.plans.schemas import AdminPlanWriteSchema, AdminPromoCodeWriteSchema
@@ -52,7 +53,7 @@ class PlanViewSet(viewsets.ViewSet):
     def list(self, request, *args: Any, **kwargs: Any) -> Response:
         schemas = services.get_plans(plan_type=request.query_params.get("type"))
         data = [s.model_dump(by_alias=True) for s in schemas]
-        return Response(data, status=status.HTTP_200_OK)
+        return with_public_cache_headers(Response(data, status=status.HTTP_200_OK))
 
     def retrieve(self, request, pk: str | None = None, *args: Any, **kwargs: Any) -> Response:
         try:
@@ -60,7 +61,7 @@ class PlanViewSet(viewsets.ViewSet):
         except Plan.DoesNotExist as exc:
             raise Http404 from exc
         data = schema.model_dump(by_alias=True)
-        return Response(data, status=status.HTTP_200_OK)
+        return with_public_cache_headers(Response(data, status=status.HTTP_200_OK))
 
     def purchase(self, request, *args: Any, **kwargs: Any) -> Response:
         """
