@@ -71,7 +71,7 @@ class InventoryModuleView(APIView):
                     "items": True,
                     "stock_levels": False,
                     "maintenance": False,
-                    "suppliers": False,
+                    "suppliers": True,
                     "purchases": False,
                 },
             }

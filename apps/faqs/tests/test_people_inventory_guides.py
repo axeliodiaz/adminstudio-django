@@ -30,7 +30,7 @@ def test_seed_is_additive_idempotent_and_repairs_access():
     assert FAQItem.all_objects.filter(question=removed.question).count() == 1
     assert FAQItem.all_objects.get(pk=removed.pk).is_removed is True
     for data in SECTIONS:
-        assert FAQItem.all_objects.filter(section__slug=data["slug"]).count() == 3
+        assert FAQItem.all_objects.filter(section__slug=data["slug"]).count() == len(data["items"])
 
 
 @pytest.mark.django_db
