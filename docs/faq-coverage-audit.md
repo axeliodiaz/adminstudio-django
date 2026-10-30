@@ -57,9 +57,13 @@ seed sequence; it does not execute against production as part of this audit.
 
 ## Remaining boundaries
 
-- Stock/minimums/consumption/laundry/loss: CYC-415, not delivered by base inventory.
-- Suppliers: CYC-417. Inventory movement audit: CYC-419. Do not write usage
-  instructions for these until their workflows exist.
+- CYC-417 adds supplier contact/product-reference guides; CYC-419 adds the API
+  audit guide. CYC-415 extends it with stock/minimum/consumption/laundry/loss
+  instructions. These supersede the original base-only inventory boundary.
+- Stock starts unknown until an explicit opening count (available and laundry).
+  No historical balance or movement backfill is performed. The existing audit
+  feed is the movement log, with actor/time/before/after/action/quantity/reason.
+- Source coverage does not verify production migration or seed execution.
 - People contracts/pay configuration/payroll are not active in the module shell.
 - Communications campaign sending/provider selection is not active; keep its
   existing unavailable-feature explanation rather than inventing a Send flow.

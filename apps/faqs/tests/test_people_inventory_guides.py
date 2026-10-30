@@ -61,6 +61,23 @@ def test_guides_limit_claims_to_delivered_features():
     inventory = " ".join(answer for _, answer in SECTIONS[1]["items"])
     assert "directorio de consulta" in people
     assert "No incluye edición" in people
-    assert "Todavía no" in inventory
-    assert "No hay controles de stock mínimo" in inventory
+    assert "Sin conteo inicial significa desconocido, no cero" in inventory
+    assert "no inventa movimientos históricos" in inventory
     assert "no una asignación automática" in inventory
+
+
+@pytest.mark.django_db
+def test_stock_seed_updates_only_original_answer_and_preserves_publication():
+    from apps.faqs.management.commands.seed_people_inventory_faq import PREVIOUS_ANSWERS
+
+    call_command("seed_people_inventory_faq")
+    for question, answers in PREVIOUS_ANSWERS.items():
+        item = FAQItem.objects.get(question=question)
+        item.answer = answers[0]
+        item.is_published = False
+        item.save()
+    call_command("seed_people_inventory_faq")
+    for question in PREVIOUS_ANSWERS:
+        item = FAQItem.objects.get(question=question)
+        assert item.answer == dict(SECTIONS[1]["items"])[question]
+        assert item.is_published is False
