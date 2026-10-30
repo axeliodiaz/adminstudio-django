@@ -3,11 +3,11 @@ sentry-sdk[django]==2.73.0
 black==26.10.1
 djangorestframework==3.18.3
 drf-expiring-token==1.1.2
-pytest==9.1.1
+pytest==9.2.0
 pytest-xdist==3.8.0
 pytest-django==4.14.0
 django-model-utils==5.0.0
-pydantic==2.14.1
+pydantic==2.14.2
 pytest-mock==3.17.0
 model_bakery==1.24.2
 email-validator==2.3.0
