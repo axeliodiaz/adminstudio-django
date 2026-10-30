@@ -114,3 +114,13 @@ class InventoryAudit(UUIDModel):
 
     class Meta:
         ordering = ["-at", "-id"]
+
+
+class StockBalance(UUIDModel):
+    """Explicitly initialized integer counts; absent means unknown, not zero."""
+
+    item = models.OneToOneField(Item, on_delete=models.PROTECT, related_name="stock")
+    available = models.PositiveIntegerField(default=0)
+    laundry = models.PositiveIntegerField(default=0)
+    minimum = models.PositiveIntegerField(default=0)
+    version = models.PositiveIntegerField(default=1)
