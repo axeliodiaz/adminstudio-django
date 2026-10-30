@@ -56,6 +56,17 @@ SECTIONS = (
                 "esa referencia al guardar; Cancelar descarta los cambios sin guardar.",
             ),
             (
+                "¿Cómo consulto quién cambió el inventario?",
+                "Abre **Inventario > Auditoría** con una cuenta de administrador. La lista "
+                "muestra fecha, usuario, tipo de registro y creación o actualización. "
+                "Expande **Ver antes y después** para revisar los valores. Solo incluye "
+                "altas de categorías, ubicaciones y artículos, y altas o ediciones de "
+                "proveedores realizadas en la API desde que se activó esta función. "
+                "No reconstruye el pasado ni registra cambios directos en base de datos "
+                "o Django Admin. No hay movimientos de stock o lavandería implementados. "
+                "El historial es de consulta: no permite editar ni borrar eventos.",
+            ),
+            (
                 "¿Cómo preparo categorías y ubicaciones del inventario?",
                 "Como administrador (superusuario), abre **Inventario > Inventario**. "
                 "En **Categorías**, escribe el nombre y una descripción opcional y pulsa "
@@ -76,8 +87,7 @@ SECTIONS = (
                 "¿El inventario controla stock, consumos, lavandería o proveedores?",
                 "Todavía no. La pantalla permite crear y consultar categorías, ubicaciones "
                 "y artículos. No hay controles de stock mínimo, movimientos de consumo, "
-                "rotación de lavandería, pérdidas ni historial de auditoría "
-                "de movimientos. Tampoco hay botones para editar o eliminar artículos "
+                "rotación de lavandería ni pérdidas. Tampoco hay botones para editar o eliminar artículos "
                 "desde esta pantalla. No registres un artículo esperando que cambie una "
                 "cantidad de stock o dispare una compra.",
             ),
@@ -112,15 +122,21 @@ class Command(BaseCommand):
                     defaults={"answer": answer, "order": index, "is_published": True},
                 )
                 # Update only the exact previous seed text, never editorial changes.
-                old_answer = answer.replace(
-                    "rotación de lavandería, pérdidas ni historial",
-                    "rotación de lavandería, pérdidas, proveedores ni historial",
-                )
+                previous_answers = {
+                    answer.replace(
+                        "rotación de lavandería ni pérdidas. Tampoco hay botones",
+                        "rotación de lavandería, pérdidas ni historial de auditoría de movimientos. Tampoco hay botones",
+                    ),
+                    answer.replace(
+                        "rotación de lavandería ni pérdidas. Tampoco hay botones",
+                        "rotación de lavandería, pérdidas, proveedores ni historial de auditoría de movimientos. Tampoco hay botones",
+                    ),
+                }
                 if (
                     not created
                     and not item.is_removed
-                    and old_answer != answer
-                    and item.answer == old_answer
+                    and item.answer != answer
+                    and item.answer in previous_answers
                 ):
                     item.answer = answer
                     item.save(update_fields=["answer"])
