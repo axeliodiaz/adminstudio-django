@@ -71,3 +71,30 @@ class Item(SoftDeletableModel, UUIDModel, TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+class Supplier(SoftDeletableModel, UUIDModel, TimeStampedModel):
+    """Contact directory, without purchase orders or outbound communication."""
+
+    name = models.CharField(max_length=160)
+    contact_name = models.CharField(max_length=160, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    phone = models.CharField(max_length=80, blank=True, default="")
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["name", "id"]
+
+
+class SupplierProduct(UUIDModel):
+    """Reference quote: an unknown price or lead time is null, never zero."""
+
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="products")
+    name = models.CharField(max_length=160)
+    price = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3, default="CLP")
+    lead_time_days = models.PositiveIntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["name", "id"]

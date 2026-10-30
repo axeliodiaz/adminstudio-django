@@ -46,6 +46,16 @@ SECTIONS = (
         "order": 94,
         "items": (
             (
+                "¿Cómo registro proveedores y sus productos?",
+                "En **Inventario > Proveedores**, completa nombre y los datos de contacto "
+                "disponibles. Usa **Agregar producto** para registrar un nombre, precio y "
+                "moneda de referencia (CLP, USD o EUR), plazo en días y notas. Deja precio "
+                "o plazo vacío si no lo conoces. **Guardar proveedor** guarda la ficha; "
+                "no envía mensajes ni crea una compra. Busca por nombre o contacto y usa "
+                "**Editar** para cambiar la ficha. Quitar un producto del formulario elimina "
+                "esa referencia al guardar; Cancelar descarta los cambios sin guardar.",
+            ),
+            (
                 "¿Cómo preparo categorías y ubicaciones del inventario?",
                 "Como administrador (superusuario), abre **Inventario > Inventario**. "
                 "En **Categorías**, escribe el nombre y una descripción opcional y pulsa "
@@ -66,7 +76,7 @@ SECTIONS = (
                 "¿El inventario controla stock, consumos, lavandería o proveedores?",
                 "Todavía no. La pantalla permite crear y consultar categorías, ubicaciones "
                 "y artículos. No hay controles de stock mínimo, movimientos de consumo, "
-                "rotación de lavandería, pérdidas, proveedores ni historial de auditoría "
+                "rotación de lavandería, pérdidas ni historial de auditoría "
                 "de movimientos. Tampoco hay botones para editar o eliminar artículos "
                 "desde esta pantalla. No registres un artículo esperando que cambie una "
                 "cantidad de stock o dispare una compra.",
@@ -96,11 +106,24 @@ class Command(BaseCommand):
                 section.requires_staff = True
                 section.save(update_fields=["requires_staff"])
             for index, (question, answer) in enumerate(data["items"], start=1):
-                _, created = FAQItem.all_objects.get_or_create(
+                item, created = FAQItem.all_objects.get_or_create(
                     section=section,
                     question=question,
                     defaults={"answer": answer, "order": index, "is_published": True},
                 )
+                # Update only the exact previous seed text, never editorial changes.
+                old_answer = answer.replace(
+                    "rotación de lavandería, pérdidas ni historial",
+                    "rotación de lavandería, pérdidas, proveedores ni historial",
+                )
+                if (
+                    not created
+                    and not item.is_removed
+                    and old_answer != answer
+                    and item.answer == old_answer
+                ):
+                    item.answer = answer
+                    item.save(update_fields=["answer"])
                 created_items += int(created)
         self.stdout.write(
             self.style.SUCCESS(f"seed_people_inventory_faq: {created_items} new items.")

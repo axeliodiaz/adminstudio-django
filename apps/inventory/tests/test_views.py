@@ -65,7 +65,7 @@ class TestInventoryModuleView:
         assert response.status_code == status.HTTP_200_OK
         assert response.data["module"] == "inventory"
         assert response.data["features"]["items"] is True
-        assert response.data["features"]["suppliers"] is False
+        assert response.data["features"]["suppliers"] is True
 
 
 @pytest.mark.django_db
