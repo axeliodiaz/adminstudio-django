@@ -71,3 +71,56 @@ class Item(SoftDeletableModel, UUIDModel, TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+class Supplier(SoftDeletableModel, UUIDModel, TimeStampedModel):
+    """Contact directory, without purchase orders or outbound communication."""
+
+    name = models.CharField(max_length=160)
+    contact_name = models.CharField(max_length=160, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    phone = models.CharField(max_length=80, blank=True, default="")
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["name", "id"]
+
+
+class SupplierProduct(UUIDModel):
+    """Reference quote: an unknown price or lead time is null, never zero."""
+
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="products")
+    name = models.CharField(max_length=160)
+    price = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3, default="CLP")
+    lead_time_days = models.PositiveIntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["name", "id"]
+
+
+class InventoryAudit(UUIDModel):
+    """Append-only application event for supported inventory API writes."""
+
+    at = models.DateTimeField(auto_now_add=True)
+    actor_id = models.CharField(max_length=80)
+    actor_name = models.CharField(max_length=160)
+    entity = models.CharField(max_length=40)
+    entity_id = models.UUIDField()
+    action = models.CharField(max_length=20)
+    before = models.JSONField(null=True)
+    after = models.JSONField()
+
+    class Meta:
+        ordering = ["-at", "-id"]
+
+
+class StockBalance(UUIDModel):
+    """Explicitly initialized integer counts; absent means unknown, not zero."""
+
+    item = models.OneToOneField(Item, on_delete=models.PROTECT, related_name="stock")
+    available = models.PositiveIntegerField(default=0)
+    laundry = models.PositiveIntegerField(default=0)
+    minimum = models.PositiveIntegerField(default=0)
+    version = models.PositiveIntegerField(default=1)
