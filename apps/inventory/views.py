@@ -5,7 +5,10 @@ locations and items. Later tickets add stock levels, maintenance records,
 suppliers and purchases (CYC-415..418).
 """
 
+from django.db import transaction
 from rest_framework import status
+
+from apps.inventory.audit import record_inventory_change
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -73,6 +76,7 @@ class InventoryModuleView(APIView):
                     "maintenance": False,
                     "suppliers": True,
                     "purchases": False,
+                    "audit_log": True,
                 },
             }
         )
@@ -87,6 +91,7 @@ class CategoryListCreateView(APIView):
         categories = Category.objects.filter(is_removed=False)
         return Response(paginate(request.query_params, categories, _serialize_category))
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         name = (request.data.get("name") or "").strip()
         if not name:
@@ -98,7 +103,9 @@ class CategoryListCreateView(APIView):
             description=(request.data.get("description") or "").strip(),
             order=request.data.get("order") or 0,
         )
-        return Response(_serialize_category(category), status=status.HTTP_201_CREATED)
+        payload = _serialize_category(category)
+        record_inventory_change(request.user, "category", category.pk, payload)
+        return Response(payload, status=status.HTTP_201_CREATED)
 
 
 class LocationListCreateView(APIView):
@@ -113,6 +120,7 @@ class LocationListCreateView(APIView):
             locations = locations.filter(kind=kind)
         return Response(paginate(request.query_params, locations, _serialize_location))
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         name = (request.data.get("name") or "").strip()
         if not name:
@@ -127,7 +135,9 @@ class LocationListCreateView(APIView):
             kind=kind,
             description=(request.data.get("description") or "").strip(),
         )
-        return Response(_serialize_location(location), status=status.HTTP_201_CREATED)
+        payload = _serialize_location(location)
+        record_inventory_change(request.user, "location", location.pk, payload)
+        return Response(payload, status=status.HTTP_201_CREATED)
 
 
 class ItemListCreateView(APIView):
@@ -156,6 +166,7 @@ class ItemListCreateView(APIView):
             )
         return Response(paginate(request.query_params, items, _serialize_item))
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         name = (request.data.get("name") or "").strip()
         if not name:
@@ -178,4 +189,6 @@ class ItemListCreateView(APIView):
             identifier=(request.data.get("identifier") or "").strip(),
             notes=(request.data.get("notes") or "").strip(),
         )
-        return Response(_serialize_item(item), status=status.HTTP_201_CREATED)
+        payload = _serialize_item(item)
+        record_inventory_change(request.user, "item", item.pk, payload)
+        return Response(payload, status=status.HTTP_201_CREATED)

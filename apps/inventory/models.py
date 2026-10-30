@@ -98,3 +98,19 @@ class SupplierProduct(UUIDModel):
 
     class Meta:
         ordering = ["name", "id"]
+
+
+class InventoryAudit(UUIDModel):
+    """Append-only application event for supported inventory API writes."""
+
+    at = models.DateTimeField(auto_now_add=True)
+    actor_id = models.CharField(max_length=80)
+    actor_name = models.CharField(max_length=160)
+    entity = models.CharField(max_length=40)
+    entity_id = models.UUIDField()
+    action = models.CharField(max_length=20)
+    before = models.JSONField(null=True)
+    after = models.JSONField()
+
+    class Meta:
+        ordering = ["-at", "-id"]

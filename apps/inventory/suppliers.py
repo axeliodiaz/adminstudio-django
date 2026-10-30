@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 
 from apps.common.pagination import paginate
 from apps.inventory.models import Supplier, SupplierProduct
+from apps.inventory.audit import record_inventory_change
 from apps.inventory.permissions import IsInventoryAdmin
 
 
@@ -92,19 +93,26 @@ class SupplierListCreateView(APIView):
             )
         return Response(paginate(request.query_params, suppliers, serialize_supplier))
 
+    @transaction.atomic
     def post(self, request):
         serializer = SupplierInput(data=request.data)
         serializer.is_valid(raise_exception=True)
         supplier = save_supplier(serializer.validated_data)
-        return Response(serialize_supplier(supplier), status=status.HTTP_201_CREATED)
+        payload = serialize_supplier(supplier)
+        record_inventory_change(request.user, "supplier", supplier.pk, payload)
+        return Response(payload, status=status.HTTP_201_CREATED)
 
 
 class SupplierDetailView(APIView):
     permission_classes = [IsAuthenticated, IsInventoryAdmin]
 
+    @transaction.atomic
     def patch(self, request, pk):
         supplier = get_object_or_404(Supplier, pk=pk)
+        before = serialize_supplier(supplier)
         serializer = SupplierInput(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         supplier = save_supplier(serializer.validated_data, supplier)
-        return Response(serialize_supplier(supplier))
+        payload = serialize_supplier(supplier)
+        record_inventory_change(request.user, "supplier", supplier.pk, payload, before)
+        return Response(payload)

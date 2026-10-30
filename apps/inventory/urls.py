@@ -1,4 +1,5 @@
 from django.urls import path
+from .audit import InventoryAuditListView
 
 from .suppliers import SupplierDetailView, SupplierListCreateView
 
@@ -10,6 +11,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path("audit/", InventoryAuditListView.as_view(), name="inventory-audit"),
     path("suppliers/", SupplierListCreateView.as_view(), name="inventory-suppliers"),
     path("suppliers/<uuid:pk>/", SupplierDetailView.as_view(), name="inventory-supplier-detail"),
     path("", InventoryModuleView.as_view(), name="inventory-module"),
