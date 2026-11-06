@@ -34,6 +34,10 @@ def _serialize_purchase(purchase: PlanPurchase) -> dict:
         "end": purchase.end,
         "plan_id": purchase.plan.id,
         "plan_name": purchase.plan.name,
+        "credit_expiry_enabled": purchase.credit_expiry_enabled,
+        "package_validity_days": purchase.package_validity_days,
+        "credits_remaining": purchase.credits_remaining,
+        "credits_valid_until": purchase.credits_valid_until,
     }
     return PlanPurchaseSchema.model_validate(payload).model_dump(mode="json")
 

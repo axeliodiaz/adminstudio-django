@@ -214,7 +214,7 @@ def create_reservation(validated_data: dict) -> Reservation:
             WalletService.consume_guest_pass_credit(guest_pass.issuer)
             credit_charged = False
         else:
-            credit_charged = WalletService.consume_class_credit(user)
+            credit_charged = False
 
         reservation = Reservation.objects.create(
             member=member,
@@ -223,6 +223,11 @@ def create_reservation(validated_data: dict) -> Reservation:
             notes=validated_data.get("notes") or "",
             credit_charged=credit_charged,
         )
+        if not guest_pass:
+            reservation.credit_charged = WalletService.consume_class_credit(
+                user, class_time=schedule.start_time, reservation=reservation
+            )
+            reservation.save(update_fields=["credit_charged", "credit_lot", "modified"])
         if guest_pass:
             guest_pass.reservation = reservation
             guest_pass.status = guest_pass.Status.BOOKED
@@ -286,6 +291,13 @@ def cancel_reservation(
 
     refunded = False
     with transaction.atomic():
+        reservation = (
+            Reservation.objects.select_for_update()
+            .select_related("member__user", "schedule")
+            .get(pk=reservation.pk)
+        )
+        if reservation.status != constants.RESERVATION_STATUS_RESERVED:
+            raise ReservationInvalidStateException("Only RESERVED reservations can be cancelled.")
         guest_pass = getattr(reservation, "guest_pass_invitation", None)
         if guest_pass and guest_pass.credit_consumed_at:
             WalletService.refund_guest_pass_credit(guest_pass.issuer)
@@ -294,7 +306,11 @@ def cancel_reservation(
             guest_pass.save(update_fields=["credit_consumed_at", "status", "modified"])
             refunded = True
         elif reservation.credit_charged:
-            WalletService.refund_class_credit(reservation.member.user)
+            WalletService.refund_class_credit(
+                reservation.member.user,
+                reservation=reservation,
+                studio_cancelled=cancellation_source in constants.STUDIO_CANCELLATION_SOURCES,
+            )
             reservation.credit_charged = False
             refunded = True
         reservation.status = constants.RESERVATION_STATUS_CANCELLED

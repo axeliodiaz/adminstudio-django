@@ -155,6 +155,13 @@ class Reservation(SoftDeletableModel, UUIDModel, TimeStampedModel):
         blank=True,
         help_text="The bike spot/puesto number chosen for this reservation.",
     )
+    credit_lot = models.ForeignKey(
+        "wallets.ClassCreditLot",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="reservations",
+    )
     credit_charged = models.BooleanField(
         default=False,
         help_text="True when a class credit was deducted from the wallet for this reservation.",

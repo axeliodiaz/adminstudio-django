@@ -39,7 +39,7 @@ def get_member_stats(user, *, now=None) -> dict:
     is_unlimited = bool(plan and wallet and wallet.is_unlimited_membership_active) or (
         plan is not None and plan.classes_included is None
     )
-    class_credits = int(wallet.class_credits) if wallet else 0
+    class_credits = int(wallet.available_class_credits) if wallet else 0
     guest_pass_credits = int(wallet.guest_pass_credits) if wallet else 0
 
     empty = _empty_payload(
