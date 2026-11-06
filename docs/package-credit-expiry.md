@@ -7,9 +7,11 @@ including not-yet-activated purchases, remain grandfathered. Existing wallet
 balances are not backfilled, removed or assigned expiry dates. Membership and
 gift product behavior is not changed. No cron is needed.
 
-**Release is held until the owner chooses replacement-credit validity.** The
-studio-cancellation branch deliberately raises and rolls back when that policy
-is absent. Do not deploy this incomplete configuration.
+The owner chose a separate non-expiring replacement credit, one per refunded
+booking, on November 6 (Slack reply 1793963472.087139). The class-time expiry,
+replacement and FAQ/migration release scope were approved in the same thread.
+Production release still requires a verified private backup, migration rehearsal
+and the normal release gates.
 
 ## Accounting
 
@@ -25,7 +27,7 @@ is absent. Do not deploy this incomplete configuration.
   lot and never extends expiry. Old charged reservations restore legacy credit,
   even when a later unlimited plan is active.
 - Studio cancellation of an expired lot grants a separate one-credit replacement
-  tied to the reservation, once. Its validity still needs the owner's answer.
+  tied to the reservation, once. It never expires; it is recorded separately.
 - Activation and cancellation use row locks/state rechecks to prevent duplicate
   grants/refunds. A failed reservation rolls back both wallet and lot debits.
 

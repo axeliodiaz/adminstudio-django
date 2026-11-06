@@ -93,7 +93,8 @@ def test_two_debits_compete_for_one_credit(base_graph):
     assert Reservation.objects.filter(schedule=schedule, credit_charged=True).count() == 1
 
 
-def test_concurrent_cancel_refunds_once(base_graph):
+@pytest.mark.parametrize("studio_expired", [False, True])
+def test_concurrent_cancel_refunds_once(base_graph, studio_expired):
     postgres_only()
     member, _, room = base_graph
     plan = baker.make(
@@ -111,11 +112,17 @@ def test_concurrent_cancel_refunds_once(base_graph):
         )
         reservation.save()
 
+    if studio_expired:
+        ClassCreditLot.objects.filter(purchase=purchase).update(
+            expires_at=timezone.now() - timedelta(seconds=1)
+        )
+
     def run():
         try:
             cancel_reservation(
                 str(reservation.pk),
                 bypass_free_cancel_window=True,
+                cancellation_source="studio" if studio_expired else "member",
                 promote_waitlist=False,
                 notify=False,
             )
@@ -124,5 +131,9 @@ def test_concurrent_cancel_refunds_once(base_graph):
             return "already"
 
     assert sorted(race(run)) == ["already", "cancelled"]
-    assert ClassCreditLot.objects.get(purchase=purchase).remaining == 1
+    assert ClassCreditLot.objects.get(purchase=purchase).remaining == (0 if studio_expired else 1)
     assert Wallet.objects.get(user=member.user).class_credits == 11
+    if studio_expired:
+        replacement = ClassCreditLot.objects.get(replacement_for=reservation)
+        assert replacement.remaining == 1 and replacement.expires_at is None
+        assert ClassCreditLot.objects.filter(replacement_for=reservation).count() == 1

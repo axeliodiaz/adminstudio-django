@@ -24,7 +24,7 @@ def forward(apps, schema_editor):
             "Para reservar, la clase debe comenzar antes de que venza el crédito, en hora de Santiago. "
             "Usamos primero los créditos válidos con vencimiento más cercano. Comprar varios paquetes no amplía su vigencia. "
             "Cancelar dentro del plazo permitido devuelve el crédito a su paquete original y no extiende su vencimiento. "
-            "Si el estudio cancela una clase y el paquete ya venció, corresponde un crédito de reemplazo. "
+            "Si el estudio cancela una clase y el paquete ya venció, corresponde un crédito de reemplazo sin vencimiento, uno por reserva reembolsada y registrado aparte. "
             "La regla no requiere un proceso nocturno ni elimina tus saldos anteriores.",
             "is_published": True,
             "order": 0,

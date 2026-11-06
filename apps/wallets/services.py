@@ -5,7 +5,6 @@ Encapsulate wallet activation logic for plan purchases.
 
 from datetime import timedelta
 
-from django.conf import settings
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
@@ -194,20 +193,14 @@ class WalletService:
             if lot_id:
                 lot = ClassCreditLot.objects.select_for_update().get(pk=lot_id, wallet=wallet)
                 if studio_cancelled and lot.expires_at and lot.expires_at < timezone.now():
-                    # Explicit policy gate. No replacement deadline is inferred.
-                    if not hasattr(settings, "CLASS_CREDIT_REPLACEMENT_VALIDITY_DAYS"):
-                        raise ValueError("Studio replacement credit policy is not configured")
-                    days = settings.CLASS_CREDIT_REPLACEMENT_VALIDITY_DAYS
-                    replacement_expiry = (
-                        None if days is None else timezone.now() + timedelta(days=days)
-                    )
+                    # Owner policy: one separate non-expiring credit per refunded booking.
                     replacement, created = ClassCreditLot.objects.get_or_create(
                         replacement_for=reservation,
                         defaults={
                             "wallet": wallet,
                             "initial_credits": 1,
                             "remaining": 1,
-                            "expires_at": replacement_expiry,
+                            "expires_at": None,
                         },
                     )
                     if not created:

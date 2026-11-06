@@ -180,30 +180,7 @@ def test_unlimited_checked_at_class_date(base_graph):
         charge(r, timezone.now() + timedelta(days=2))
 
 
-def test_replacement_policy_missing_rolls_back_cancel(base_graph):
-    member, _, room = base_graph
-    p = activate(member.user, classes=1)
-    r = reservation(member, room)
-    charge(r)
-    ClassCreditLot.objects.filter(purchase=p).update(
-        expires_at=timezone.now() - timedelta(seconds=1)
-    )
-    with pytest.raises(ValueError, match="policy is not configured"):
-        cancel_reservation(
-            str(r.id),
-            bypass_free_cancel_window=True,
-            cancellation_source="studio",
-            promote_waitlist=False,
-            notify=False,
-        )
-    r.refresh_from_db()
-    assert r.credit_charged
-    assert not ClassCreditLot.objects.filter(replacement_for=r).exists()
-
-
-@pytest.mark.parametrize("days", [None, 7])
-def test_replacement_policy_explicit_test_configuration(base_graph, settings, days):
-    settings.CLASS_CREDIT_REPLACEMENT_VALIDITY_DAYS = days
+def test_studio_replacement_never_expires_and_is_usable_in_future(base_graph):
     member, _, room = base_graph
     p = activate(member.user, classes=1)
     r = reservation(member, room)
@@ -220,8 +197,14 @@ def test_replacement_policy_explicit_test_configuration(base_graph, settings, da
     )
     replacement = ClassCreditLot.objects.get(replacement_for=r)
     assert replacement.remaining == 1
-    assert (replacement.expires_at is None) == (days is None)
-    assert Wallet.objects.get(user=member.user).available_class_credits == 11
+    assert replacement.expires_at is None
+    future = reservation(member, room)
+    charge(future, timezone.now() + timedelta(days=3650))
+    future.refresh_from_db()
+    assert future.credit_lot_id == replacement.pk
+    replacement.refresh_from_db()
+    assert replacement.remaining == 0
+    assert Wallet.objects.get(user=member.user).available_class_credits == 10
     assert ClassCreditLot.objects.get(purchase=p).remaining == 0
 
 
@@ -232,7 +215,7 @@ def test_faq_explains_class_time_legacy_and_studio_replacement():
     assert row.is_published and not row.section.requires_staff
     assert "sin vencimiento" in row.answer
     assert "la clase debe comenzar" in row.answer
-    assert "crédito de reemplazo" in row.answer
+    assert "crédito de reemplazo sin vencimiento" in row.answer
 
 
 def test_failed_booking_rolls_back_both_lot_and_wallet(base_graph):
