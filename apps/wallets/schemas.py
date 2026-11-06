@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class WalletSchema(BaseModel):
@@ -11,7 +11,9 @@ class WalletSchema(BaseModel):
     id: uuid.UUID
     created: datetime
     modified: datetime
-    class_credits: int
+    class_credits: int = Field(
+        validation_alias=AliasChoices("available_class_credits", "class_credits")
+    )
     guest_pass_credits: int
     active_membership_end_date: date | None = None
     retail_discount_percentage: Decimal
@@ -35,6 +37,10 @@ class PlanPurchaseSchema(BaseModel):
     end: datetime | None = None
     plan_id: uuid.UUID
     plan_name: str | None = None
+    credit_expiry_enabled: bool = False
+    package_validity_days: int | None = None
+    credits_remaining: int | None = None
+    credits_valid_until: datetime | None = None
 
     model_config = {"from_attributes": True}
 

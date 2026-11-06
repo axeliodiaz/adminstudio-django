@@ -57,7 +57,7 @@ class AdminMemberSchema(BaseModel):
             gender=getattr(user, "gender", None) or None,
             is_active=bool(user.is_active),
             last_login=user.last_login,
-            class_credits=int(getattr(wallet, "class_credits", 0) or 0),
+            class_credits=int(getattr(wallet, "available_class_credits", 0) or 0),
             reservation_count=int(count or 0),
             created=member.created,
             modified=member.modified,

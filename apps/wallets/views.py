@@ -304,7 +304,7 @@ class WalletViewSet(viewsets.ViewSet):
         # fetch each plan and benefit separately (CYC-82).
         purchases = (
             PlanPurchase.objects.filter(user=user)
-            .select_related("plan")
+            .select_related("plan", "credit_lot")
             .prefetch_related(
                 Prefetch(
                     "plan__benefits",
@@ -328,6 +328,10 @@ class WalletViewSet(viewsets.ViewSet):
                 "end": purchase.end,
                 "plan_id": purchase.plan.id,
                 "plan_name": purchase.plan.name,
+                "credit_expiry_enabled": purchase.credit_expiry_enabled,
+                "package_validity_days": purchase.package_validity_days,
+                "credits_remaining": purchase.credits_remaining,
+                "credits_valid_until": purchase.credits_valid_until,
                 "plan": {
                     "id": purchase.plan.id,
                     "name": purchase.plan.name,

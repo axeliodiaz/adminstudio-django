@@ -75,7 +75,7 @@ def list_admin_wallets(*, search: str | None = None, status: str | None = None) 
                 "user_name": _display_name(user),
                 "user_email": user.email,
                 "plan_name": _active_plan_name(user, today) or "—",
-                "class_credits": wallet.class_credits,
+                "class_credits": wallet.available_class_credits,
                 "guest_pass_credits": wallet.guest_pass_credits,
                 "membership_end": (
                     wallet.active_membership_end_date.isoformat()
