@@ -1,5 +1,3 @@
-from apps.wallets.credit_balances import with_available_credits
-
 """Build the PulseFit admin operational dashboard payload from live data."""
 
 from collections import defaultdict

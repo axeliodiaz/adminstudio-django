@@ -63,3 +63,25 @@ refund, class-time boundary and atomic rollback. Wallet API query count stays
 constant as purchase history grows. Frontend re-reads the catalogue without SWR
 before checkout and blocks changed validity pending fresh consent. Local browser
 screens use synthetic API fixtures only. No payment gateway is changed.
+
+### Final-policy verification, November 6
+
+On backend `656a4f1`, fresh PostgreSQL runs passed 74 wallet, 124 member,
+63 FAQ/plan and 81 analytics/communications tests (342 total). The final
+nonexpiring-replacement policy was also rehearsed from the old schema in a
+new disposable PostgreSQL database: balance 17 retained, the old unactivated
+purchase grandfathered, zero historical lots, new purchase expiry enabled,
+and the new FAQ preserved the one-per-refunded-booking nonexpiring exception.
+Frontend `487b358` passed its five targeted tests and production build. Cart
+and wallet desktop/mobile pixels were inspected with mocked APIs, including
+Santiago purchase dates under a Tokyo browser timezone and renewed consent
+when catalogue validity changes. These are not production-data checks.
+
+Stock reports/schedules tests are not all green: model_bakery creates random
+unspecified Room capacities near the integer limit, and their daily sum can
+overflow a report integer. The existing exception logger then raises a
+LogRecord `args` collision. Untouched develop `eb66dfd` reproduces this failure
+class. A separate diagnostic pytest plugin limiting only unspecified synthetic
+Room capacities to 40 makes all 102 reports/schedules tests pass on both
+baseline and feature. That diagnostic pass is not a stock-suite pass, and this
+credit-expiry change does not alter reporting or scheduling fixtures to hide it.
