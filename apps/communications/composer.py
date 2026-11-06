@@ -25,7 +25,7 @@ def _display_name(user):
 
 def _remaining_credits(user):
     wallet = getattr(user, "wallet", None)
-    return str(wallet.class_credits if wallet else 0)
+    return str(wallet.available_class_credits if wallet else 0)
 
 
 VARIABLES = {

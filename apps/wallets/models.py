@@ -49,6 +49,20 @@ class Wallet(UUIDModel, TimeStampedModel):
         default=False, verbose_name="Unlimited Membership"
     )
 
+    @property
+    def available_class_credits(self):
+        """Exclude expired lots lazily, retaining all legacy balances unchanged."""
+        return self.credits_at(timezone.now())
+
+    def credits_at(self, when):
+        from django.db.models import Sum
+
+        expired = (
+            self.credit_lots.filter(expires_at__lt=when).aggregate(total=Sum("remaining"))["total"]
+            or 0
+        )
+        return max(0, self.class_credits - expired)
+
     def __str__(self):
         return f"Wallet for {self.user.username}"
 
@@ -94,6 +108,8 @@ class PlanPurchase(UUIDModel, TimeStampedModel, TimeFramedModel):
         verbose_name="Payment method",
     )
     activated_since = models.DateField(null=True, blank=True, verbose_name="Activated Since")
+    credit_expiry_enabled = models.BooleanField(default=True, editable=False)
+    package_validity_days = models.PositiveIntegerField(null=True, editable=False)
     expiry_reminder_sent_at = models.DateTimeField(
         null=True, blank=True, verbose_name="Expiry Reminder Sent At"
     )
@@ -123,14 +139,24 @@ class PlanPurchase(UUIDModel, TimeStampedModel, TimeFramedModel):
             except Plan.DoesNotExist:
                 pass
 
+        if self._state.adding:
+            # This policy covers packages only, not membership or gift products.
+            self.credit_expiry_enabled = self.credit_expiry_enabled and self.plan.type == "PACKAGE"
+            if self.credit_expiry_enabled:
+                self.package_validity_days = self.plan.duration_days
         if self.activated_since:
             # Calculate start: beginning of the activation date
             self.start = timezone.make_aware(
                 datetime.combine(self.activated_since, datetime.min.time())
             )
             # Calculate end: end of the day after duration_days
-            if self.plan and self.plan.duration_days:
-                end_date = self.activated_since + timedelta(days=self.plan.duration_days)
+            duration = (
+                self.package_validity_days
+                if self.credit_expiry_enabled
+                else self.plan.duration_days
+            )
+            if duration is not None:
+                end_date = self.activated_since + timedelta(days=duration)
                 self.end = timezone.make_aware(datetime.combine(end_date, datetime.max.time()))
             else:
                 self.end = None
@@ -149,6 +175,16 @@ class PlanPurchase(UUIDModel, TimeStampedModel, TimeFramedModel):
             kwargs["update_fields"] = list(update_fields)
 
         super().save(*args, **kwargs)
+
+    @property
+    def credits_remaining(self):
+        lot = getattr(self, "credit_lot", None)
+        return lot.remaining if lot else None
+
+    @property
+    def credits_valid_until(self):
+        lot = getattr(self, "credit_lot", None)
+        return lot.expires_at if lot else None
 
     def __str__(self):
         return f"Purchase of {self.plan.name} by {self.user.username} - ${self.price_paid}"
@@ -285,3 +321,31 @@ class GuestPassInvitation(UUIDModel, TimeStampedModel):
 
     def __str__(self):
         return f"Guest pass for {self.guest_email} ({self.status})"
+
+
+class ClassCreditLot(UUIDModel, TimeStampedModel):
+    """Purchase-origin credits. Existing wallet credits are never backfilled."""
+
+    wallet = models.ForeignKey(Wallet, on_delete=models.PROTECT, related_name="credit_lots")
+    purchase = models.OneToOneField(
+        PlanPurchase, on_delete=models.PROTECT, related_name="credit_lot", null=True, blank=True
+    )
+    replacement_for = models.OneToOneField(
+        "members.Reservation",
+        on_delete=models.PROTECT,
+        related_name="replacement_credit",
+        null=True,
+        blank=True,
+    )
+    initial_credits = models.PositiveIntegerField()
+    remaining = models.PositiveIntegerField()
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(remaining__lte=models.F("initial_credits")),
+                name="credit_lot_remaining_lte_initial",
+            )
+        ]
+        indexes = [models.Index(fields=["wallet", "expires_at"], name="credit_lot_wallet_expiry")]

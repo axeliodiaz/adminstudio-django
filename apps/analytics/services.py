@@ -24,6 +24,7 @@ from apps.members.constants import (
 )
 from apps.members.models import Member, Reservation
 from apps.schedules.models import Schedule
+from apps.wallets.credit_balances import with_available_credits
 from apps.wallets.models import PlanPurchase, Wallet
 
 
@@ -200,7 +201,14 @@ def get_admin_dashboard_module(module: str, *, now=None, days=DASHBOARD_DEFAULT_
     if module == "unlimited-wallets":
         return {"value": Wallet.objects.filter(is_unlimited_membership_active=True).count()}
     if module == "class-credits-outstanding":
-        return {"value": int(Wallet.objects.aggregate(total=Sum("class_credits"))["total"] or 0)}
+        return {
+            "value": int(
+                with_available_credits(Wallet.objects.all()).aggregate(
+                    total=Sum("valid_class_credits")
+                )["total"]
+                or 0
+            )
+        }
     if module == "guest-passes-outstanding":
         return {
             "value": int(Wallet.objects.aggregate(total=Sum("guest_pass_credits"))["total"] or 0)
@@ -580,7 +588,9 @@ def _clean_plan_name(name: str | None) -> str:
 def _wallet_commerce(today, period_start) -> dict:
     wallets = Wallet.objects.all()
     unlimited = wallets.filter(is_unlimited_membership_active=True).count()
-    class_credits = wallets.aggregate(total=Sum("class_credits"))["total"] or 0
+    class_credits = (
+        with_available_credits(wallets).aggregate(total=Sum("valid_class_credits"))["total"] or 0
+    )
     guest_passes = wallets.aggregate(total=Sum("guest_pass_credits"))["total"] or 0
 
     period_purchases = _period_purchases(period_start, today)

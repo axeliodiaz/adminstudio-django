@@ -6,6 +6,7 @@ Encapsulate wallet activation logic for plan purchases.
 from datetime import timedelta
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from apps.wallets.constants import BenefitName, WalletField
@@ -13,7 +14,7 @@ from apps.wallets.exceptions import (
     InsufficientCreditsException,
     PurchaseAlreadyActivatedException,
 )
-from apps.wallets.models import GiftCard, GuestPassInvitation, PlanPurchase, Wallet
+from apps.wallets.models import ClassCreditLot, GiftCard, GuestPassInvitation, PlanPurchase, Wallet
 
 
 class WalletService:
@@ -40,6 +41,7 @@ class WalletService:
     }
 
     @staticmethod
+    @transaction.atomic
     def activate_purchase(purchase: PlanPurchase) -> Wallet:
         """
         Activates a plan purchase and updates the user's Wallet.
@@ -61,6 +63,12 @@ class WalletService:
         Raises:
             PurchaseAlreadyActivatedException: If the purchase is already activated
         """
+        original_purchase = purchase
+        purchase = (
+            PlanPurchase.objects.select_for_update()
+            .select_related("plan", "user")
+            .get(pk=purchase.pk)
+        )
         if purchase.activated_since:
             raise PurchaseAlreadyActivatedException(f"Purchase {purchase.id} is already activated")
 
@@ -70,7 +78,7 @@ class WalletService:
         guest_passes_included = plan.guest_passes_included
 
         # 1. Get or create the user's Wallet
-        wallet, created = Wallet.objects.get_or_create(user=user)
+        wallet, created = Wallet.objects.select_for_update().get_or_create(user=user)
 
         # 2. Add classes_included to class_credits
         if plan.classes_included is not None:
@@ -82,7 +90,7 @@ class WalletService:
 
         # 4. Extend active_membership_end_date by duration_days
         if plan.duration_days is not None:
-            today = timezone.now().date()
+            today = timezone.localdate()
             if wallet.active_membership_end_date:
                 # If it already has an expiration date, extend from that date
                 # or from today, whichever is more recent
@@ -110,10 +118,18 @@ class WalletService:
         # Ensure plan is loaded for start/end calculation
         if not purchase.plan:
             purchase.plan = plan
-        purchase.activated_since = timezone.now().date()
+        purchase.activated_since = timezone.localdate()
         # start and end will be automatically included in update_fields by the save method
         purchase.save(update_fields=["activated_since", "modified"])
 
+        if plan.classes_included is not None and purchase.credit_expiry_enabled:
+            ClassCreditLot.objects.create(
+                wallet=wallet,
+                purchase=purchase,
+                initial_credits=plan.classes_included * quantity,
+                remaining=plan.classes_included * quantity,
+                expires_at=purchase.end,
+            )
         # 7. Save the Wallet
         wallet.save()
 
@@ -128,46 +144,72 @@ class WalletService:
         if not has_previous_activated_purchase:
             reward_first_purchase(user=user)
         send_purchase_receipt_email(purchase)
+        original_purchase.refresh_from_db()
         return wallet
 
     @staticmethod
-    def consume_class_credit(user) -> bool:
-        """
-        Deduct one class credit for a booking.
-
-        Returns True if a credit was charged, False if the member has an active
-        unlimited membership (no debit). Raises InsufficientCreditsException
-        when the wallet has no credits left.
-        """
+    def consume_class_credit(user, *, class_time=None, reservation=None) -> bool:
+        """Earliest eligible lot first, then grandfathered credits; class-time expiry."""
+        when = class_time or timezone.now()
         with transaction.atomic():
             wallet, _ = Wallet.objects.select_for_update().get_or_create(user=user)
-
-            # Check unlimited membership with expiry validation
             if wallet.is_unlimited_membership_active:
                 if (
                     wallet.active_membership_end_date is None
-                    or wallet.active_membership_end_date >= timezone.now().date()
+                    or wallet.active_membership_end_date >= timezone.localtime(when).date()
                 ):
                     return False
-                # Membership has expired — deactivate the flag
-                wallet.is_unlimited_membership_active = False
-                wallet.save(update_fields=["is_unlimited_membership_active", "modified"])
-
-            if wallet.class_credits <= 0:
+            lots = list(
+                ClassCreditLot.objects.select_for_update()
+                .filter(wallet=wallet, remaining__gt=0)
+                .order_by(F("expires_at").asc(nulls_last=True), "created", "id")
+            )
+            eligible = next(
+                (lot for lot in lots if lot.expires_at is None or lot.expires_at >= when), None
+            )
+            legacy = wallet.class_credits - sum(lot.remaining for lot in lots)
+            if eligible is None and legacy <= 0:
                 raise InsufficientCreditsException(
-                    "No te quedan créditos de clase. Compra un plan para reservar."
+                    "No tienes créditos válidos para la fecha de esta clase. Compra un plan para reservar."
                 )
+            if eligible:
+                if reservation is None:
+                    raise ValueError(
+                        "A reservation is required to preserve package credit provenance"
+                    )
+                eligible.remaining -= 1
+                eligible.save(update_fields=["remaining", "modified"])
+                reservation.credit_lot = eligible
             wallet.class_credits -= 1
             wallet.save(update_fields=["class_credits", "modified"])
             return True
 
     @staticmethod
-    def refund_class_credit(user) -> None:
-        """Return one class credit to the wallet (no-op for unlimited members)."""
+    def refund_class_credit(user, *, reservation=None, studio_cancelled=False) -> None:
+        """Restore only the charged origin, without extending a member's expiry."""
         with transaction.atomic():
             wallet, _ = Wallet.objects.select_for_update().get_or_create(user=user)
-            if wallet.is_unlimited_membership_active:
-                return
+            lot_id = reservation.credit_lot_id if reservation else None
+            if lot_id:
+                lot = ClassCreditLot.objects.select_for_update().get(pk=lot_id, wallet=wallet)
+                if studio_cancelled and lot.expires_at and lot.expires_at < timezone.now():
+                    # Owner policy: one separate non-expiring credit per refunded booking.
+                    replacement, created = ClassCreditLot.objects.get_or_create(
+                        replacement_for=reservation,
+                        defaults={
+                            "wallet": wallet,
+                            "initial_credits": 1,
+                            "remaining": 1,
+                            "expires_at": None,
+                        },
+                    )
+                    if not created:
+                        return
+                else:
+                    lot.remaining += 1
+                    lot.save(update_fields=["remaining", "modified"])
+            # Old reservations already record whether a credit was charged. Do not
+            # suppress their refund just because a newer unlimited plan is active.
             wallet.class_credits += 1
             wallet.save(update_fields=["class_credits", "modified"])
 

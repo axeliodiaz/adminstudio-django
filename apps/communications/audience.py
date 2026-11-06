@@ -95,8 +95,12 @@ def _q_has_class_credits(params):
     from apps.wallets.models import Wallet
 
     min_credits = params.get("min", 1)
-    wallet_qs = Wallet.objects.filter(class_credits__gte=min_credits).values_list(
-        "user_id", flat=True
+    from apps.wallets.credit_balances import with_available_credits
+
+    wallet_qs = (
+        with_available_credits(Wallet.objects.all())
+        .filter(valid_class_credits__gte=min_credits)
+        .values_list("user_id", flat=True)
     )
     return Q(id__in=wallet_qs)
 
