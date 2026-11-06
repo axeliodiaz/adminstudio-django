@@ -43,7 +43,9 @@ def postgres_only():
 def test_concurrent_activation_grants_once(base_graph):
     postgres_only()
     member, _, _ = base_graph
-    plan = baker.make("plans.Plan", classes_included=1, duration_days=30, guest_passes_included=0)
+    plan = baker.make(
+        "plans.Plan", type="PACKAGE", classes_included=1, duration_days=30, guest_passes_included=0
+    )
     purchase = PlanPurchase.objects.create(user=member.user, plan=plan, price_paid=0)
 
     def run():
@@ -62,7 +64,9 @@ def test_two_debits_compete_for_one_credit(base_graph):
     postgres_only()
     member, _, room = base_graph
     Wallet.objects.filter(user=member.user).update(class_credits=0)
-    plan = baker.make("plans.Plan", classes_included=1, duration_days=30, guest_passes_included=0)
+    plan = baker.make(
+        "plans.Plan", type="PACKAGE", classes_included=1, duration_days=30, guest_passes_included=0
+    )
     purchase = PlanPurchase.objects.create(user=member.user, plan=plan, price_paid=0)
     WalletService.activate_purchase(purchase)
     schedule = baker.make(
@@ -92,7 +96,9 @@ def test_two_debits_compete_for_one_credit(base_graph):
 def test_concurrent_cancel_refunds_once(base_graph):
     postgres_only()
     member, _, room = base_graph
-    plan = baker.make("plans.Plan", classes_included=1, duration_days=30, guest_passes_included=0)
+    plan = baker.make(
+        "plans.Plan", type="PACKAGE", classes_included=1, duration_days=30, guest_passes_included=0
+    )
     purchase = PlanPurchase.objects.create(user=member.user, plan=plan, price_paid=0)
     WalletService.activate_purchase(purchase)
     schedule = baker.make(
