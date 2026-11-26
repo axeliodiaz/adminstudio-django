@@ -39,10 +39,53 @@ class Email:
         smtp_ok = "mailtrap" in email_host.lower() and email_user and email_password
         return bool(smtp_ok or getattr(settings, "MAILTRAP_API_KEY", None))
 
+    def _cloudflare_is_configured(self) -> bool:
+        allowed = {
+            address.strip().casefold()
+            for address in getattr(settings, "CLOUDFLARE_EMAIL_RECIPIENTS", [])
+            if address.strip()
+        }
+        return bool(
+            getattr(settings, "CLOUDFLARE_ACCOUNT_ID", "")
+            and getattr(settings, "CLOUDFLARE_EMAIL_API_TOKEN", "")
+            and getattr(settings, "CLOUDFLARE_EMAIL_FROM", "")
+            and self.recipient_list
+            and all(address.strip().casefold() in allowed for address in self.recipient_list)
+        )
+
+    def _send_via_cloudflare(self) -> requests.Response:
+        response = requests.post(
+            f"https://api.cloudflare.com/client/v4/accounts/{settings.CLOUDFLARE_ACCOUNT_ID}/email/sending/send",
+            json={
+                "from": settings.CLOUDFLARE_EMAIL_FROM,
+                "to": self.recipient_list,
+                "subject": self.subject,
+                "text": self.message,
+                **({"html": self.html_content} if self.html_content else {}),
+            },
+            headers={"Authorization": f"Bearer {settings.CLOUDFLARE_EMAIL_API_TOKEN}"},
+            timeout=60,
+        )
+        response.raise_for_status()
+        data = response.json()
+        result = data.get("result") or {}
+        accepted = {
+            address.casefold() for address in result.get("delivered", []) + result.get("queued", [])
+        }
+        if (
+            data.get("success") is not True
+            or result.get("permanent_bounces")
+            or not all(address.casefold() in accepted for address in self.recipient_list)
+        ):
+            raise requests.exceptions.RequestException("Cloudflare did not accept every recipient")
+        return response
+
     def get_mailing_client(self) -> str:
         """Pick a provider. Local (DEBUG) prefers Mailtrap; prod prefers Resend."""
         if getattr(settings, "DEBUG", False) and self._mailtrap_is_configured():
             return constants.MAIL_CLIENT_MAILTRAP
+        if not getattr(settings, "DEBUG", False) and self._cloudflare_is_configured():
+            return constants.MAIL_CLIENT_CLOUDFLARE
         if getattr(settings, "RESEND_API_KEY", None):
             return constants.MAIL_CLIENT_RESEND
         if self._mailtrap_is_configured():
@@ -173,7 +216,9 @@ class Email:
             return True
 
         try:
-            if mailing_client == constants.MAIL_CLIENT_RESEND:
+            if mailing_client == constants.MAIL_CLIENT_CLOUDFLARE:
+                resp = self._send_via_cloudflare()
+            elif mailing_client == constants.MAIL_CLIENT_RESEND:
                 resp = self._send_via_resend()
             else:
                 resp = self._send_via_python_mailing(mailing_client)
