@@ -8,6 +8,7 @@ os.environ["SENTRY_DSN"] = ""
 # Domain tests used to POST to python-mailing / Resend / Mailtrap (e.g. waitlist
 # users like wl_confirm_<uuid>@ex.com) whenever create_notification ran.
 for _mailing_env in (
+    "CLOUDFLARE_EMAIL_API_TOKEN",
     "RESEND_API_KEY",
     "MAILTRAP_API_KEY",
     "MAILTRAP_INBOX_ID",
@@ -49,6 +50,7 @@ def _block_live_email_sends(request, mocker, settings):
     if getattr(request.module, "__name__", "") == "apps.notifications.tests.test_mailing":
         yield
         return
+    settings.CLOUDFLARE_EMAIL_API_TOKEN = None
     settings.RESEND_API_KEY = None
     settings.MAILTRAP_API_KEY = None
     settings.MAILTRAP_INBOX_ID = None

@@ -6,3 +6,5 @@ RESEND_API_URL = "https://api.resend.com/emails"
 PYTHON_MAILING_URL = "https://python-mailing.onrender.com/emails"
 MAILTRAP_API_URL = "https://send.api.mailtrap.io/api/send"
 MAILTRAP_SANDBOX_API_URL = "https://sandbox.api.mailtrap.io/api/send"
+
+MAIL_CLIENT_CLOUDFLARE = "cloudflare"
