@@ -70,11 +70,13 @@ class Email:
         data = response.json()
         result = data.get("result") or {}
         accepted = {
-            address.casefold()
-            for address in result.get("delivered", []) + result.get("queued", [])
+            address.casefold() for address in result.get("delivered", []) + result.get("queued", [])
         }
-        if (data.get("success") is not True or result.get("permanent_bounces")
-                or not all(address.casefold() in accepted for address in self.recipient_list)):
+        if (
+            data.get("success") is not True
+            or result.get("permanent_bounces")
+            or not all(address.casefold() in accepted for address in self.recipient_list)
+        ):
             raise requests.exceptions.RequestException("Cloudflare did not accept every recipient")
         return response
 
