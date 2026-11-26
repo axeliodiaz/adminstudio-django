@@ -528,3 +528,57 @@ class TestEmailSendMail:
         assert args[0] == constants.PYTHON_MAILING_URL
         assert kwargs["json"]["provider"] == constants.MAIL_CLIENT_DEFAULT
         assert kwargs["json"]["api_key"] is None
+
+
+class TestCloudflareEmail:
+    def configure(self, settings):
+        settings.DEBUG = False
+        settings.CLOUDFLARE_ACCOUNT_ID = 'account'
+        settings.CLOUDFLARE_EMAIL_API_TOKEN = 'test-token'
+        settings.CLOUDFLARE_EMAIL_FROM = 'noreply@mail.example.com'
+        settings.CLOUDFLARE_EMAIL_RECIPIENTS = ['owner@example.com']
+        settings.RESEND_API_KEY = 'resend-test'
+        return Email('nid', 'Subject', 'Body', ['owner@example.com'])
+
+    def test_verified_route_and_payload(self, settings, mocker):
+        email = self.configure(settings)
+        post = mocker.patch('apps.notifications.mailing.requests.post')
+        post.return_value.json.return_value = {
+            'success': True, 'result': {'delivered': ['owner@example.com'], 'queued': []}
+        }
+        assert email.get_mailing_client() == constants.MAIL_CLIENT_CLOUDFLARE
+        assert email.send_mail() is True
+        assert post.call_count == 1
+        assert post.call_args.kwargs['json']['to'] == ['owner@example.com']
+        assert post.call_args.kwargs['json']['from'] == 'noreply@mail.example.com'
+
+    def test_unverified_and_mixed_keep_original_provider(self, settings):
+        email = self.configure(settings)
+        for recipients in [['other@example.com'], ['owner@example.com', 'other@example.com'], []]:
+            email.recipient_list = recipients
+            assert email.get_mailing_client() == constants.MAIL_CLIENT_RESEND
+
+    @pytest.mark.parametrize('result', [
+        {'success': False},
+        {'success': True, 'result': {'permanent_bounces': ['owner@example.com']}},
+        {'success': True, 'result': {'delivered': []}},
+    ])
+    def test_failure_not_marked_success_or_resent(self, settings, mocker, result):
+        email = self.configure(settings)
+        post = mocker.patch('apps.notifications.mailing.requests.post')
+        post.return_value.json.return_value = result
+        assert email.send_mail() is False
+        assert post.call_count == 1
+
+    def test_queued_is_accepted(self, settings, mocker):
+        email = self.configure(settings)
+        post = mocker.patch('apps.notifications.mailing.requests.post')
+        post.return_value.json.return_value = {
+            'success': True, 'result': {'queued': ['owner@example.com']}
+        }
+        assert email.send_mail() is True
+
+    def test_missing_token_keeps_resend(self, settings):
+        email = self.configure(settings)
+        settings.CLOUDFLARE_EMAIL_API_TOKEN = ''
+        assert email.get_mailing_client() == constants.MAIL_CLIENT_RESEND

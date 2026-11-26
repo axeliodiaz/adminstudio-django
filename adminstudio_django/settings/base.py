@@ -354,3 +354,13 @@ CKEDITOR_5_CONFIGS = {
         "language": "es",
     }
 }
+
+# Cloudflare Free only accepts individually verified destinations. Other
+# recipients keep their existing provider; never rewrite recipient addresses.
+CLOUDFLARE_ACCOUNT_ID = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "")
+CLOUDFLARE_EMAIL_API_TOKEN = os.environ.get("CLOUDFLARE_EMAIL_API_TOKEN", "")
+CLOUDFLARE_EMAIL_FROM = os.environ.get("CLOUDFLARE_EMAIL_FROM", "")
+CLOUDFLARE_EMAIL_RECIPIENTS = [
+    value.strip() for value in os.environ.get("CLOUDFLARE_EMAIL_RECIPIENTS", "").split(",")
+    if value.strip()
+]
